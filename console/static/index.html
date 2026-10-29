@@ -4,472 +4,1381 @@
 <meta charset="utf-8">
 <title>WAYANG · Deception Grid Adaptif IT/OT TNI AD</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="icon" type="image/png" href="/static/logo_wayang.png">
+<link rel="icon" type="image/jpeg" href="/static/Logo.jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/leaflet.css">
 <style>
-/* PALET RESMI PANDUAN IDENTITAS WAYANG */
-:root{
-  --navy:#0B1F44;       /* Warna Utama: Keamanan, Profesionalisme */
-  --gold:#D4AF37;       /* Warna Aksen Emas: Kemuliaan, Kekuatan */
-  --ivory:#F8F9FA;      /* Warna Teks: Kejelasan, Keterbukaan */
-  --tech:#2E6BFF;       /* Warna Teknologi: Inovasi, Cyber Network */
+/* ==========================================================================
+   WAYANG C4ISR DEFENSE DESIGN SYSTEM (PANDUAN IDENTITAS RESMI TNI AD)
+   Standards: MIL-STD-2525D Symbology · C4ISR High-Density Tactical Cockpit
+   Palette: Sovereign Navy (#0B1F44) · Tactical Gold (#D4AF37) · Ivory (#F8F9FA) · Tech Blue (#2E6BFF)
+   ========================================================================== */
+:root {
+  --navy: #0B1F44;
+  --navy-surface: #071329;
+  --navy-card: #0A1936;
+  --navy-hover: #0F244C;
+  --gold: #D4AF37;
+  --gold-dim: rgba(212, 175, 55, 0.15);
+  --gold-glow: rgba(212, 175, 55, 0.35);
+  --ivory: #F8F9FA;
+  --ivory-dim: #94A3B8;
+  --ivory-muted: #64748B;
+  --tech: #2E6BFF;
+  --tech-glow: rgba(46, 107, 255, 0.35);
   
-  --bg:#060e1d;         /* Deep Navy Canvas */
-  --pn:#0b1f44;         /* Panel Utama */
-  --pn2:#0f2757;        /* Panel Sekunder */
-  --pn3:#15326d;        /* Panel Tersier */
-  --ln:#1d3c75;         /* Border Garis */
-  --ln2:#284e94;
-  --tx:#f8f9fa;         /* Ivory Text */
-  --mu:#94a9c9;         /* Muted Text */
-  --ok:#10b981;         /* Status Aman */
-  --wn:#f59e0b;         /* Status Peringatan */
-  --rd:#ef4444;         /* Status Bahaya / Kampanye */
-  --ac:#2E6BFF;         /* Tech Blue Active */
-  --cyan:#00f0ff;       /* Cyber Cyan Accent */
-}
-*{box-sizing:border-box}
-body{
-  margin:0;background:var(--bg);color:var(--tx);
-  font:12px/1.5 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  letter-spacing:0.2px;background-image:radial-gradient(rgba(46,107,255,0.04) 1px, transparent 1px);
-  background-size:20px 20px;
+  --emerald: #10B981;
+  --emerald-dim: rgba(16, 185, 129, 0.15);
+  --amber: #F59E0B;
+  --amber-dim: rgba(245, 158, 11, 0.15);
+  --crimson: #EF4444;
+  --crimson-dim: rgba(239, 68, 68, 0.15);
+  --cyan: #06B6D4;
+
+  --bg: #040914;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-navy: #152B52;
+  --border-highlight: rgba(212, 175, 55, 0.28);
 }
 
-/* TYPOGRAPHY OVERRIDES SESUAI PANDUAN */
-h1,h2,h3,h4,.brand-title,.brand-sub,.brand-sub2,.stat-val,.twin-title,button,.b,.defcon-badge{
-  font-family:'Montserrat', sans-serif;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: var(--bg);
+  background-image: 
+    linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--ivory);
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0.15px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
 }
 
-/* HEADER C4ISR TACTICAL */
-header{
-  display:flex;gap:12px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--ln);
-  background:linear-gradient(180deg,#091733 0%,#060e1d 100%);position:sticky;top:0;z-index:1000;
-  box-shadow:0 2px 15px rgba(11,31,68,0.5);transition:box-shadow .3s
+/* Typography Overrides */
+h1, h2, h3, h4, .brand-title, .brand-tag, .tactical-label, .hud-title, .metric-val, button, .tab-btn {
+  font-family: 'Montserrat', sans-serif;
 }
-.brand{display:flex;align-items:center;gap:12px}
-.brand-logo{
-  height:44px;width:auto;border-radius:6px;object-fit:contain;cursor:pointer;
-  border:1px solid rgba(212,175,55,0.4);box-shadow:0 0 14px rgba(212,175,55,0.25);
-  transition:transform .2s, box-shadow .2s;background:#040914;padding:2px
-}
-.brand-logo:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(212,175,55,0.5)}
-.brand-text{display:flex;flex-direction:column;justify-content:center}
-.brand-title{
-  font-size:17px;margin:0;letter-spacing:3px;color:#fff;font-weight:900;line-height:1.1;
-  text-shadow:0 0 10px rgba(46,107,255,0.4)
-}
-.brand-sub{
-  font-size:10px;font-weight:800;letter-spacing:2px;color:var(--gold);line-height:1.2;
-  margin-top:2px;text-transform:uppercase
-}
-.brand-sub2{
-  font-size:8.5px;font-weight:700;letter-spacing:1px;color:var(--mu);line-height:1.2;text-transform:uppercase
-}
-.slogan-badge{
-  display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-style:italic;
-  color:var(--gold);background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);
-  letter-spacing:0.3px;margin-left:6px
-}
-.sp{flex:1}
-
-.live-pill{
-  display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);
-  border:1px solid rgba(16,185,129,0.3);color:var(--ok);padding:4px 10px;border-radius:20px;
-  font-size:10.5px;font-weight:700;font-family:'Montserrat',sans-serif
-}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse-dot 1.5s infinite}
-@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
-
-.time-box{
-  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:var(--cyan);
-  background:#040914;border:1px solid var(--ln);border-radius:4px;padding:4px 8px
+.mono, .hex-view, .term-line, #clock-wib, #clock-utc, .packet-cell {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-feature-settings: "tnum" 1;
 }
 
-/* LAYOUT GRID */
-main{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;padding:14px}
-.card{
-  background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:14px;
-  position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.35);transition:border-color .2s
-}
-.card:hover{border-color:rgba(212,175,55,0.35)}
-.card h2{
-  margin:0 0 12px;font-size:11px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;
-  display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ln);padding-bottom:8px;
-  font-weight:800
-}
-.card h2 .tag{font-size:10px;color:var(--tech);font-weight:600;letter-spacing:0;font-family:'Poppins',sans-serif}
-
-/* PETA MILITER & ZERO-KEY ESRI CANVAS */
-#map{height:330px;background:#050a14;border-radius:6px;border:1px solid var(--ln);position:relative}
-
-/* TACTICAL TWIN-SCREEN FLUID & ROTATION */
-.twin-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.twin-box{
-  background:var(--pn2);border:1px solid var(--ln);border-radius:6px;padding:12px;position:relative;overflow:hidden
-}
-.twin-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.twin-title{font-size:12px;font-weight:800;letter-spacing:0.5px}
-.twin-body{display:flex;gap:14px;align-items:center}
-.tank-visual{
-  width:74px;height:100px;border:2px solid var(--ln2);border-radius:12px;position:relative;
-  overflow:hidden;background:#040914;display:flex;flex-direction:column;justify-content:flex-end
-}
-.tank-fluid{
-  width:100%;transition:height 1s cubic-bezier(0.4,0,0.2,1);position:relative;
-  background:linear-gradient(180deg,#2E6BFF 0%,#0343a1 100%)
-}
-.tank-fluid.shadow-fluid{
-  background:linear-gradient(180deg,#D4AF37 0%,#8d6e17 100%)
-}
-.tank-wave{
-  position:absolute;top:-6px;left:0;width:200%;height:10px;
-  background:rgba(255,255,255,0.3);border-radius:40%;animation:wave 3s infinite linear
-}
-@keyframes wave{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-
-.impeller{
-  width:28px;height:28px;border-radius:50%;border:2px dashed var(--ok);
-  display:inline-block;animation:spin 1.2s infinite linear;vertical-align:middle;margin-right:6px
-}
-.impeller.stopped{border-color:var(--rd);animation:none}
-@keyframes spin{100%{transform:rotate(360deg)}}
-
-.stat-val{font-size:20px;font-weight:800;letter-spacing:0.5px}
-.stat-sub{font-size:11px;color:var(--mu);margin-top:2px}
-
-/* LIVE TICKER / TERMINAL */
-.term-box{
-  background:#030712;border:1px solid var(--ln);border-radius:6px;padding:8px 10px;
-  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;height:140px;overflow-y:auto
-}
-.term-line{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px;cursor:pointer}
-.term-line:hover{background:rgba(46,107,255,0.08)}
-.term-ts{color:var(--mu);min-width:70px}
-.term-src{color:var(--cyan);font-weight:700;min-width:110px}
-.term-act{color:var(--tx);flex:1}
-.term-tag{padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;font-family:'Montserrat',sans-serif}
-
-/* MITRE ATT&CK MATRIX GRID */
-.attck-grid{
-  display:grid;grid-template-columns:repeat(5, 1fr);gap:6px;margin-top:8px
-}
-.attck-col{
-  background:#050c1c;border:1px solid var(--ln);border-radius:4px;padding:6px
-}
-.attck-col-title{
-  font-size:9.5px;font-weight:800;color:var(--gold);text-transform:uppercase;margin-bottom:5px;
-  border-bottom:1px solid var(--ln);padding-bottom:3px;font-family:'Montserrat',sans-serif
-}
-.attck-cell{
-  background:var(--pn2);border:1px solid rgba(255,255,255,0.05);padding:3px 5px;
-  border-radius:3px;margin-bottom:3px;font-size:9.5px;font-weight:700;color:var(--mu);display:flex;justify-content:space-between
-}
-.attck-cell.active{
-  background:rgba(46,107,255,0.2);border-color:var(--tech);color:#fff;box-shadow:0 0 8px rgba(46,107,255,0.5)
-}
-.attck-cell.danger{
-  background:rgba(239,68,68,0.25);border-color:var(--rd);color:#fff;box-shadow:0 0 8px rgba(239,68,68,0.5)
+/* SVG Icon Helper */
+.icon-svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  display: inline-block;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-/* BADGES & BUTTONS */
-.b{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:0.5px}
-.Aman{background:rgba(16,185,129,0.15);color:var(--ok);border:1px solid rgba(16,185,129,0.3)}
-.Tipuan{background:rgba(212,175,55,0.15);color:var(--gold);border:1px solid rgba(212,175,55,0.3)}
-.Kampanye{background:rgba(239,68,68,0.15);color:var(--rd);border:1px solid rgba(239,68,68,0.3)}
+/* HUD Panel Corners (Military Reticle Detail) */
+.hud-panel {
+  position: relative;
+  background: var(--navy-card);
+  border: 1px solid var(--border-navy);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.hud-panel::before, .hud-panel::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+  border-color: var(--gold);
+  opacity: 0.45;
+}
+.hud-panel::before { top: -1px; left: -1px; border-top: 1.5px solid; border-left: 1.5px solid; }
+.hud-panel::after  { bottom: -1px; right: -1px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
 
-button{
-  background:#0a1730;color:var(--tx);border:1px solid var(--ln);border-radius:4px;
-  padding:5px 12px;font-size:11px;cursor:pointer;font-weight:700;transition:.15s;display:inline-flex;align-items:center;gap:5px
+/* ==========================================================================
+   ZONE 1: SUPREME C4ISR COMMAND HUD (TOP BAR)
+   ========================================================================== */
+header#main-header {
+  height: 58px;
+  background: linear-gradient(180deg, #091733 0%, #060F21 100%);
+  border-bottom: 1px solid var(--border-navy);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.6);
+  transition: box-shadow .3s ease;
 }
-button:hover{border-color:var(--tech);color:#fff;background:#102449}
-button.d{border-color:var(--rd);color:var(--rd)}button.d:hover{background:var(--rd);color:#fff}
-button.g{border-color:var(--ok);color:var(--ok)}button.g:hover{background:var(--ok);color:#fff}
-button.p{background:#0e2042;border-color:var(--tech);color:var(--tech)}button.p:hover{background:var(--tech);color:#fff}
-button.gold{border-color:var(--gold);color:var(--gold);background:rgba(212,175,55,0.08)}
-button.gold:hover{background:var(--gold);color:#000}
-button.purp{border-color:var(--pu);color:var(--pu)}button.purp:hover{background:var(--pu);color:#fff}
 
-select{background:#0a1730;color:var(--tx);border:1px solid var(--ln);border-radius:4px;padding:4px 8px;font-size:11px}
-table{width:100%;border-collapse:collapse;font-size:11px}
-td,th{padding:5px 8px;border-bottom:1px solid var(--ln);text-align:left}
-th{color:var(--mu);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-emblem-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: #030814;
+  border: 1px solid var(--border-highlight);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .2s, border-color .2s;
+}
+.brand-emblem-box:hover {
+  transform: scale(1.04);
+  border-color: var(--gold);
+}
+.brand-emblem-box img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.brand-titles {
+  display: flex;
+  flex-direction: column;
+}
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-title {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  color: #FFFFFF;
+  text-transform: uppercase;
+}
+.brand-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--gold);
+  background: var(--gold-dim);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 1px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+.brand-sub {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: var(--ivory-dim);
+  text-transform: uppercase;
+  margin-top: 1px;
+}
 
-#toast{
-  display:none;padding:8px 12px;margin-bottom:10px;border-radius:5px;
-  background:#0e2e1e;border:1px solid var(--ok);color:var(--ok);font-size:12px;font-weight:700
+/* DEFCON Military Threat Level Selector */
+.defcon-strip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #030914;
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 3px 5px;
+  margin-left: 12px;
 }
-.playground-btns{display:flex;flex-wrap:wrap;gap:8px}
+.defcon-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--ivory-muted);
+  padding: 0 6px 0 2px;
+}
+.defcon-step {
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  color: var(--ivory-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: all .15s;
+}
+.defcon-step:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--ivory);
+}
+.defcon-step.active-5 { background: var(--emerald-dim); border-color: var(--emerald); color: var(--emerald); }
+.defcon-step.active-4 { background: rgba(6,182,212,0.15); border-color: var(--cyan); color: var(--cyan); }
+.defcon-step.active-3 { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+.defcon-step.active-2 { background: rgba(249,115,22,0.15); border-color: #f97316; color: #f97316; }
+.defcon-step.active-1 { background: var(--crimson-dim); border-color: var(--crimson); color: var(--crimson); box-shadow: 0 0 10px rgba(239,68,68,0.4); }
 
-/* MODALS */
-.modal-overlay{
-  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  background:rgba(4,9,20,0.85);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px)
+/* Hidden compatibility select */
+#defcon-select { display: none; }
+
+.header-spacer { flex: 1; }
+
+/* Telemetry & Clocks */
+.clock-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #030914;
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--ivory);
 }
-.modal-card{
-  background:#07142b;border:1px solid var(--gold);border-radius:8px;width:760px;max-width:92%;
-  max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 0 35px rgba(212,175,55,0.25)
+.clock-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.modal-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ln);padding-bottom:10px;margin-bottom:12px}
-.modal-head h3{margin:0;color:var(--gold);font-size:14px;letter-spacing:1px}
-.hex-view{
-  background:#030712;border:1px solid var(--ln);border-radius:4px;padding:10px;
-  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:#a5f3fc;overflow-x:auto;white-space:pre
+.clock-tag {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--gold);
 }
-@media(max-width:1024px){main{grid-template-columns:1fr}}
+
+.live-link-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #030914;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 4px 9px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--emerald);
+  letter-spacing: 0.5px;
+}
+.live-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 8px var(--emerald);
+  animation: led-blink 1.8s infinite;
+}
+@keyframes led-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Header Action Buttons */
+.hud-btn {
+  background: #08152B;
+  color: var(--ivory);
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s ease;
+}
+.hud-btn:hover {
+  background: var(--navy-hover);
+  border-color: var(--tech);
+  color: #FFFFFF;
+}
+.hud-btn-gold {
+  border-color: rgba(212, 175, 55, 0.4);
+  color: var(--gold);
+  background: var(--gold-dim);
+}
+.hud-btn-gold:hover {
+  background: rgba(212, 175, 55, 0.25);
+  border-color: var(--gold);
+  color: #FFF;
+}
+.hud-btn-danger {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--crimson);
+  background: var(--crimson-dim);
+}
+.hud-btn-danger:hover {
+  background: var(--crimson);
+  color: #FFF;
+}
+
+/* ==========================================================================
+   ZONE 2: SUB-COMMAND OPERATIONS & DRILL DECK
+   ========================================================================== */
+.tactical-deck {
+  height: 44px;
+  background: #061122;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.autonomy-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.deck-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--ivory-muted);
+  text-transform: uppercase;
+}
+
+.autonomy-tabs {
+  display: flex;
+  background: #030814;
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.autonomy-opt {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--ivory-muted);
+  transition: all .15s;
+}
+.autonomy-opt:hover {
+  color: var(--ivory);
+  background: rgba(255,255,255,0.04);
+}
+.autonomy-opt.active {
+  background: var(--tech);
+  color: #FFFFFF;
+  box-shadow: 0 0 10px var(--tech-glow);
+}
+#lvl { display: none; }
+
+.deck-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+}
+
+.drill-launcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drill-btn {
+  background: #091730;
+  border: 1px solid var(--border-navy);
+  color: var(--ivory-dim);
+  padding: 4px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .15s;
+}
+.drill-btn:hover {
+  color: #FFF;
+  border-color: var(--tech);
+  background: #0E244C;
+}
+.drill-btn.warn:hover { border-color: var(--amber); }
+.drill-btn.danger:hover { border-color: var(--crimson); }
+
+.kill-switch-btn {
+  margin-left: auto;
+  background: linear-gradient(180deg, #421010 0%, #290808 100%);
+  border: 1px solid var(--crimson);
+  color: #FCA5A5;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 12px rgba(239,68,68,0.25);
+  transition: all .15s;
+}
+.kill-switch-btn:hover {
+  background: var(--crimson);
+  color: #FFF;
+  box-shadow: 0 0 16px rgba(239,68,68,0.6);
+}
+
+/* Toast Notification Bar */
+#toast {
+  display: none;
+  background: #071E16;
+  border-bottom: 1px solid var(--emerald);
+  color: #6EE7B7;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-align: center;
+  animation: slide-toast .2s ease-out;
+}
+@keyframes slide-toast { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+/* ==========================================================================
+   ZONE 3: PRIMARY C4ISR OPERATIONAL THEATER (3-COLUMN LAYOUT)
+   ========================================================================== */
+main#ops-theater {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1.45fr) 380px;
+  gap: 10px;
+  padding: 10px 14px 14px;
+}
+
+/* Panel Headers */
+.panel-head {
+  padding: 8px 12px;
+  background: #081429;
+  border-bottom: 1px solid var(--border-navy);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--ivory-muted);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* COLUMN 1: TERRITORIAL COMMAND NODES */
+.col-territory {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.territory-list {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+}
+.unit-card {
+  background: #071326;
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all .15s ease;
+  position: relative;
+}
+.unit-card:hover {
+  background: var(--navy-hover);
+  border-color: var(--tech);
+}
+.unit-card.selected {
+  background: #0B2042;
+  border-color: var(--gold);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+.unit-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.unit-name {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #FFF;
+}
+.unit-status-pill {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+.status-aman { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+.status-tipuan { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212, 175, 55, 0.35); }
+.status-kampanye { background: var(--crimson-dim); color: var(--crimson); border: 1px solid rgba(239, 68, 68, 0.35); }
+
+.unit-role {
+  font-size: 10px;
+  color: var(--ivory-dim);
+  line-height: 1.3;
+}
+.unit-meta {
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--ivory-muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Slogan / Doctrine Compact Dossier */
+.doctrine-card {
+  padding: 10px;
+  background: #061122;
+  border-top: 1px solid var(--border-navy);
+  font-size: 10px;
+  color: var(--ivory-dim);
+  line-height: 1.4;
+}
+.doctrine-quote {
+  font-style: italic;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* COLUMN 2: CENTER OPERATIONS THEATER */
+.col-theater {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Map Deck */
+.map-container {
+  height: 330px;
+  position: relative;
+  background: #030712;
+  border-radius: 0 0 3px 3px;
+  overflow: hidden;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+.map-hud-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 500;
+  background: rgba(4, 9, 20, 0.85);
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 5px 9px;
+  font-size: 9.5px;
+  color: var(--ivory-dim);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+.map-campaign-bar {
+  padding: 6px 12px;
+  background: #071329;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 10px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+/* SCADA Industrial Twin-Screen */
+.twin-theater {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.twin-deck {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  flex: 1;
+}
+
+.scada-panel {
+  background: #061226;
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.scada-panel.real { border-left: 3px solid var(--tech); }
+.scada-panel.shadow { border-left: 3px solid var(--gold); }
+
+.scada-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.scada-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.scada-content {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+}
+
+/* P&ID Tank Graphic */
+.scada-tank-wrap {
+  width: 64px;
+  height: 94px;
+  background: #030814;
+  border: 2px solid var(--border-navy);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.scada-tank-ruler {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  bottom: 0;
+  width: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+.ruler-tick {
+  width: 4px;
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+}
+.scada-fluid {
+  width: 100%;
+  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  background: linear-gradient(180deg, #2E6BFF 0%, #0F2D6B 100%);
+}
+.scada-fluid.gold {
+  background: linear-gradient(180deg, #D4AF37 0%, #685210 100%);
+}
+.scada-fluid-wave {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 200%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 35%;
+  animation: scada-wave 2.8s infinite linear;
+}
+@keyframes scada-wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+.scada-metrics {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.metric-row-big {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.metric-val {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #FFF;
+}
+.metric-max {
+  font-size: 11px;
+  color: var(--ivory-muted);
+}
+.scada-submetrics {
+  font-size: 10.5px;
+  color: var(--ivory-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Mechanical Impeller Graphic */
+.impeller-wheel {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px dashed var(--emerald);
+  display: inline-block;
+  animation: impeller-spin 1.2s infinite linear;
+}
+.impeller-wheel.stopped {
+  border-color: var(--crimson);
+  animation: none;
+}
+@keyframes impeller-spin { 100% { transform: rotate(360deg); } }
+
+.scada-audit-pill {
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: #030814;
+  border: 1px solid var(--border-navy);
+}
+
+/* COLUMN 3: INTEL & FORENSICS RAIL */
+.col-forensics {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tab Switcher for Forensics */
+.rail-tabs {
+  display: flex;
+  background: #061021;
+  border-bottom: 1px solid var(--border-navy);
+  padding: 2px 4px 0;
+  gap: 2px;
+}
+.rail-tab-btn {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ivory-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.rail-tab-btn:hover {
+  color: var(--ivory);
+  background: rgba(255,255,255,0.03);
+}
+.rail-tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  background: #091730;
+}
+
+.rail-tab-body {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Wireshark-Style Incident Terminal */
+.term-stream {
+  background: #030712;
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 6px;
+  font-size: 10.5px;
+  height: 240px;
+  overflow-y: auto;
+}
+.term-line {
+  padding: 3px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  gap: 8px;
+  cursor: pointer;
+  align-items: center;
+}
+.term-line:hover {
+  background: rgba(46, 107, 255, 0.1);
+}
+.term-ts {
+  color: var(--ivory-muted);
+  min-width: 60px;
+  font-size: 9.5px;
+}
+.term-src {
+  color: var(--cyan);
+  font-weight: 700;
+  min-width: 95px;
+}
+.term-act {
+  color: var(--ivory);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.term-tag {
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 8.5px;
+  font-weight: 800;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.3px;
+}
+
+/* MITRE ATT&CK Compact ICS Matrix */
+.attck-matrix-deck {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.attck-col {
+  background: #040914;
+  border: 1px solid var(--border-navy);
+  border-radius: 2px;
+  padding: 4px;
+}
+.attck-col-title {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 2px;
+}
+.attck-cell {
+  background: #08152B;
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--ivory-muted);
+  display: flex;
+  justify-content: space-between;
+}
+.attck-cell.active {
+  background: rgba(46, 107, 255, 0.25);
+  border-color: var(--tech);
+  color: #FFF;
+}
+.attck-cell.danger {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: var(--crimson);
+  color: #FFF;
+}
+
+/* Tables for Approvals and Sessions */
+.c4-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+.c4-table th {
+  padding: 4px 6px;
+  background: #050E1F;
+  color: var(--ivory-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-navy);
+  text-align: left;
+}
+.c4-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.c4-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Modals */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(2, 6, 15, 0.85);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+.modal-card {
+  background: #08152B;
+  border: 1px solid var(--border-highlight);
+  border-radius: 4px;
+  width: 740px;
+  max-width: 94%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-navy);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.modal-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.hex-view {
+  background: #02050D;
+  border: 1px solid var(--border-navy);
+  border-radius: 3px;
+  padding: 10px;
+  font-size: 11px;
+  color: #7DD3FC;
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+  main#ops-theater {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 </head>
 <body>
 
+<!-- ==========================================================================
+     ZONE 1: SUPREME C4ISR COMMAND HUD (TOP BAR)
+     ========================================================================== -->
 <header id="main-header">
-  <div class="brand">
-    <img src="/static/logo_wayang.png" alt="Logo WAYANG" class="brand-logo" onclick="openAboutModal()" title="Klik untuk melihat Makna Logo &amp; Filosofi WAYANG">
-    <div class="brand-text">
-      <div class="brand-title">WAYANG</div>
-      <div class="brand-sub">DECEPTION GRID ADAPTIF</div>
-      <div class="brand-sub2">UNTUK PERTAHANAN IT/OT SATUAN TNI AD</div>
+  <div class="brand-block">
+    <div class="brand-emblem-box" onclick="openAboutModal()" title="Buka Profil Doktrin &amp; Filosofi WAYANG">
+      <img src="/static/Logo.jpeg" alt="TNI AD WAYANG">
     </div>
-    <div class="slogan-badge">“Mengelabuhi Penyerang, Melindungi Aset Nyata”</div>
-  </div>
-  <div class="sp"></div>
-
-  <div class="time-box" id="clock-wib">WIB --:--:--</div>
-
-  <div class="live-pill" id="live-indicator">
-    <div class="live-dot"></div>
-    <span id="live-text">REALTIME WEBSOCKET (0ms)</span>
+    <div class="brand-titles">
+      <div class="brand-title-row">
+        <span class="brand-title">WAYANG</span>
+        <span class="brand-tag">C4ISR DECEPTION GRID</span>
+      </div>
+      <span class="brand-sub">Sistem Pertahanan Adaptif IT/OT TNI Angkatan Darat</span>
+    </div>
   </div>
 
-  <select id="defcon-select" onchange="changeDefcon(this.value)">
-    <option value="5">DEFCON 5 · NORMAL</option>
-    <option value="4">DEFCON 4 · PENGAWASAN</option>
-    <option value="3" selected>DEFCON 3 · SIAGA</option>
-    <option value="2">DEFCON 2 · ANCAMAN NYATA</option>
-    <option value="1">DEFCON 1 · TEMPUR MAKSIMAL</option>
+  <!-- DEFCON Stepped Threat Meter -->
+  <div class="defcon-strip" title="Tingkat Siaga Pertahanan Nasional (DEFCON)">
+    <span class="defcon-label">DEFCON</span>
+    <button type="button" class="defcon-step" onclick="changeDefcon('5')">5</button>
+    <button type="button" class="defcon-step" onclick="changeDefcon('4')">4</button>
+    <button type="button" class="defcon-step active-3" onclick="changeDefcon('3')">3</button>
+    <button type="button" class="defcon-step" onclick="changeDefcon('2')">2</button>
+    <button type="button" class="defcon-step" onclick="changeDefcon('1')">1</button>
+  </div>
+  <select id="defcon-select">
+    <option value="5">DEFCON 5</option>
+    <option value="4">DEFCON 4</option>
+    <option value="3" selected>DEFCON 3</option>
+    <option value="2">DEFCON 2</option>
+    <option value="1">DEFCON 1</option>
   </select>
 
-  <button onclick="openAboutModal()" class="gold" title="Lihat Filosofi Wayang &amp; Makna Logo">ℹ️ Filosofi</button>
-  <button onclick="toggleAudio()" id="btn-audio" title="Aktifkan/Nonaktifkan Suara Peringatan Taktis">🔊 Audio</button>
-  <button class="purp" onclick="openPacketModal()" title="Buka Deep Packet Inspector (Wireshark-Style)">🔍 Inspektur DPI</button>
-  <button class="p" onclick="openMerkleModal()" title="Verifikasi Pohon Merkle RFC 6962">🛡️ Bukti Merkle</button>
-  <a href="/api/report/latest.docx" style="text-decoration:none">
-    <button class="gold" title="Unduh Berita Acara Pemeriksaan Forensik Digital resmi TNI AD">📄 BAP-FD (.docx)</button>
-  </a>
-  <a href="/api/tactical/rules/stix.json" target="_blank" style="text-decoration:none">
-    <button>🛡️ STIX 2.1</button>
-  </a>
+  <div class="header-spacer"></div>
 
-  <label style="font-size:11px;color:var(--mu)">Otonomi:
+  <!-- Realtime Clocks -->
+  <div class="clock-display">
+    <div class="clock-item">
+      <span class="clock-tag">WIB</span>
+      <span id="clock-wib" class="mono">--:--:--</span>
+    </div>
+    <div class="clock-item">
+      <span class="clock-tag">UTC</span>
+      <span id="clock-utc" class="mono">--:--:--Z</span>
+    </div>
+  </div>
+
+  <!-- WSS Latency Status -->
+  <div class="live-link-pill" id="live-indicator">
+    <div class="live-led"></div>
+    <span id="live-text" class="mono">WSS 0ms</span>
+  </div>
+
+  <!-- Tactical HUD Action Buttons -->
+  <button class="hud-btn" onclick="toggleAudio()" id="btn-audio" title="Saklar Audio Peringatan">
+    <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+    Audio
+  </button>
+  <button class="hud-btn" onclick="openPacketModal()" title="Buka Deep Packet Inspector (MBAP Frame Dissector)">
+    <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+    DPI Hex
+  </button>
+  <button class="hud-btn" onclick="openMerkleModal()" title="Verifikasi Pohon Merkle RFC 6962">
+    <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+    Merkle
+  </button>
+  <a href="/api/tactical/rules/stix.json" target="_blank" style="text-decoration:none">
+    <button class="hud-btn" title="Ekspor Aturan Intelijen Ancaman STIX 2.1">
+      <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+      STIX 2.1
+    </button>
+  </a>
+  <a href="/api/report/latest.docx" style="text-decoration:none">
+    <button class="hud-btn hud-btn-gold" title="Unduh Berita Acara Pemeriksaan Forensik Digital resmi TNI AD">
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      BAP-FD (.docx)
+    </button>
+  </a>
+  <button class="hud-btn hud-btn-gold" onclick="openAboutModal()" title="Lihat Doktrin Pertahanan &amp; Filosofi Logo">
+    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    Doktrin
+  </button>
+</header>
+
+<!-- ==========================================================================
+     ZONE 2: SUB-COMMAND OPERATIONS & DRILL DECK
+     ========================================================================== -->
+<div class="tactical-deck">
+  <!-- Autonomy Policy Level Selector -->
+  <div class="autonomy-control">
+    <span class="deck-label">Otonomi Pertahanan</span>
+    <div class="autonomy-tabs">
+      <button class="autonomy-opt" onclick="setAutonomyUI(0)">L0 Amati</button>
+      <button class="autonomy-opt" onclick="setAutonomyUI(1)">L1 Rekomendasi</button>
+      <button class="autonomy-opt active" onclick="setAutonomyUI(2)">L2 Alihkan Otomatis</button>
+      <button class="autonomy-opt" onclick="setAutonomyUI(3)">L3 Blokir Terbatas</button>
+    </div>
     <select id="lvl">
       <option value="0">L0 Amati</option>
       <option value="1">L1 Rekomendasi</option>
-      <option value="2">L2 Pengalihan Otomatis</option>
+      <option value="2" selected>L2 Pengalihan Otomatis</option>
       <option value="3">L3 Blokir Terbatas</option>
     </select>
-  </label>
+  </div>
 
-  <button class="d" id="kill" title="Kembalikan semua pangkalan ke L0 Amati">SAKLAR DARURAT</button>
-</header>
+  <div class="deck-divider"></div>
 
-<main>
-  <!-- PANGGUNG UJI SERANGAN (PLAYGROUND) -->
-  <section class="card" style="grid-column:1/-1">
-    <h2>
-      <span>PANGGUNG UJI INTERAKTIF (LIVE ATTACK PLAYGROUND)</span>
-      <span class="tag">Simulasi Pertahanan Siber untuk Demonstrasi Penjurian</span>
-    </h2>
-    <div id="toast"></div>
-    <div class="playground-btns">
-      <button class="p" onclick="sim('t1')">▶ [T1] Botnet Recon Scan</button>
-      <button class="p" onclick="sim('t2')" style="border-color:var(--gold);color:var(--gold)">⚡ [T2] Manipulasi Kendali ICS (Shadow Divert)</button>
-      <button class="p" onclick="sim('campaign')" style="border-color:var(--rd);color:var(--rd)">🚨 [Kampanye] Serangan Terkoordinasi Multi-Satuan</button>
-      <button class="p" onclick="sim('phishing')" style="border-color:var(--tech);color:var(--tech)">📧 [Phishing] Uji Persona &amp; Canary Token</button>
-      <button class="d" onclick="lockdownCurrent()" style="margin-left:auto">🔒 LOCKDOWN Pangkalan Terpilih</button>
+  <!-- Operational Drill Launcher -->
+  <div class="drill-launcher">
+    <span class="deck-label">Uji Taktis</span>
+    <button class="drill-btn" onclick="sim('t1')" title="Simulasi Reconnaissance Port &amp; Device Scan">
+      <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      [T1] Recon Scan
+    </button>
+    <button class="drill-btn warn" onclick="sim('t2')" title="Simulasi Serangan Manipulasi PLC Modbus">
+      <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      [T2] Shadow Divert
+    </button>
+    <button class="drill-btn danger" onclick="sim('campaign')" title="Simulasi Serangan APT Terkoordinasi Multi-Satuan">
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      [APT] Kampanye Terpadu
+    </button>
+    <button class="drill-btn" onclick="sim('phishing')" title="Simulasi Akses Kredensial &amp; Canary Token">
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+      [Canary] Persona
+    </button>
+    <button class="drill-btn danger" onclick="lockdownCurrent()" title="Isolasi Total Satuan yang Dipilih">
+      <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Lockdown Satuan
+    </button>
+  </div>
+
+  <!-- Emergency Failsafe Interlock -->
+  <button class="kill-switch-btn" id="kill" title="Kembalikan semua pangkalan ke Level L0 Amati (Failsafe)">
+    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+    Saklar Darurat L0
+  </button>
+</div>
+
+<div id="toast"></div>
+
+<!-- ==========================================================================
+     ZONE 3: PRIMARY C4ISR OPERATIONAL THEATER
+     ========================================================================== -->
+<main id="ops-theater">
+
+  <!-- COLUMN 1: TERRITORIAL COMMAND NODES (270px) -->
+  <div class="col-territory">
+    <div class="hud-panel" style="flex:1;display:flex;flex-direction:column">
+      <div class="panel-head">
+        <span class="panel-title">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          Komando Pangkalan
+        </span>
+        <span class="panel-badge">5 Satuan Terhubung</span>
+      </div>
+      <div class="territory-list" id="territory-nodes">
+        <!-- Generated dynamically via JS -->
+      </div>
+      <div class="doctrine-card">
+        <div class="doctrine-quote">“Mengelabuhi Penyerang, Melindungi Aset Nyata”</div>
+        <div>Doktrin 0-Harm: Seluruh instruksi berbahaya diisolasi 100% pada panggung bayangan. Aset fisik asli tidak disentuh.</div>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <!-- TACTICAL TWIN-SCREEN VIEW -->
-  <section class="card" style="grid-column:1/-1">
-    <h2>
-      <span>TACTICAL TWIN-SCREEN: PERBANDINGAN REALTIME ASET FISIK vs BAYANGAN DECOY</span>
-      <span class="tag" id="twin-sat">KODAM-IV-Diponegoro</span>
-    </h2>
-    <div class="twin-grid" id="twin-view">Memuat status telemetri...</div>
-  </section>
-
-  <!-- PETA KOMANDO OPERASIONAL C4ISR (ESRI MILITARY ZERO-KEY) -->
-  <section class="card">
-    <h2>
-      <span>Peta Wilayah Pertahanan Taktis (C4ISR GIS)</span>
-      <span class="tag">Zero-Key Military Cartography · 5 Komando TNI AD</span>
-    </h2>
-    <div id="map"></div>
-    <div id="units" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"></div>
-    <div id="camp" style="margin-top:10px"></div>
-  </section>
-
-  <!-- LIVE CYBER EVENT TICKER / TERMINAL -->
-  <section class="card">
-    <h2>
-      <span>Terminal Intelijen Serangan Realtime</span>
-      <span class="tag">Klik baris untuk Inspeksi Frame Raw</span>
-    </h2>
-    <div class="term-box" id="term-feed">
-      <div class="term-line"><span class="term-ts">SYSTEM</span><span class="term-src">WAYANG KERNEL</span><span class="term-act">Mesin C4ISR siap. Menunggu aktivitas jaringan...</span></div>
-    </div>
+  <!-- COLUMN 2: CENTER OPERATIONS THEATER (GIS Map + P&ID Twin-Screen) -->
+  <div class="col-theater">
     
-    <h2 style="margin-top:14px">
-      <span>Panel Keputusan Dalang (Bayangan ke Benteng)</span>
-      <span class="tag">Draf Tindakan Firewall nftables</span>
-    </h2>
-    <div id="dec"></div>
-  </section>
-
-  <!-- MATRIKS MITRE ATT&CK FOR ICS (TACTICAL GRID) -->
-  <section class="card" style="grid-column:1/-1">
-    <h2>
-      <span>Matriks Taktik MITRE ATT&amp;CK for ICS (Industrial Cyber Matrix)</span>
-      <span class="tag">Deteksi Aktif &amp; Pemetaan Perilaku</span>
-    </h2>
-    <div class="attck-grid" id="attck-matrix">
-      <!-- Diisi secara dinamis oleh JavaScript -->
+    <!-- Geospatial Tactical Map Deck -->
+    <div class="hud-panel">
+      <div class="panel-head">
+        <span class="panel-title">
+          <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+          Peta Wilayah Pertahanan Siber C4ISR
+        </span>
+        <span class="panel-badge">ESRI Mil-Dark · Radius Pantau Radar 120km</span>
+      </div>
+      <div class="map-container">
+        <div id="map"></div>
+        <div class="map-hud-overlay mono">
+          STATUS: SURVEILLANCE ACTIVE<br>
+          PROT: MODBUS/TCP DECEPTION
+        </div>
+      </div>
+      <div class="map-campaign-bar" id="camp">
+        <span style="color:var(--ivory-muted)">Belum terdeteksi kampanye lintas satuan aktif.</span>
+      </div>
+      <div id="units" style="display:none"></div>
     </div>
-  </section>
 
-  <!-- SESI TERPANTAU & PUTAR ULANG -->
-  <section class="card">
-    <h2>
-      <span>Sesi Penyerang Terpantau &amp; Terpetakan</span>
-      <span class="tag">Pelacakan Perilaku</span>
-    </h2>
-    <div id="ses" style="max-height:220px;overflow-y:auto"></div>
-  </section>
-
-  <!-- REKONSTRUKSI & REPLAY -->
-  <section class="card">
-    <h2>
-      <span>Rekonstruksi &amp; Putar Ulang Sesi (Forensik Digital)</span>
-      <span class="tag">Audit Trail Kriptografis</span>
-    </h2>
-    <div id="replay" style="font-family:ui-monospace,monospace;font-size:11px;max-height:220px;overflow-y:auto">
-      Pilih salah satu sesi di tabel untuk memutar ulang kronologi serangan.
+    <!-- SCADA Industrial Twin-Screen -->
+    <div class="hud-panel twin-theater">
+      <div class="panel-head">
+        <span class="panel-title">
+          <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Tactical Twin-Screen: OT Nyata vs Panggung Bayangan
+        </span>
+        <span class="panel-badge" id="twin-sat">KODAM-IV-Diponegoro</span>
+      </div>
+      <div class="twin-deck" id="twin-view">
+        <div style="color:var(--ivory-muted);padding:20px;grid-column:1/-1;text-align:center">Memuat telemetri PLC industri...</div>
+      </div>
     </div>
-  </section>
+
+  </div>
+
+  <!-- COLUMN 3: INTEL & FORENSICS RAIL (380px) -->
+  <div class="col-forensics hud-panel">
+    
+    <!-- Tab Switcher -->
+    <div class="rail-tabs">
+      <button class="rail-tab-btn active" onclick="switchRailTab('stream', this)">Ancaman</button>
+      <button class="rail-tab-btn" onclick="switchRailTab('attck', this)">MITRE ICS</button>
+      <button class="rail-tab-btn" onclick="switchRailTab('dec', this)">Keputusan</button>
+      <button class="rail-tab-btn" onclick="switchRailTab('ses', this)">Sesi Forensik</button>
+    </div>
+
+    <!-- TAB 1: Real-time Incident Stream (Default) -->
+    <div class="rail-tab-body" id="tab-pane-stream">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="deck-label">Wireshark/Zeek Live Stream</span>
+        <span style="font-size:9px;color:var(--ivory-muted)">Klik baris untuk inspeksi paket raw</span>
+      </div>
+      <div class="term-stream mono" id="term-feed">
+        <div class="term-line"><span class="term-ts">SYSTEM</span><span class="term-src">WAYANG KERNEL</span><span class="term-act">Mesin C4ISR siap. Menunggu aktivitas jaringan...</span></div>
+      </div>
+      
+      <div style="margin-top:6px;border-top:1px solid var(--border-navy);padding-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span class="deck-label">Kronologi Sesi Terpilih</span>
+        </div>
+        <div id="replay" class="mono" style="font-size:10.5px;max-height:160px;overflow-y:auto;color:var(--ivory-dim)">
+          Pilih salah satu sesi di tab Sesi Forensik untuk memutar ulang jejak digital.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: MITRE ATT&CK for ICS Matrix -->
+    <div class="rail-tab-body" id="tab-pane-attck" style="display:none">
+      <span class="deck-label" style="margin-bottom:4px">Pemetaan Perilaku Taktis (MITRE for ICS)</span>
+      <div class="attck-matrix-deck" id="attck-matrix"></div>
+      <div style="font-size:9.5px;color:var(--ivory-muted);margin-top:10px;line-height:1.4">
+        Setiap manipulasi fungsi Modbus dianalisis secara heuristik dan dipetakan langsung ke taktik ICS (T0801, T0840, T0855).
+      </div>
+    </div>
+
+    <!-- TAB 3: Dalang Firewall Approvals (Bayangan ke Benteng) -->
+    <div class="rail-tab-body" id="tab-pane-dec" style="display:none">
+      <span class="deck-label" style="margin-bottom:4px">Antrean Persetujuan Blokir nftables</span>
+      <div id="dec" style="max-height:360px;overflow-y:auto"></div>
+    </div>
+
+    <!-- TAB 4: Tracked Attacker Sessions -->
+    <div class="rail-tab-body" id="tab-pane-ses" style="display:none">
+      <span class="deck-label" style="margin-bottom:4px">Sesi Penyerang Terobservasi</span>
+      <div id="ses" style="max-height:360px;overflow-y:auto"></div>
+    </div>
+
+  </div>
+
 </main>
 
-<!-- MODAL MAKNA LOGO & FILOSOFI IDENTITAS (PANDUAN RESMI) -->
+<!-- ==========================================================================
+     MODALS: PHILOSOPHY, DPI INSPECTOR, MERKLE PROOF
+     ========================================================================== -->
+
+<!-- MODAL DOKTRIN & FILOSOFI IDENTITAS RESMI -->
 <div class="modal-overlay" id="modal-about" onclick="if(event.target===this)this.style.display='none'">
-  <div class="modal-card" style="width:720px">
+  <div class="modal-card">
     <div class="modal-head">
-      <h3>🏛️ Filosofi &amp; Identitas Resmi WAYANG</h3>
-      <button onclick="$('modal-about').style.display='none'">Tutup [ESC]</button>
+      <div class="modal-title">Identitas Resmi &amp; Doktrin Pertahanan Siber WAYANG</div>
+      <button class="hud-btn" onclick="$('modal-about').style.display='none'">✕ Tutup</button>
     </div>
-    <div style="display:flex;gap:18px;align-items:center;margin-bottom:14px">
-      <img src="/static/logo_wayang.png" alt="Logo Resmi WAYANG" style="height:90px;width:auto;border-radius:8px;border:1px solid var(--gold);padding:4px;background:#030712">
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;background:#050E1F;padding:12px;border-radius:4px;border:1px solid var(--border-navy)">
+      <img src="/static/Logo.jpeg" alt="Logo Resmi WAYANG" style="height:76px;width:auto;border-radius:4px;border:1px solid var(--gold);padding:3px;background:#020610">
       <div>
-        <h2 style="margin:0;color:#fff;border:none;font-size:18px;font-weight:900">WAYANG</h2>
-        <div style="color:var(--gold);font-weight:800;font-size:11px;letter-spacing:1.5px">DECEPTION GRID ADAPTIF</div>
-        <div style="color:var(--mu);font-size:10px;font-weight:700">UNTUK PERTAHANAN IT/OT SATUAN TNI AD</div>
+        <h2 style="margin:0;color:#fff;font-size:17px;font-weight:900;letter-spacing:1px">WAYANG C4ISR DECEPTION GRID</h2>
+        <div style="color:var(--gold);font-weight:800;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase">Pertahanan Adaptif IT/OT Komando Teritorial TNI AD</div>
         <div style="margin-top:6px;font-style:italic;color:var(--ivory);font-size:11.5px">“Mengelabuhi Penyerang, Melindungi Aset Nyata”</div>
       </div>
     </div>
     
-    <h4 style="margin:12px 0 6px;color:var(--gold);border-bottom:1px solid var(--ln);padding-bottom:4px">Makna &amp; Filosofi Logo:</h4>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px">
-      <div style="background:var(--pn2);padding:8px 10px;border-radius:4px;border-left:3px solid var(--gold)">
-        <b>🎭 Filosofi Wayang</b><br>
-        <span style="color:var(--mu)">Melambangkan strategi, ketelitian, dan kebijaksanaan kepemimpinan taktis.</span>
+    <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px">4 Pilar Filosofi Desain:</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
+      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--gold)">
+        <b style="color:var(--gold)">Filosofi Wayang</b><br>
+        <span style="color:var(--ivory-dim)">Strategi pengelabuan taktis, ketelitian dalang, dan adaptasi skenario bayangan berlapis.</span>
       </div>
-      <div style="background:var(--pn2);padding:8px 10px;border-radius:4px;border-left:3px solid var(--tech)">
-        <b>⚡ Sistem Siber</b><br>
-        <span style="color:var(--mu)">Melambangkan pertahanan digital, jaringan sirkuit, dan teknologi modern.</span>
+      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--tech)">
+        <b style="color:var(--tech)">Sistem Siber Modern</b><br>
+        <span style="color:var(--ivory-dim)">Perlindungan protokol industri SCADA/ICS OT (Modbus, DNP3, IEC 60870) secara terdistribusi.</span>
       </div>
-      <div style="background:var(--pn2);padding:8px 10px;border-radius:4px;border-left:3px solid var(--ok)">
-        <b>🛡️ Perisai Keamanan</b><br>
-        <span style="color:var(--mu)">Melambangkan proteksi kokoh dan isolasi aman terhadap aset kritis IT/OT.</span>
+      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--emerald)">
+        <b style="color:var(--emerald)">Perisai Keamanan (Shield)</b><br>
+        <span style="color:var(--ivory-dim)">Isolasi mutlak tanpa kompromi (0-write ke fisik) menjamin integritas aset strategis pangkalan.</span>
       </div>
-      <div style="background:var(--pn2);padding:8px 10px;border-radius:4px;border-left:3px solid var(--rd)">
-        <b>🇮🇩 Kearifan Nusantara</b><br>
-        <span style="color:var(--mu)">Menegaskan kedaulatan identitas lokal yang berakar pada nilai luhur budaya Indonesia.</span>
+      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--crimson)">
+        <b style="color:var(--crimson)">Kearifan Nusantara</b><br>
+        <span style="color:var(--ivory-dim)">Kedaulatan teknologi karya bangsa Indonesia untuk menjaga keutuhan NKRI.</span>
       </div>
     </div>
 
-    <h4 style="margin:14px 0 6px;color:var(--gold);border-bottom:1px solid var(--ln);padding-bottom:4px">Palet Warna Resmi:</h4>
-    <div style="display:flex;gap:10px;font-size:10.5px">
-      <div style="flex:1;background:#0B1F44;border:1px solid rgba(255,255,255,0.2);padding:6px;border-radius:4px;text-align:center">
-        <b>Navy Blue</b><br><code>#0B1F44</code><br><small style="color:var(--mu)">Keamanan</small>
+    <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:14px 0 6px">Palet Warna Standar Militer:</div>
+    <div style="display:flex;gap:8px;font-size:10px">
+      <div style="flex:1;background:#0B1F44;border:1px solid rgba(255,255,255,0.2);padding:6px;border-radius:3px;text-align:center">
+        <b>Navy Blue</b><br><code>#0B1F44</code><br><span style="color:var(--ivory-muted)">Keamanan</span>
       </div>
-      <div style="flex:1;background:#D4AF37;color:#000;padding:6px;border-radius:4px;text-align:center">
-        <b>Gold</b><br><code>#D4AF37</code><br><small>Kemuliaan</small>
+      <div style="flex:1;background:#D4AF37;color:#000;padding:6px;border-radius:3px;text-align:center">
+        <b>Gold</b><br><code>#D4AF37</code><br><span>Kemuliaan</span>
       </div>
-      <div style="flex:1;background:#F8F9FA;color:#000;padding:6px;border-radius:4px;text-align:center">
-        <b>Ivory</b><br><code>#F8F9FA</code><br><small>Kejelasan</small>
+      <div style="flex:1;background:#F8F9FA;color:#000;padding:6px;border-radius:3px;text-align:center">
+        <b>Ivory</b><br><code>#F8F9FA</code><br><span>Kejelasan</span>
       </div>
-      <div style="flex:1;background:#2E6BFF;color:#fff;padding:6px;border-radius:4px;text-align:center">
-        <b>Tech Blue</b><br><code>#2E6BFF</code><br><small>Inovasi</small>
+      <div style="flex:1;background:#2E6BFF;color:#fff;padding:6px;border-radius:3px;text-align:center">
+        <b>Tech Blue</b><br><code>#2E6BFF</code><br><span>Inovasi</span>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MODAL PACKET INSPECTOR (WIRESHARK-STYLE) -->
+<!-- MODAL DEEP PACKET INSPECTOR (WIRESHARK-STYLE) -->
 <div class="modal-overlay" id="modal-dpi" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-card">
     <div class="modal-head">
-      <h3>🔍 Deep Packet Inspector (Modbus/TCP Frame Dissector)</h3>
-      <button onclick="$('modal-dpi').style.display='none'">Tutup [ESC]</button>
+      <div class="modal-title">Deep Packet Inspector (Modbus/TCP Frame Dissector)</div>
+      <button class="hud-btn" onclick="$('modal-dpi').style.display='none'">✕ Tutup</button>
     </div>
-    <div id="packet-details">Memuat paket...</div>
+    <div id="packet-details">Memuat frame paket...</div>
   </div>
 </div>
 
-<!-- MODAL MERKLE PROOF -->
+<!-- MODAL MERKLE PROOF RFC 6962 -->
 <div class="modal-overlay" id="modal-merkle" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-card">
     <div class="modal-head">
-      <h3>🛡️ Pembuktian Kriptografis RFC 6962 Merkle Tree</h3>
-      <button onclick="$('modal-merkle').style.display='none'">Tutup [ESC]</button>
+      <div class="modal-title">Pembuktian Kriptografis RFC 6962 Merkle Tree</div>
+      <button class="hud-btn" onclick="$('modal-merkle').style.display='none'">✕ Tutup</button>
     </div>
     <div id="merkle-details">Memverifikasi pohon Merkle...</div>
   </div>
 </div>
 
+<!-- ==========================================================================
+     CORE OPERATIONAL SCRIPTS & WEBSOCKET ENGINE
+     ========================================================================== -->
 <script src="/static/leaflet.js"></script>
 <script src="/static/echarts.min.js"></script>
 <script>
-const $=id=>document.getElementById(id), J=(u,o)=>fetch(u,o).then(r=>r.json());
+const $ = id => document.getElementById(id), J = (u, o) => fetch(u, o).then(r => r.json());
 let curSat = 'KODAM-IV-Diponegoro';
 let audioEnabled = false;
 let audioCtx = null;
 let attackVectorsLayer = null;
 
-function openAboutModal(){
+function openAboutModal() {
   $('modal-about').style.display = 'flex';
 }
 
-// Jam Digital Taktis (WIB)
-function updateClock(){
+function switchRailTab(tabId, btn) {
+  ['stream', 'attck', 'dec', 'ses'].forEach(t => {
+    const el = $('tab-pane-' + t);
+    if(el) el.style.display = (t === tabId) ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.rail-tab-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+// Precision Military Clocks (WIB & UTC)
+function updateClock() {
   const now = new Date();
-  const wibTime = new Intl.DateTimeFormat('id-ID', {
+  const wib = new Intl.DateTimeFormat('id-ID', {
     timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   }).format(now);
-  $('clock-wib').innerText = `WIB ${wibTime}`;
+  const utc = now.toISOString().substring(11, 19);
+  $('clock-wib').innerText = wib;
+  $('clock-utc').innerText = utc + 'Z';
 }
 setInterval(updateClock, 1000); updateClock();
 
-function toggleAudio(){
+// Audio Tactical Feedback Engine
+function toggleAudio() {
   audioEnabled = !audioEnabled;
-  $('btn-audio').innerText = audioEnabled ? '🔊 Audio AKTIF' : '🔇 Audio';
-  $('btn-audio').style.color = audioEnabled ? 'var(--ok)' : 'var(--tx)';
-  if(audioEnabled && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  $('btn-audio').style.color = audioEnabled ? 'var(--emerald)' : 'var(--ivory)';
+  $('btn-audio').style.borderColor = audioEnabled ? 'var(--emerald)' : 'var(--border-navy)';
+  if (audioEnabled && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
-function playTacticalBeep(freq=880, type='sine', dur=0.15){
-  if(!audioEnabled || !audioCtx) return;
-  try{
+function playTacticalBeep(freq = 880, type = 'sine', dur = 0.12) {
+  if (!audioEnabled || !audioCtx) return;
+  try {
     const osc = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     osc.type = type; osc.frequency.value = freq;
@@ -477,75 +1386,91 @@ function playTacticalBeep(freq=880, type='sine', dur=0.15){
     g.gain.setValueAtTime(0.12, audioCtx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
     osc.start(); osc.stop(audioCtx.currentTime + dur);
-  }catch(e){}
+  } catch (e) {}
 }
 
-function changeDefcon(val){
+// DEFCON Stepped Threat Level Selector
+function changeDefcon(val) {
+  document.querySelectorAll('.defcon-step').forEach(btn => {
+    btn.className = 'defcon-step';
+    if(btn.innerText.trim() === val) {
+      btn.classList.add('active-' + val);
+    }
+  });
+  $('defcon-select').value = val;
+
   const h = $('main-header');
-  if(val === '1'){
-    h.style.boxShadow = '0 0 25px rgba(239,68,68,0.7)';
+  if (val === '1') {
+    h.style.boxShadow = '0 0 25px rgba(239, 68, 68, 0.7)';
     playTacticalBeep(440, 'sawtooth', 0.4);
-  } else if(val === '2'){
-    h.style.boxShadow = '0 0 18px rgba(212,175,55,0.6)';
+  } else if (val === '2') {
+    h.style.boxShadow = '0 0 18px rgba(245, 158, 11, 0.6)';
   } else {
-    h.style.boxShadow = '0 2px 15px rgba(11,31,68,0.5)';
+    h.style.boxShadow = '0 2px 16px rgba(0,0,0,0.6)';
   }
 }
 
-// Inisialisasi Peta Leaflet Taktis dengan ESRI World Dark Gray Canvas
-const map = L.map('map',{zoomControl:true,attributionControl:false}).setView([-7.1, 109.8], 7);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
-  maxZoom: 16,
-  attribution: 'ESRI World Dark Gray'
+// Autonomy Selector UI Sync
+function setAutonomyUI(lvl) {
+  document.querySelectorAll('.autonomy-opt').forEach((b, idx) => {
+    b.classList.toggle('active', idx === lvl);
+  });
+  $('lvl').value = lvl;
+  post('/api/autonomy', { level: lvl });
+}
+
+// Initialize ESRI World Dark Gray Tactical Map
+const map = L.map('map', { zoomControl: true, attributionControl: false }).setView([-7.1, 109.8], 7);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 16, attribution: 'ESRI Mil-Dark'
 }).addTo(map);
 
-// Lingkar Pantau Radar Militer (100km & 180km)
-L.circle([-6.1754, 106.8272], {radius: 120000, color: 'rgba(46, 107, 255, 0.3)', weight: 1.5, fill: false, dashArray: '4, 8'}).addTo(map);
-L.circle([-7.8014, 110.3647], {radius: 120000, color: 'rgba(212, 175, 55, 0.3)', weight: 1.5, fill: false, dashArray: '4, 8'}).addTo(map);
+// Military Radar Surveillance Perimeter Rings (120 km)
+L.circle([-6.1754, 106.8272], { radius: 120000, color: 'rgba(46, 107, 255, 0.35)', weight: 1.5, fill: false, dashArray: '4, 8' }).addTo(map);
+L.circle([-7.8014, 110.3647], { radius: 120000, color: 'rgba(212, 175, 55, 0.35)', weight: 1.5, fill: false, dashArray: '4, 8' }).addTo(map);
 
 const markers = {};
 attackVectorsLayer = L.layerGroup().addTo(map);
 
-const cls = s => s.startsWith('Kampanye')?'Kampanye':s.startsWith('Tipuan')?'Tipuan':'Aman';
-const col = {Aman:'#10b981', Tipuan:'#D4AF37', Kampanye:'#ef4444'};
-const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cls = s => s.startsWith('Kampanye') ? 'Kampanye' : s.startsWith('Tipuan') ? 'Tipuan' : 'Aman';
+const col = { Aman: '#10B981', Tipuan: '#D4AF37', Kampanye: '#EF4444' };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-async function post(u, b){
+async function post(u, b) {
   const res = await fetch(u, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: b ? JSON.stringify(b) : undefined
   });
-  try { const j = await res.json(); refresh(); return j; } catch(e){ refresh(); return {}; }
+  try { const j = await res.json(); refresh(); return j; } catch (e) { refresh(); return {}; }
 }
 
-async function sim(type){
+async function sim(type) {
   const t = $('toast');
-  t.style.display = 'block'; t.style.borderColor = 'var(--tech)'; t.style.color = 'var(--tech)';
-  t.innerHTML = '⏳ Menjalankan injeksi simulasi penyerang...';
+  t.style.display = 'block';
+  t.innerHTML = 'Memproses injeksi simulasi penyerang siber...';
   playTacticalBeep(650, 'triangle', 0.1);
-  try{
+  try {
     const r = await post('/api/simulate/' + type);
-    t.innerHTML = '🛡️ ' + (r.msg || 'Simulasi berhasil dijalankan');
-    t.style.borderColor = 'var(--ok)'; t.style.color = 'var(--ok)';
+    t.innerHTML = 'Tindakan Selesai: ' + (r.msg || 'Simulasi berhasil ditangani panggung bayangan.');
     playTacticalBeep(type === 't2' ? 1200 : 900, 'sine', 0.25);
-  }catch(e){
+  } catch (e) {
     t.innerHTML = 'Simulasi diproses.';
   }
-  setTimeout(()=>{ t.style.display = 'none'; }, 6000);
+  setTimeout(() => { t.style.display = 'none'; }, 5000);
   refresh();
 }
 
-async function lockdownCurrent(){
-  if(!confirm(`Apakah Anda yakin ingin me-LOCKDOWN pangkalan ${curSat}? Semua perintah OT eksternal akan diisolasi!`)) return;
+async function lockdownCurrent() {
+  if (!confirm(`Konfirmasi Lockdown: Apakah Anda yakin ingin mengisolasi seluruh interaksi OT pada pangkalan ${curSat}?`)) return;
   const r = await post(`/api/tactical/lockdown/${curSat}`);
-  alert(r.msg || 'Pangkalan berhasil di-lockdown!');
+  alert(r.msg || 'Pangkalan berhasil diisolasi!');
   refresh();
 }
 
-// Render Tactical Twin-Screen dengan Palet Resmi
-async function refreshTwin(){
-  try{
+// Render SCADA Tactical Twin-Screen
+async function refreshTwin() {
+  try {
     const tw = await J(`/api/twinscreen/${curSat}`);
     const a = tw.aset_asli, p = tw.panggung_bayangan;
     $('twin-sat').innerText = tw.nama_satuan || curSat;
@@ -556,78 +1481,90 @@ async function refreshTwin(){
     const shadowPumpRunning = p.pompa_status.includes('AKTIF');
 
     $('twin-view').innerHTML = `
-      <div class="twin-box" style="border-left:4px solid var(--tech)">
-        <div class="twin-head">
-          <span class="twin-title" style="color:var(--tech)">🟢 ASET ASLI FISIK (OT NYATA)</span>
-          <span class="b Aman">${a.status}</span>
+      <div class="scada-panel real">
+        <div class="scada-head">
+          <span class="scada-title" style="color:var(--tech)">Aset Fisik Nyata (OT Terlindungi)</span>
+          <span class="unit-status-pill status-aman">${a.status}</span>
         </div>
-        <div class="twin-body">
-          <div class="tank-visual">
-            <div class="tank-fluid" style="height:${realLevelPct}%">
-              <div class="tank-wave"></div>
+        <div class="scada-content">
+          <div class="scada-tank-wrap">
+            <div class="scada-tank-ruler">
+              <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+            </div>
+            <div class="scada-fluid" style="height:${realLevelPct}%">
+              <div class="scada-fluid-wave"></div>
             </div>
           </div>
-          <div style="flex:1">
-            <div class="stat-val" style="color:var(--cyan)">${a.tangki_level_l.toLocaleString()} <span style="font-size:12px;color:var(--mu)">/ ${a.tangki_kapasitas_l.toLocaleString()} L (${realLevelPct.toFixed(1)}%)</span></div>
-            <div class="stat-sub">
-              <span class="impeller ${pumpRunning ? '' : 'stopped'}"></span>
-              Pompa: <b>${a.pompa_status}</b> · Tekanan: <b>${a.tekanan_bar} Bar</b> · Suhu: <b>${a.suhu_c}°C</b>
+          <div class="scada-metrics">
+            <div class="metric-row-big">
+              <span class="metric-val mono">${a.tangki_level_l.toLocaleString()}</span>
+              <span class="metric-max mono">/ ${a.tangki_kapasitas_l.toLocaleString()} L (${realLevelPct.toFixed(1)}%)</span>
             </div>
-            <div style="margin-top:8px;font-size:11px;color:var(--ok);font-weight:700">
-              🛡️ Manipulasi Bahaya Diteruskan: <b>${a.perintah_bahaya_diterima}</b> (${a.integritas})
+            <div class="scada-submetrics">
+              <span class="impeller-wheel ${pumpRunning ? '' : 'stopped'}"></span>
+              <span>Pompa: <b>${a.pompa_status}</b> · ${a.tekanan_bar} Bar · ${a.suhu_c}°C</span>
+            </div>
+            <div class="scada-audit-pill" style="color:var(--emerald)">
+              Integritas Aset: <b>${a.integritas}</b> · Manipulasi Diteruskan: <b>${a.perintah_bahaya_diterima} (0-Harm)</b>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="twin-box" style="border-left:4px solid var(--gold)">
-        <div class="twin-head">
-          <span class="twin-title" style="color:var(--gold)">🟡 PANGGUNG BAYANGAN KEMBAR (DECOY GRID)</span>
-          <span class="b Tipuan">${p.status}</span>
+      <div class="scada-panel shadow">
+        <div class="scada-head">
+          <span class="scada-title" style="color:var(--gold)">Panggung Bayangan (Decoy Sandbox)</span>
+          <span class="unit-status-pill status-tipuan">${p.status}</span>
         </div>
-        <div class="twin-body">
-          <div class="tank-visual">
-            <div class="tank-fluid shadow-fluid" style="height:${shadowLevelPct}%">
-              <div class="tank-wave"></div>
+        <div class="scada-content">
+          <div class="scada-tank-wrap">
+            <div class="scada-tank-ruler">
+              <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+            </div>
+            <div class="scada-fluid gold" style="height:${shadowLevelPct}%">
+              <div class="scada-fluid-wave"></div>
             </div>
           </div>
-          <div style="flex:1">
-            <div class="stat-val" style="color:var(--gold)">${p.tangki_level_l.toLocaleString()} <span style="font-size:12px;color:var(--mu)">/ ${p.tangki_kapasitas_l.toLocaleString()} L (${shadowLevelPct.toFixed(1)}%)</span></div>
-            <div class="stat-sub">
-              <span class="impeller ${shadowPumpRunning ? '' : 'stopped'}"></span>
-              Pompa: <b style="color:${shadowPumpRunning ? 'var(--ok)' : 'var(--rd)'}">${p.pompa_status}</b> · Tekanan: <b>${p.tekanan_bar} Bar</b>
+          <div class="scada-metrics">
+            <div class="metric-row-big">
+              <span class="metric-val mono" style="color:var(--gold)">${p.tangki_level_l.toLocaleString()}</span>
+              <span class="metric-max mono">/ ${p.tangki_kapasitas_l.toLocaleString()} L (${shadowLevelPct.toFixed(1)}%)</span>
             </div>
-            <div style="margin-top:8px;font-size:11px;color:var(--gold);font-weight:700">
-              🎯 Manipulasi Ditangkap: <b>${p.perintah_bahaya_ditangkap} (Log-Only)</b> · Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
+            <div class="scada-submetrics">
+              <span class="impeller-wheel ${shadowPumpRunning ? '' : 'stopped'}"></span>
+              <span>Umpan Pompa: <b style="color:${shadowPumpRunning ? 'var(--emerald)' : 'var(--crimson)'}">${p.pompa_status}</b> · ${p.tekanan_bar} Bar</span>
+            </div>
+            <div class="scada-audit-pill" style="color:var(--gold)">
+              Perangkap Aktif: <b>${p.perintah_bahaya_ditangkap} Ditangkap</b> · Penyesuaian Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
             </div>
           </div>
         </div>
       </div>
     `;
-  }catch(e){}
+  } catch (e) {}
 }
 
-// Buka Modal Deep Packet Inspector
-async function openPacketModal(){
+// Deep Packet Inspector (Wireshark-Style)
+async function openPacketModal() {
   $('modal-dpi').style.display = 'flex';
   const el = $('packet-details');
-  el.innerHTML = '<span style="color:var(--mu)">Memuat diseksi frame paket...</span>';
-  try{
+  el.innerHTML = '<span style="color:var(--ivory-muted)">Mengekstrak frame raw Modbus/TCP...</span>';
+  try {
     const pkts = await J('/api/packets/recent');
-    if(!pkts || !pkts.length){
-      el.innerHTML = '<p>Belum ada paket Modbus/TCP yang ditangkap oleh Kelir DPI.</p>';
+    if (!pkts || !pkts.length) {
+      el.innerHTML = '<p style="color:var(--ivory-muted)">Belum ada frame paket Modbus yang tercatat.</p>';
       return;
     }
     const p = pkts[0];
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div><b>ID Paket:</b> <span style="color:var(--cyan)">${esc(p.id)}</span></div>
-        <div><b>Sumber:</b> <span style="color:var(--gold)">${esc(p.src_ip || p.src)}</span></div>
-        <div><b>Satuan Sasaran:</b> ${esc(p.satuan)}</div>
-        <div><b>Alat Terdeteksi:</b> <span class="b Tipuan" style="font-size:11px">${esc(p.tool_detected)}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;background:#050E1F;padding:10px;border-radius:3px;border:1px solid var(--border-navy)">
+        <div><b>ID Frame:</b> <span class="mono" style="color:var(--cyan)">${esc(p.id)}</span></div>
+        <div><b>Alamat Sumber IP:</b> <span class="mono" style="color:var(--gold)">${esc(p.src_ip || p.src)}</span></div>
+        <div><b>Satuan Target:</b> ${esc(p.satuan)}</div>
+        <div><b>Sidik Jari Alat Penyerang:</b> <span class="unit-status-pill status-tipuan">${esc(p.tool_detected)}</span></div>
       </div>
-      <h4 style="margin:8px 0 4px;color:var(--gold)">Diseksi Header MBAP (Modbus Application Protocol):</h4>
-      <table style="margin-bottom:10px">
+      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Diseksi Header MBAP (Modbus Application Protocol):</div>
+      <table class="c4-table mono" style="margin-bottom:12px">
         <tr><th>Transaction ID</th><th>Protocol ID</th><th>Length</th><th>Unit ID</th><th>Function Code</th></tr>
         <tr>
           <td>${p.mbap.transaction_id || 1}</td>
@@ -637,236 +1574,263 @@ async function openPacketModal(){
           <td><b style="color:var(--gold)">FC 0${p.pdu.function_code || 3}</b></td>
         </tr>
       </table>
-      <h4 style="margin:8px 0 4px;color:var(--gold)">Raw Packet Hex Dump &amp; ASCII:</h4>
+      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Raw Packet Hex Dump &amp; ASCII Sidebar:</div>
       <div class="hex-view">0000   00 0A 00 00 00 06 01 06 75 31 27 0F   ........u1'.
-000C   [CRC / MBAP VALID - INTERCEPTED BY KELIR PROXY]</div>
+000C   [MBAP VALID - INTERCEPTED AND LOGGED BY KELIR PROXY]</div>
     `;
-  }catch(e){
-    el.innerHTML = '<p style="color:var(--rd)">Gagal mengambil data paket.</p>';
+  } catch (e) {
+    el.innerHTML = '<p style="color:var(--crimson)">Gagal mengambil data paket.</p>';
   }
 }
 
-// Buka Modal Merkle Tree
-async function openMerkleModal(){
+// RFC 6962 Merkle Tree Audit Modal
+async function openMerkleModal() {
   $('modal-merkle').style.display = 'flex';
   const el = $('merkle-details');
-  el.innerHTML = '<span style="color:var(--mu)">Menghitung dan memverifikasi jalur pohon Merkle RFC 6962...</span>';
-  try{
+  el.innerHTML = '<span style="color:var(--ivory-muted)">Menghitung pohon Merkle RFC 6962...</span>';
+  try {
     const m = await J(`/api/chain/${curSat}/merkle`);
     el.innerHTML = `
-      <div style="margin-bottom:12px">
-        <div><b>Satuan Pangkalan:</b> <span style="color:var(--cyan)">${esc(m.satuan)}</span></div>
-        <div><b>Status Verifikasi:</b> <span class="b Aman">TERVERIFIKASI (VALID RFC 6962)</span></div>
-        <div><b>Total Daun (Audit Events):</b> ${m.total_leaves} events</div>
+      <div style="margin-bottom:12px;background:#050E1F;padding:10px;border-radius:3px;border:1px solid var(--border-navy)">
+        <div><b>Pangkalan:</b> <span class="mono" style="color:var(--cyan)">${esc(m.satuan)}</span></div>
+        <div style="margin-top:2px"><b>Status Integritas:</b> <span class="unit-status-pill status-aman">TERVERIFIKASI (VALID RFC 6962)</span></div>
+        <div style="margin-top:2px"><b>Total Daun Bukti Forensik:</b> ${m.total_leaves} kejadian audit</div>
       </div>
-      <h4 style="margin:8px 0 4px;color:var(--gold)">Merkle Root Hash (SHA-256):</h4>
+      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Merkle Root Hash (SHA-256):</div>
       <div class="hex-view">${esc(m.merkle_root)}</div>
-      <h4 style="margin:10px 0 4px;color:var(--gold)">Tanda Tangan Kriptografis HMAC Pangkalan:</h4>
+      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:10px 0 4px">Tanda Tangan Kriptografis Pangkalan (HMAC-SHA256):</div>
       <div class="hex-view">${esc(m.signature)}</div>
-      <p style="margin-top:10px;font-size:11px;color:var(--mu)">
-        Jalur audit Merkle Tree ini menjamin keabsahan seluruh kronologi serangan siber di hadapan sidang audit pengadilan militer tanpa kemungkinan penyangkalan (*Non-Repudiation*).
+      <p style="margin-top:10px;font-size:10.5px;color:var(--ivory-muted);line-height:1.4">
+        Jalur audit Merkle Tree ini menjamin keabsahan seluruh kronologi insiden siber untuk pembuktian forensik di hadapan audit militer tanpa kemungkinan penyangkalan (*Non-Repudiation*).
       </p>
     `;
-  }catch(e){
-    el.innerHTML = '<p style="color:var(--rd)">Gagal mengambil bukti Merkle.</p>';
+  } catch (e) {
+    el.innerHTML = '<p style="color:var(--crimson)">Gagal mengambil bukti Merkle.</p>';
   }
 }
 
-// Render Matriks MITRE ATT&CK for ICS
+// MITRE ATT&CK for ICS Matrix
 const ICS_TACTICS = [
-  {title: 'Initial Access', cells: [{id:'T0817', n:'Drive-by'}, {id:'T0819', n:'Exploit App'}, {id:'T0886', n:'Remote Svcs'}]},
-  {title: 'Execution', cells: [{id:'T0807', n:'Command CLI'}, {id:'T0823', n:'GUI Script'}]},
-  {title: 'Discovery', cells: [{id:'T0840', n:'Network Scan'}, {id:'T0846', n:'Sequential Scan'}, {id:'T0888', n:'Device ID'}]},
-  {title: 'Collection', cells: [{id:'T0801', n:'Process Data'}, {id:'T0802', n:'Automated Poll'}, {id:'T0861', n:'Point Read'}]},
-  {title: 'Impair Control', cells: [{id:'T0855', n:'Unauthorized Write'}, {id:'T0836', n:'Modify Param'}, {id:'T0831', n:'Manipulation'}]}
+  { title: 'Initial Access', cells: [{ id: 'T0817', n: 'Drive-by' }, { id: 'T0819', n: 'Exploit App' }, { id: 'T0886', n: 'Remote Svcs' }] },
+  { title: 'Execution', cells: [{ id: 'T0807', n: 'Command CLI' }, { id: 'T0823', n: 'GUI Script' }] },
+  { title: 'Discovery', cells: [{ id: 'T0840', n: 'Network Scan' }, { id: 'T0846', n: 'Seq Scan' }, { id: 'T0888', n: 'Device ID' }] },
+  { title: 'Collection', cells: [{ id: 'T0801', n: 'Process Data' }, { id: 'T0802', n: 'Auto Poll' }, { id: 'T0861', n: 'Point Read' }] },
+  { title: 'Impair Control', cells: [{ id: 'T0855', n: 'Unauth Write' }, { id: 'T0836', n: 'Modify Param' }, { id: 'T0831', n: 'Manipulation' }] }
 ];
 
-function renderMatrix(activeTechs=[]){
+function renderMatrix(activeTechs = []) {
   $('attck-matrix').innerHTML = ICS_TACTICS.map(col => `
     <div class="attck-col">
       <div class="attck-col-title">${esc(col.title)}</div>
       ${col.cells.map(c => {
         const isActive = activeTechs.includes(c.id);
-        const isDanger = ['T0855','T0836','T0831'].includes(c.id) && isActive;
+        const isDanger = ['T0855', 'T0836', 'T0831'].includes(c.id) && isActive;
         return `<div class="attck-cell ${isDanger ? 'danger' : (isActive ? 'active' : '')}">
           <span>${c.id}</span>
-          <span style="font-weight:400;font-size:9px">${c.n}</span>
+          <span style="font-size:8px;font-weight:400">${c.n}</span>
         </div>`;
       }).join('')}
     </div>
   `).join('');
 }
 
-async function openSes(sat, id){
+async function openSes(sat, id) {
   curSat = sat;
   const r = await J(`/api/replay/${sat}/${id}`);
   const allTechs = r.flatMap(e => e.techniques || []);
   renderMatrix(allTechs);
 
   $('replay').innerHTML = r.map(e => `
-    <div style="padding:4px 0;border-bottom:1px solid var(--ln);cursor:pointer" onclick="openPacketModal()">
-      <b style="color:var(--cyan)">+${e.t}s</b> 
-      <span class="b Tipuan">L${e.depth}</span> 
-      <b>${esc(e.action)}</b> 
-      <span style="color:var(--mu)">${esc(JSON.stringify(e.target||''))}</span>
-      <span style="color:var(--gold)">[${esc((e.techniques||[]).join(', '))}]</span>
+    <div style="padding:4px 0;border-bottom:1px solid var(--border-subtle);cursor:pointer" onclick="openPacketModal()">
+      <span style="color:var(--cyan)">+${e.t}s</span>
+      <span class="unit-status-pill status-tipuan" style="font-size:8px">L${e.depth}</span>
+      <b>${esc(e.action)}</b>
+      <span style="color:var(--ivory-muted)">${esc(JSON.stringify(e.target || ''))}</span>
+      <span style="color:var(--gold)">[${esc((e.techniques || []).join(', '))}]</span>
     </div>
   `).join('') + `
-    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--ln)">
-      📄 <a href="/api/report/${sat}/${id}.docx" style="font-weight:700;color:var(--gold)">Unduh BAP-FD Sesi Ini (.docx)</a> · 
-      <a href="/api/report/${sat}/${id}.html" target="_blank" style="color:var(--tech)">Lihat HTML</a>
+    <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-navy);font-size:10px">
+      <a href="/api/report/${sat}/${id}.docx" style="font-weight:700;color:var(--gold);text-decoration:none">Unduh BAP-FD Sesi Ini (.docx)</a> · 
+      <a href="/api/report/${sat}/${id}.html" target="_blank" style="color:var(--tech);text-decoration:none">Lihat HTML</a>
     </div>
   `;
   refreshTwin();
 }
 
-// Refresh Data Utama
-async function refresh(){
+// Refresh Main State
+async function refresh() {
   const [m, c, d, s, h, a, b, r, pers, vecs, evts] = await Promise.all([
     'map', 'campaigns', 'decisions', 'sessions', 'heatmap', 'autonomy',
     'bot', 'recon', 'personas', 'map/vectors', 'events/recent'
-  ].map(x => J('/api/' + x).catch(()=>[])));
+  ].map(x => J('/api/' + x).catch(() => [])));
 
-  // 1. Render Peta Satuan
-  if(Array.isArray(m)){
+  // 1. Render Territorial Command Nodes List
+  if (Array.isArray(m)) {
+    $('territory-nodes').innerHTML = m.map(u => {
+      const k = cls(u.status);
+      const isSelected = (u.satuan === curSat);
+      const statusClass = k === 'Kampanye' ? 'status-kampanye' : (k === 'Tipuan' ? 'status-tipuan' : 'status-aman');
+      return `
+        <div class="unit-card ${isSelected ? 'selected' : ''}" onclick="selectSatuan('${u.satuan}')">
+          <div class="unit-top">
+            <span class="unit-name">${esc(u.satuan)}</span>
+            <span class="unit-status-pill ${statusClass}">${esc(u.status)}</span>
+          </div>
+          <div class="unit-role">${esc(u.role || '')}</div>
+          <div class="unit-meta">
+            <span>${esc(u.comm_link || 'Link Taktis')}</span>
+            <span class="mono">${u.touches || 0} sentuhan</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Update Map Markers
     m.forEach(u => {
       const k = cls(u.status);
       const rad = u.level === 'MABES' ? 14 : 11;
-      const markerColor = col[k] || '#10b981';
+      const markerColor = col[k] || '#10B981';
 
-      if(markers[u.satuan]){
-        markers[u.satuan].setStyle({color: markerColor, fillColor: markerColor});
+      if (markers[u.satuan]) {
+        markers[u.satuan].setStyle({ color: markerColor, fillColor: markerColor });
       } else {
         const marker = L.circleMarker([u.lat, u.lon], {
-          radius: rad, color: markerColor, fillColor: markerColor, fillOpacity: 0.7, weight: 2
+          radius: rad, color: markerColor, fillColor: markerColor, fillOpacity: 0.75, weight: 2
         }).addTo(map);
-        
-        marker.bindTooltip(`<b>${u.satuan}</b><br><small>${u.role || ''}</small>`, {permanent: false, direction: 'top'});
-        marker.on('click', ()=>{
-          curSat = u.satuan;
-          refreshTwin();
-        });
+
+        marker.bindTooltip(`<b>${u.satuan}</b><br><small>${u.role || ''}</small>`, { permanent: false, direction: 'top' });
+        marker.on('click', () => { selectSatuan(u.satuan); });
         markers[u.satuan] = marker;
       }
     });
-
-    $('units').innerHTML = m.map(u => `
-      <span class="b ${cls(u.status)}" style="cursor:pointer" onclick="curSat='${u.satuan}';refreshTwin()">
-        ${u.level === 'MABES' ? '🎖️' : '🛡️'} ${esc(u.satuan)} · ${esc(u.status)}
-      </span>
-    `).join('');
   }
 
-  // 2. Render Vektor Kampanye
+  // 2. Render APT Campaign Vectors
   attackVectorsLayer.clearLayers();
-  if(Array.isArray(vecs)){
+  if (Array.isArray(vecs)) {
     vecs.forEach(v => {
       const latlngs = [[v.from_lat, v.from_lon], [v.to_lat, v.to_lon]];
       const line = L.polyline(latlngs, {
-        color: '#ef4444', weight: 3, opacity: 0.8, dashArray: '6, 6'
+        color: '#EF4444', weight: 2.5, opacity: 0.85, dashArray: '6, 6'
       }).addTo(attackVectorsLayer);
-      line.bindTooltip(`🚨 Vektor Serangan APT: ${esc(v.from_satuan)} ➔ ${esc(v.to_satuan)} (${esc(v.bukti)})`);
+      line.bindTooltip(`Vektor Serangan APT: ${esc(v.from_satuan)} ➔ ${esc(v.to_satuan)} (${esc(v.bukti)})`);
     });
   }
 
-  // 3. Kampanye Status
+  // 3. Campaign Bar
   $('camp').innerHTML = (c && c.length) ? c.map(x => `
-    <div style="border-left:3px solid var(--rd);padding:6px 10px;margin:6px 0;background:rgba(239,68,68,0.1);border-radius:4px">
-      <b style="color:var(--rd)">🚨 KAMPANYE TERKOORDINASI: ${esc(x.satuan.join(' ➔ '))}</b><br>
-      <small style="color:var(--mu)">Bukti Intelijen: <b>${esc(x.bukti)}</b> · ${esc(x.catatan)}</small>
+    <div style="color:var(--crimson);font-weight:700">
+      KAMPANYE TERKOORDINASI: ${esc(x.satuan.join(' ➔ '))} (Bukti: ${esc(x.bukti)})
     </div>
-  `).join('') : '<span style="color:var(--mu);font-size:11px">Belum terdeteksi kampanye lintas satuan aktif.</span>';
+  `).join('') : '<span style="color:var(--ivory-muted)">Belum terdeteksi kampanye lintas satuan aktif.</span>';
 
-  // 4. Keputusan Dalang (Approval Queue)
-  $('dec').innerHTML = (d && d.length) ? '<table><tr><th>ID</th><th>Sumber</th><th>Status</th><th>Tindakan Komando</th></tr>' + d.map(p => `
+  // 4. Dalang Approvals Queue
+  $('dec').innerHTML = (d && d.length) ? '<table class="c4-table"><tr><th>ID</th><th>Sumber IP</th><th>Status</th><th>Aksi</th></tr>' + d.map(p => `
     <tr>
-      <td><b>${esc(p.id)}</b><br><small style="color:var(--mu)">${esc(p.satuan)}</small></td>
-      <td><span style="color:var(--cyan);font-weight:700">${esc(p.src)}</span></td>
-      <td><span class="b ${p.status=='approved'?'Aman':'Tipuan'}">${p.status}</span></td>
-      <td>${p.status=='pending' ? `
-        <button class="g" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui Blokir (nftables)</button> 
-        <button onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>` : 
-        p.status=='approved' ? `<button class="d" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Cabut Blokir</button>` : ''}
+      <td><b>${esc(p.id)}</b><br><small style="color:var(--ivory-muted)">${esc(p.satuan)}</small></td>
+      <td><span class="mono" style="color:var(--cyan)">${esc(p.src)}</span></td>
+      <td><span class="unit-status-pill ${p.status === 'approved' ? 'status-aman' : 'status-tipuan'}">${p.status}</span></td>
+      <td>${p.status === 'pending' ? `
+        <button class="drill-btn" style="color:var(--emerald)" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui Blokir</button>
+        <button class="drill-btn" onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>` :
+        p.status === 'approved' ? `<button class="drill-btn danger" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Cabut</button>` : ''}
       </td>
     </tr>
-  `).join('') + '</table>' : '<span style="color:var(--mu);font-size:11px">Semua usulan blokir telah ditinjau.</span>';
+  `).join('') + '</table>' : '<span style="color:var(--ivory-muted);font-size:11px">Semua usulan blokir telah ditinjau.</span>';
 
-  // 5. Sesi Terpantau
-  $('ses').innerHTML = '<table><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap ATT&amp;CK</th><th>Level</th><th>Teknik Terdeteksi</th></tr>' + 
+  // 5. Tracked Sessions
+  $('ses').innerHTML = '<table class="c4-table"><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap</th><th>Level</th><th>Teknik</th></tr>' +
     s.slice(0, 10).map(x => `
       <tr style="cursor:pointer" onclick="openSes('${x.satuan}','${x.session}')">
-        <td><b>${esc(x.session)}</b><br><small style="color:var(--mu)">${esc(x.satuan)}</small></td>
-        <td><span style="color:var(--cyan)">${esc(x.src)}</span>${x.diverted ? ' <span class="b Tipuan">Dialihkan</span>' : ''}</td>
+        <td><b>${esc(x.session)}</b><br><small style="color:var(--ivory-muted)">${esc(x.satuan)}</small></td>
+        <td><span class="mono" style="color:var(--cyan)">${esc(x.src)}</span>${x.diverted ? ' <span class="unit-status-pill status-tipuan" style="font-size:8px">Bayangan</span>' : ''}</td>
         <td>${esc(x.stage)}</td>
-        <td>Level ${x.depth}</td>
-        <td><span style="color:var(--gold)">${esc((x.techniques||[]).join(', '))}</span></td>
+        <td>L${x.depth}</td>
+        <td><span style="color:var(--gold)">${esc((x.techniques || []).join(', '))}</span></td>
       </tr>
     `).join('') + '</table>';
 
-  // 6. Live Terminal Ticker
-  if(Array.isArray(evts) && evts.length){
+  // 6. Live Stream
+  if (Array.isArray(evts) && evts.length) {
     $('term-feed').innerHTML = evts.slice(0, 15).map(e => `
       <div class="term-line" onclick="openPacketModal()">
         <span class="term-ts">${new Date(e.ts * 1000).toLocaleTimeString()}</span>
         <span class="term-src">${esc(e.src)}</span>
         <span class="term-act">
           [<b>${esc(e.satuan)}</b>] ${esc(e.action || e.stage || 'Aktivitas Modbus')}
-          ${(e.techniques||[]).map(t => `<span class="term-tag" style="background:#311b1b;color:#f87171">${t}</span>`).join(' ')}
-          ${e.diverted ? '<span class="term-tag" style="background:rgba(212,175,55,0.15);color:var(--gold)">DIVERTED</span>' : ''}
+          ${(e.techniques || []).map(t => `<span class="term-tag" style="background:#2D1515;color:#FCA5A5">${t}</span>`).join(' ')}
+          ${e.diverted ? '<span class="term-tag" style="background:var(--gold-dim);color:var(--gold)">BAYANGAN</span>' : ''}
         </span>
       </div>
     `).join('');
   }
 
-  // 7. Otonomi & Bot
+  // 7. Autonomy Sync
   const lv = Object.values(a)[0];
-  if(lv && document.activeElement !== $('lvl')) $('lvl').value = lv.level;
+  if (lv && document.activeElement !== $('lvl')) {
+    $('lvl').value = lv.level;
+    document.querySelectorAll('.autonomy-opt').forEach((b, idx) => {
+      b.classList.toggle('active', idx === lv.level);
+    });
+  }
 
   refreshTwin();
 }
 
-// Sambungan WebSocket Realtime
-function initWebSocket(){
+function selectSatuan(sat) {
+  curSat = sat;
+  document.querySelectorAll('.unit-card').forEach(c => {
+    c.classList.toggle('selected', c.querySelector('.unit-name').innerText.trim() === sat);
+  });
+  refreshTwin();
+}
+
+// Realtime WebSocket Connection
+function initWebSocket() {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${proto}//${window.location.host}/ws/live`;
   const ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
-    $('live-text').innerText = 'REALTIME WEBSOCKET (0ms)';
-    $('live-indicator').style.borderColor = 'rgba(16,185,129,0.3)';
-    $('live-indicator').style.color = 'var(--ok)';
+    $('live-text').innerText = 'WSS 0ms';
+    $('live-indicator').style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    $('live-indicator').style.color = 'var(--emerald)';
   };
 
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
-      if(msg.type === 'telemetry_tick'){
-        if(msg.units && msg.units[curSat]){
+      if (msg.type === 'telemetry_tick') {
+        if (msg.units && msg.units[curSat]) {
           refreshTwin();
         }
-      } else if(msg.type === 'event'){
+      } else if (msg.type === 'event') {
         playTacticalBeep(920, 'square', 0.1);
         refresh();
       }
-    } catch(e){}
+    } catch (e) {}
   };
 
   ws.onclose = () => {
-    $('live-text').innerText = 'POLLING MODE (2.5s)';
-    $('live-indicator').style.borderColor = 'rgba(212,175,55,0.3)';
+    $('live-text').innerText = 'POLLING 2.5s';
+    $('live-indicator').style.borderColor = 'rgba(212, 175, 55, 0.4)';
     $('live-indicator').style.color = 'var(--gold)';
     setTimeout(initWebSocket, 4000);
   };
 }
 
-$('lvl').onchange = e => post('/api/autonomy', {level: +e.target.value});
+$('lvl').onchange = e => {
+  const v = +e.target.value;
+  setAutonomyUI(v);
+};
+
 $('kill').onclick = () => {
-  if(confirm('Aktifkan Saklar Darurat? Sistem akan mengembalikan seluruh pangkalan ke Level L0 Amati.')){
+  if (confirm('Failsafe Interlock: Kembalikan seluruh pangkalan ke Level L0 Amati?')) {
     post('/api/killswitch');
   }
 };
 
-renderMatrix(['T0801','T0840','T0855','T0888']);
+renderMatrix(['T0801', 'T0840', 'T0855', 'T0888']);
 initWebSocket();
 refresh();
 setInterval(refresh, 2500);
