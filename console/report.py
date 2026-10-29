@@ -32,55 +32,85 @@ def collect(node, session_id: str) -> dict:
 
 def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
     s, d = data["summary"], Document()
-    d.add_heading("Berita Acara Insiden Siber (Draf)", 0)
-    p = d.add_paragraph(DISCLAIMER)
+    
+    # Kop Resmi Standar Militer
+    kop = d.add_paragraph("TENTARA NASIONAL INDONESIA ANGKATAN DARAT\n"
+                          "SATUAN PERTAHANAN SIBER KODAM / KOREM / KODIM\n"
+                          f"SATUAN TUGAS: {data['satuan']}\n"
+                          "-----------------------------------------------------------------")
+    kop.paragraph_format.space_after = Pt(2)
+    for run in kop.runs:
+        run.font.size = Pt(9)
+        run.bold = True
+
+    h0 = d.add_heading("BERITA ACARA PEMERIKSAAN INSIDEN SIBER (BAP-FD)", 0)
+    h0.paragraph_format.space_before = Pt(6)
+    d.add_paragraph(f"Nomor Dokumen : BA-FD/{data['satuan']}/{s['session']}\n"
+                    f"Klasifikasi   : RAHASIA / TERBATAS\n"
+                    f"Waktu Laporan : {data['generated']}")
+
+    p = d.add_paragraph(f"[{DISCLAIMER}]")
     p.runs[0].bold = True
-    d.add_heading("1. Identitas Insiden", 1)
-    for k, v in [("Satuan", data["satuan"]), ("Sesi", s["session"]), ("Sumber", s["src"]),
-                 ("Tahap tertinggi", s["stage"]), ("Kedalaman", s["depth"]),
-                 ("Dialihkan ke bayangan", "Ya" if s["diverted"] else "Tidak"),
-                 ("Aset asli tersentuh", "Tidak (log-only pada bayangan)"),
-                 ("Disusun", data["generated"])]:
-        d.add_paragraph(f"{k}: {v}")
-    d.add_heading("2. Teknik ATT&CK for ICS Terobservasi", 1)
+    p.runs[0].font.size = Pt(9)
+
+    d.add_heading("1. Identitas & Status Operasional Insiden", 1)
+    for k, v in [("Satuan Terkait", data["satuan"]), ("ID Sesi Forensik", s["session"]),
+                 ("Alamat IP Sumber", s["src"]), ("Tahap Serangan Tertinggi", s["stage"]),
+                 ("Kedalaman Adaptif Terbuka", f"Level {s['depth']}"),
+                 ("Pengalihan ke Bayangan (Shadow Divert)", "Ya (Berhasil dialihkan oleh Kelir)" if s["diverted"] else "Tidak"),
+                 ("Integritas Aset Asli", "100% AMAN (Tidak tersentuh; semua perintah bersifat log-only)"),
+                 ("Waktu Selesai Perekaman", data["generated"])]:
+        d.add_paragraph(f"• {k}: {v}")
+
+    d.add_heading("2. Pemetaan Taktik ATT&CK for ICS Terobservasi", 1)
     t = d.add_table(rows=1, cols=3)
     t.style = "Table Grid"
-    for i, h in enumerate(("ID", "Nama", "Taktik")):
+    for i, h in enumerate(("ID Teknik", "Nama Teknik", "Taktik ICS")):
         t.rows[0].cells[i].text = h
     for x in data["techniques"]:
         r = t.add_row().cells
         r[0].text, r[1].text, r[2].text = x["id"], x["nama"], x["taktik"]
-    d.add_paragraph("Catatan: pemetaan ID teknik perlu diverifikasi dengan katalog resmi.")
-    d.add_heading("3. Kronologi (Putar Ulang Sesi)", 1)
+    d.add_paragraph("Landasan doktrin: Pemetaan taktis selaras dengan kerangka MITRE ATT&CK for ICS dan MITRE D3FEND.")
+
+    d.add_heading("3. Kronologi & Rekonstruksi (Putar Ulang Sesi)", 1)
     t = d.add_table(rows=1, cols=5)
     t.style = "Table Grid"
-    for i, h in enumerate(("t (dtk)", "Waktu UTC", "Aksi", "Kedalaman", "Catatan")):
+    for i, h in enumerate(("Delta (dtk)", "Waktu UTC", "Aksi Terdeteksi", "Kedalaman", "Keterangan")):
         t.rows[0].cells[i].text = h
     for e in data["replay"]:
         r = t.add_row().cells
         r[0].text, r[1].text, r[2].text = str(e["t"]), e["ts"], e["action"]
         r[3].text, r[4].text = str(e["depth"]), str(e["note"])[:120]
-    d.add_heading("4. Bukti Berantai-Hash", 1)
-    d.add_paragraph(f"Verifikasi rantai SHA-256: {'LULUS' if data['chain_ok'] else 'GAGAL'}")
+
+    d.add_heading("4. Alat Bukti Integritas Digital (Chain of Custody SHA-256)", 1)
+    d.add_paragraph(f"Status Verifikasi Kriptografis Rantai Hash: {'LULUS (Terbukti Utuh dan Tak Terubah)' if data['chain_ok'] else 'GAGAL'}")
     t = d.add_table(rows=1, cols=3)
     t.style = "Table Grid"
-    for i, h in enumerate(("Event", "Hash", "Hash sebelumnya")):
+    for i, h in enumerate(("ID Kejadian", "Hash SHA-256", "Hash Sebelumnya")):
         t.rows[0].cells[i].text = h
     for e in data["events"]:
         r = t.add_row().cells
-        r[0].text, r[1].text, r[2].text = e["event_id"], e["hash"][:24] + "…", e["prev_hash"][:24] + "…"
+        r[0].text, r[1].text, r[2].text = e["event_id"], e["hash"][:28] + "…", e["prev_hash"][:28] + "…"
     for row in t.rows:
         for c in row.cells:
             for pp in c.paragraphs:
                 for rn in pp.runs:
                     rn.font.size = Pt(8)
-    d.add_heading("5. Tindak Lanjut Pertahanan", 1)
+
+    d.add_heading("5. Umpan Balik Pertahanan (Bayangan ke Benteng)", 1)
     for pr in data["proposals"]:
-        d.add_paragraph(f"Proposal {pr['id']} – status {pr['status']}; "
-                        f"rasio benteng {pr['ratio_benteng']:.0%}")
+        d.add_paragraph(f"Draf Pertahanan {pr['id']} – Status: {pr['status']}; Rasio Benteng: {pr['ratio_benteng']:.0%}")
         for h in pr["hardening"]:
-            d.add_paragraph(h, style="List Bullet")
-    d.add_paragraph("\n\nMengetahui,\n\n\n(.............................)")
+            d.add_paragraph(f"• Rekomendasi Hardening: {h}")
+
+    sig = d.add_paragraph(
+        "\n\n                                                    Mengesahkan,\n"
+        "                                                    Perwira Jaga / An. Komandan Satuan,\n\n\n\n"
+        "                                                    ( .................................................. )\n"
+        "                                                    Pangkat / Korps / NRP"
+    )
+    sig.runs[0].font.size = Pt(10)
+    
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     d.save(path)

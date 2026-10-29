@@ -1,6 +1,6 @@
 # Hasil Evaluasi WAYANG (Bab 13)
 
-Dihasilkan otomatis oleh `sim_attacker/evaluate.py` pada 2026-10-29 03:00.
+Dihasilkan otomatis oleh `sim_attacker/evaluate.py` pada 2026-10-29 20:01.
 Mesin: Windows 11, 16 CPU logis, Python 3.13.7.
 
 > **Batas klaim.** Angka berikut diukur pada mesin pengembang dengan penyerang
@@ -13,20 +13,20 @@ Mesin: Windows 11, 16 CPU logis, Python 3.13.7.
 | Penyamaran | Tingkat tebakan benar (uji buta 5–10 relawan) | Mendekati 50% | [isi] | belum diuji (butuh manusia, lihat `docs/uji_buta_protokol.md`) |
 | Kualitas alert | FPR pada lalu lintas daftar putih | mendekati 0 | 0.0000 (0 alert dari 105 permintaan sah) | tercapai |
 | Kualitas alert | Presisi / recall alert pada skenario skrip | tinggi | 1.00 / 1.00 (12 sumber berbahaya) | diukur |
-| Kecepatan | Time-to-first-alert (sentuhan pertama → alert), median / p95 | < 2 dtk | 1.1 ms / 1.4 ms (pipeline kejadian→alert p95 3.61 ms) | tercapai |
+| Kecepatan | Time-to-first-alert (sentuhan pertama → alert), median / p95 | < 2 dtk | 1.5 ms / 2.3 ms (pipeline kejadian→alert p95 7.07 ms) | tercapai |
 | Nilai adaptif | Dwell time simulasi (rata-rata, dtk), statis vs adaptif | adaptif lebih tinggi | 18.5 vs 27.5 | adaptif lebih tinggi |
 | Nilai adaptif | Teknik unik tertangkap per sesi, statis vs adaptif | adaptif lebih tinggi | 6 vs 6 (n=30) | tidak lebih tinggi |
-| Latensi | p95 respons jalur asli / jalur bayangan | < 50 ms | 16.25 ms / 47.13 ms | tercapai |
-| Sumber daya | 10 node (Kelir + bayangan + Cermin) pada 1 proses, 3000 permintaan | muat di 4 core / 8 GB | CPU 60.4% dari satu core, RSS tambahan 10.7 MB (total 82.0 MB) | diukur di mesin pengembang, bukan mini-PC |
+| Latensi | p95 respons jalur asli / jalur bayangan | < 50 ms | 16.30 ms / 46.54 ms | tercapai |
+| Sumber daya | 10 node (Kelir + bayangan + Cermin) pada 1 proses, 3000 permintaan | muat di 4 core / 8 GB | CPU 85.6% dari satu core, RSS tambahan 10.5 MB (total 81.2 MB) | diukur di mesin pengembang, bukan mini-PC |
 | Ketahanan | Kehilangan ringkasan saat link ke pusat putus 10 dtk nyata | 0 hilang | 0 hilang; antrean saat putus 40, diterima pusat 40 | tercapai (durasi 30 menit target belum dijalankan; mekanisme antrean tidak bergantung durasi) |
-| Bandwidth | Hemat vs log mentah setara | hanya ringkasan | 71.7% (14599 B vs 51654 B) | diukur |
+| Bandwidth | Hemat vs log mentah setara | hanya ringkasan | 71.7% (14601 B vs 51657 B) | diukur |
 
 ## Indikator keberhasilan konsep (Bab 13.1)
 
 | Indikator | Hasil |
 |---|---|
 | Rasio sentuhan tipuan | presisi alert 1.00 pada skenario skrip |
-| Waktu sampai sadar | median 1.1 ms sampai alert tercatat (ringkasan ke Bot menyusul pada pipeline yang sama) |
+| Waktu sampai sadar | median 1.5 ms sampai alert tercatat (ringkasan ke Bot menyusul pada pipeline yang sama) |
 | Dwell time pada bayangan | statis 15 langkah vs adaptif 22 langkah |
 | Cakupan teknik | 3.62 teknik ATT&CK ICS unik per sesi (rata-rata) |
 | Rasio benteng | 1.00 (teknik teramati yang punya aturan otomatis) |

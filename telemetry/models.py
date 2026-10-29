@@ -62,7 +62,11 @@ class TemperatureModel:
 
 
 class PumpPressureModel:
-    """Tekanan pompa berkorelasi dengan aliran: P = P0 + k*q + eps."""
+    """Tekanan pompa berkorelasi dengan aliran: P = P0 + k*q + eps + P_transient.
+
+    Meniru inersia fluida dan efek lonjakan transien (water hammer ringan)
+    saat laju pemompaan berubah mendadak.
+    """
 
     def __init__(self, seed: int = 0, p0: float = 1.8, k: float = 0.004,
                  noise: float = 0.02):
@@ -70,9 +74,13 @@ class PumpPressureModel:
         self.p0 = p0 + float(self.rng.uniform(-0.1, 0.1))
         self.k = k * float(self.rng.uniform(0.9, 1.1))
         self.noise = noise
+        self._prev_flow = 0.0
 
     def value(self, flow_lph: float) -> float:
-        return self.p0 + self.k * flow_lph + float(self.rng.normal(0, self.noise))
+        dflow = flow_lph - self._prev_flow
+        self._prev_flow = flow_lph
+        surge = 0.0003 * dflow if abs(dflow) > 8.0 else 0.0
+        return max(0.05, self.p0 + self.k * flow_lph + surge + float(self.rng.normal(0, self.noise)))
 
 
 class DepoBBMTelemetry:

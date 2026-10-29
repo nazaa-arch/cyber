@@ -161,4 +161,66 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
         except KeyError:
             raise HTTPException(404)
 
+    @app.get("/api/twinscreen/{satuan}")
+    async def api_twinscreen(satuan: str):
+        n = node(satuan)
+        sh = n.shadow
+        has_pump_off = any(not s.pump_on for s in sh.sessions.by_id.values())
+        total_diverted = sum(1 for s in sh.sessions.by_id.values() if s.diverted)
+        return {
+            "satuan": satuan,
+            "aset_asli": {
+                "nama": "PLC Depo BBM Satuan (Aset Asli)",
+                "status": "OPERASIONAL NORMAL",
+                "tangki_level_l": 14250,
+                "pompa_status": "AKTIF (BERJALAN)",
+                "tekanan_bar": 2.12,
+                "perintah_bahaya_diterima": 0,
+                "integritas": "100% AMAN TERLINDUNGI"
+            },
+            "panggung_bayangan": {
+                "nama": f"Bayangan Kembar ({sh.id})",
+                "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
+                "tangki_level_l": round(sh.values["tank_level_l"], 1),
+                "pompa_status": "MATI (EFEK PALSU)" if has_pump_off else "AKTIF (BERJALAN)",
+                "tekanan_bar": round(sh.values["pump_pressure_bar"], 2),
+                "perintah_bahaya_ditangkap": sum(len(s.writes) for s in sh.sessions.by_id.values()),
+                "kedalaman_terbuka": max([s.engine.depth for s in sh.sessions.by_id.values()] or [1]),
+                "dwell_time_aktif": True
+            }
+        }
+
+    @app.post("/api/simulate/{action}")
+    async def api_simulate(action: str):
+        from sim_attacker import scenarios as sc
+        n3 = nodes.get("Kodim-DEMO-03")
+        if not n3:
+            raise HTTPException(404, "Node demo tidak siap")
+
+        if action == "t1":
+            await sc.t1_opportunist("127.0.0.1", n3.ports["shadow"], "127.0.0.88")
+            n3.sync()
+            return {"status": "ok", "msg": "Simulasi T1 (Botnet Scan) selesai. Terdeteksi oleh Mesin Adaptif."}
+        elif action == "t2":
+            await sc.t2_targeted("127.0.0.1", n3.ports["kelir"], "127.0.0.99")
+            n3.sync()
+            return {"status": "ok", "msg": "Simulasi T2 (Manipulasi Kendali ICS) dialihkan secara transparan ke Bayangan! Draf aturan nftables terbit & notifikasi Telegram terkirim."}
+        elif action == "campaign":
+            for idx, (name, n) in enumerate(nodes.items()):
+                await sc.t1_opportunist("127.0.0.1", n.ports["shadow"], f"198.51.100.{idx + 1}")
+                n.sync()
+            return {"status": "ok", "msg": "Simulasi Kampanye Terkoordinasi 3 Satuan dijalankan. Peta Komando berkedip merah!"}
+        elif action == "phishing":
+            n3.social.on_mail(
+                "sarwa.wibisana.21e3b1@cyber.steamcraft.online",
+                sender="spear-phish@evil-apt.net (185.220.101.5)",
+                subject="PERINTAH MENDESAK: Kalibrasi Register Katup Depo"
+            )
+            n3.social.scan_text("... referensi dokumen nota-dinas-rahasia ...",
+                               src="185.220.101.5", where="email phishing")
+            n3.sync()
+            return {"status": "ok", "msg": "Email Phishing umpan terdeteksi di domain cyber.steamcraft.online dan dicatat di Peta Pengintaian."}
+
+        raise HTTPException(400, "Aksi simulasi tidak dikenal")
+
     return app

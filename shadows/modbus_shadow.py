@@ -25,21 +25,30 @@ CONSISTENCY_PROBE_READS = 8
 
 
 class LatencyProfile:
-    """Latensi berekor panjang per profil perangkat (Bab 8, lapisan Waktu)."""
+    """Latensi berekor panjang dengan emulasi PLC Scan Cycle (Bab 8, Lapisan Waktu).
 
-    def __init__(self, seed: int, base_ms: float = 4.0, sigma: float = 0.5):
+    PLC industri nyata (Siemens S7, Schneider Modicon) memproses input-output
+    mengikuti siklus scan ladder logic (umumnya 20ms-50ms). Paket yang tiba di tengah
+    siklus dijadwalkan pada siklus scan berikutnya, menghasilkan pola sebaran waktu khas OT.
+    """
+
+    def __init__(self, seed: int, base_ms: float = 4.0, sigma: float = 0.5,
+                 plc_scan_ms: float = 20.0):
         self.rng = np.random.default_rng(seed + 11)
         self.base_ms = base_ms
         self.sigma = sigma
+        self.plc_scan_ms = plc_scan_ms
 
     def match(self, real_ms: float) -> None:
         """Samakan profil dengan aset asli (selisih latensi, Bab 9.4)."""
         self.base_ms = 0.8 * self.base_ms + 0.2 * max(1.0, min(real_ms, 40.0))
 
     def sample_s(self) -> float:
+        # Komponen ekor panjang + emulasi quantized cycle time PLC
         ms = self.base_ms * float(self.rng.lognormal(0, self.sigma))
-        ms += float(abs(self.rng.normal(0, 0.4)))
-        return min(ms, 400.0) / 1000.0
+        cycle_phase = float(self.rng.uniform(0.3, 1.0)) * self.plc_scan_ms
+        total_ms = max(ms, cycle_phase * 0.4) + float(abs(self.rng.normal(0, 0.3)))
+        return min(total_ms, 400.0) / 1000.0
 
 
 class ShadowDevice:

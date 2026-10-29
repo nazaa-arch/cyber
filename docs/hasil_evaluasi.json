@@ -7,11 +7,11 @@
     "presisi": 1.0,
     "recall": 1.0,
     "malicious_sources": 12,
-    "ttfa_ms_median": 1.0692999931052327,
-    "ttfa_ms_p95": 1.3556999620050192,
-    "event_to_alert_ms_p95": 3.611500025726855,
-    "lat_asli_p95_ms": 16.24890009406954,
-    "lat_bayangan_p95_ms": 47.12890007067472,
+    "ttfa_ms_median": 1.5037500415928662,
+    "ttfa_ms_p95": 2.2551999427378178,
+    "event_to_alert_ms_p95": 7.074399967677891,
+    "lat_asli_p95_ms": 16.303200041875243,
+    "lat_bayangan_p95_ms": 46.537899994291365,
     "teknik_per_sesi_rata2": 3.6153846153846154,
     "rasio_benteng_rata2": 1.0,
     "real_writes_total": 5,
@@ -35,11 +35,11 @@
   "res": {
     "n_bayangan": 10,
     "requests": 3000,
-    "wall_s": 3.6195638000499457,
-    "cpu_s": 2.1875,
-    "cpu_persen_satu_core": 60.43545910061911,
-    "rss_mb_tambahan": 10.719232,
-    "rss_mb_total": 82.038784
+    "wall_s": 4.196590199950151,
+    "cpu_s": 3.59375,
+    "cpu_persen_satu_core": 85.6349995775782,
+    "rss_mb_tambahan": 10.493952,
+    "rss_mb_total": 81.207296
   },
   "resil": {
     "outage_s_nyata": 10.0,
@@ -48,8 +48,8 @@
     "antrean_saat_putus": 40,
     "diterima_pusat": 40,
     "ringkasan_hilang": 0,
-    "bytes_ringkasan_terkirim": 14599,
-    "bytes_log_mentah_setara": 51654,
-    "rasio_hemat": 0.7173694195996438
+    "bytes_ringkasan_terkirim": 14601,
+    "bytes_log_mentah_setara": 51657,
+    "rasio_hemat": 0.7173471165572913
   }
 }
