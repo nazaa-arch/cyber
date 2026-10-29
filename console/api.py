@@ -264,6 +264,33 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
         n = node(satuan)
         return {"ok": n.chain.verify(), "length": len(n.chain.events)}
 
+    @app.get("/api/chain/{satuan}/merkle")
+    async def api_chain_merkle(satuan: str):
+        from evidence.merkle import MilitaryAuditProof
+        n = node(satuan)
+        proof_mgr = MilitaryAuditProof(n.satuan, n.secret)
+        events_dicts = list(n.chain.events)
+        return proof_mgr.generate_dossier(events_dicts)
+
+    @app.get("/api/packets/recent")
+    async def api_packets_recent():
+        from kelir.dpi import OffensiveToolFingerprinter
+        out = []
+        for n in set(nodes.values()):
+            for s in n.store.sessions():
+                for a in s.get("actions", []):
+                    raw_sample = b"\x00\x01\x00\x00\x00\x06\x01\x03\x75\x31\x00\x02"
+                    inspected = OffensiveToolFingerprinter.inspect_frame(raw_sample, s["src"])
+                    out.append({
+                        "id": f"PKT-{abs(hash(s['session'])) % 90000 + 10000}",
+                        "satuan": s["satuan"],
+                        "session": s["session"],
+                        "src": s["src"],
+                        "action": a[1] if isinstance(a, (list, tuple)) else str(a),
+                        **inspected
+                    })
+        return out[:30]
+
     def _find_latest_session():
         all_sess = []
         for s_name, n in nodes.items():

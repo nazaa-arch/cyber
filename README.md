@@ -1,10 +1,11 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-29%2F29%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-34%2F34%20passed-brightgreen.svg)]()
 [![Zero Real Writes](https://img.shields.io/badge/physical%20safety-0%20real%20writes-blue.svg)]()
 [![Detection TTFA](https://img.shields.io/badge/TTFA-1.5ms%20(median)-orange.svg)]()
 [![Memory Footprint](https://img.shields.io/badge/RAM-81%20MB-purple.svg)]()
+[![Cryptography RFC 6962](https://img.shields.io/badge/Merkle%20Proof-RFC%206962%20Compliant-blueviolet.svg)]()
 [![TNI AD Kartika Cyber](https://img.shields.io/badge/Kartika%20Cyber-Hackathon%202026-darkred.svg)]()
 
 > **Doktrin Pertahanan**: 100% defensif. Nol dampak pada aset fisik riil. Zero hack-back. Sesuai proposal teknis: `WAYANG - Proposal Teknis Kartika Cyber Hackathon 2026.docx`.
