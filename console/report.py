@@ -10,7 +10,7 @@ import pathlib
 import time
 
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 
 DISCLAIMER = ("DRAF OTOMATIS. Dokumen ini disusun sistem dan wajib ditinjau serta "
               "ditandatangani petugas berwenang sebelum menjadi laporan resmi.")
@@ -33,6 +33,14 @@ def collect(node, session_id: str) -> dict:
 def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
     s, d = data["summary"], Document()
     
+    # Sisipkan Logo Resmi bila tersedia
+    logo_file = pathlib.Path(__file__).parent / "static" / "Logo.jpeg"
+    if logo_file.is_file():
+        try:
+            d.add_picture(str(logo_file), width=Inches(0.9))
+        except Exception:
+            pass
+
     # Kop Resmi Standar Militer
     kop = d.add_paragraph("TENTARA NASIONAL INDONESIA ANGKATAN DARAT\n"
                           "SATUAN PERTAHANAN SIBER KODAM / KOREM / KODIM\n"
@@ -124,7 +132,9 @@ def build_html(data: dict) -> str:
         f"<td>{e['depth']}</td><td>{html.escape(str(e['note']))}</td></tr>" for e in data["replay"])
     techs = "".join(f"<li>{x['id']} {html.escape(x['nama'])} ({html.escape(x['taktik'])})</li>"
                     for x in data["techniques"])
-    return (f"<html><body><h1>Berita Acara Insiden Siber (Draf)</h1><p><b>{DISCLAIMER}</b></p>"
+    logo_tag = '<img src="/static/Logo.jpeg" style="height:48px;vertical-align:middle;margin-right:12px;border-radius:4px">'
+    return (f"<html><body style='font-family:Segoe UI,sans-serif;padding:24px;background:#f8fafc;color:#0f172a'>"
+            f"<h1>{logo_tag}Berita Acara Insiden Siber (Draf)</h1><p><b>{DISCLAIMER}</b></p>"
             f"<p>Satuan: {html.escape(data['satuan'])} · Sesi: {html.escape(s['session'])} · "
             f"Sumber: {html.escape(s['src'])}</p><p>Rantai hash: "
             f"{'LULUS' if data['chain_ok'] else 'GAGAL'}</p><ul>{techs}</ul>"
