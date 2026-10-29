@@ -80,6 +80,11 @@ def _detect_public_url() -> str | None:
 
 
 async def amain(a):
+    if a.mode == "realtime":
+        import run_wayang
+        await run_wayang.amain(a)
+        return
+
     out = a.out or tempfile.mkdtemp(prefix="wayang_")
     pub = _detect_public_url()
     if pub:
@@ -97,7 +102,7 @@ async def amain(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["full", "console", "node"], default="full")
+    ap.add_argument("--mode", choices=["realtime", "full", "console", "node"], default="realtime")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--base-port", type=int, default=15020)

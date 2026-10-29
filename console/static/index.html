@@ -1,124 +1,606 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><title>WAYANG · Dalang Console Komando</title>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>WAYANG · Pusat Komando Pertahanan Siber C4ISR TNI AD</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/static/leaflet.css">
 <style>
-:root{--bg:#090d12;--pn:#101722;--pn2:#16202e;--ln:#202e42;--tx:#dce6f2;--mu:#7a8c9e;--ok:#2ecc71;--wn:#f39c12;--rd:#e74c3c;--ac:#38bdf8}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.4 system-ui,Segoe UI,sans-serif}
-header{display:flex;gap:14px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--ln);background:#0a1017}
-header h1{font-size:17px;margin:0;letter-spacing:3px;color:var(--ac);font-weight:800}header .sp{flex:1}
-main{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;padding:12px}
-.card{background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:12px;min-height:100px}
-.card h2{margin:0 0 10px;font-size:11px;letter-spacing:1.5px;color:var(--mu);text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
-#map{height:280px;background:#06090d;border-radius:6px}
-table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:5px 6px;border-bottom:1px solid var(--ln);text-align:left}
-.b{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
-.Aman{background:#103820;color:var(--ok)}.Tipuan{background:#3d2b09;color:var(--wn)}.Kampanye{background:#421315;color:var(--rd)}
-button{background:#162333;color:var(--tx);border:1px solid var(--ln);border-radius:5px;padding:5px 11px;font-size:12px;cursor:pointer;font-weight:600;transition:.15s}
-button:hover{border-color:var(--ac);color:#fff}button.d{border-color:var(--rd);color:var(--rd)}button.d:hover{background:var(--rd);color:#fff}
+:root{
+  --bg:#060b13;--pn:#0b1320;--pn2:#111b2b;--pn3:#162438;--ln:#1e2d42;--ln2:#293b54;
+  --tx:#e2ecf8;--mu:#8294a8;--ok:#10b981;--wn:#f59e0b;--rd:#ef4444;--ac:#00f0ff;--gd:#eab308;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;letter-spacing:0.2px}
+
+/* HEADER C4ISR */
+header{
+  display:flex;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--ln);
+  background:linear-gradient(180deg,#09121f 0%,#060b13 100%);position:sticky;top:0;z-index:1000
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-badge{
+  background:linear-gradient(135deg,#1e3a8a,#06b6d4);color:#fff;font-weight:900;
+  font-size:11px;padding:3px 8px;border-radius:4px;letter-spacing:1px;border:1px solid rgba(255,255,255,0.2)
+}
+header h1{font-size:16px;margin:0;letter-spacing:2px;color:var(--ac);font-weight:800;text-transform:uppercase}
+header .sub{color:var(--mu);font-size:11px}
+.sp{flex:1}
+
+.live-pill{
+  display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);
+  border:1px solid rgba(16,185,129,0.3);color:var(--ok);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700
+}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse-dot 1.5s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+
+.defcon{
+  background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);color:var(--gd);
+  padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px
+}
+
+/* LAYOUT GRID */
+main{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;padding:14px}
+.card{
+  background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:14px;
+  position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.3)
+}
+.card h2{
+  margin:0 0 12px;font-size:11px;letter-spacing:1.5px;color:var(--mu);text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ln);padding-bottom:8px
+}
+.card h2 .tag{font-size:10px;color:var(--ac);font-weight:600;letter-spacing:0}
+
+/* PETA MILITER & VECTOR ARCS */
+#map{height:330px;background:#05080f;border-radius:6px;border:1px solid var(--ln);position:relative}
+.radar-ring{
+  position:absolute;border-radius:50%;border:2px solid var(--rd);
+  animation:radar-wave 2s infinite ease-out;pointer-events:none
+}
+@keyframes radar-wave{0%{transform:scale(0.2);opacity:1}100%{transform:scale(3.5);opacity:0}}
+
+/* TACTICAL TWIN-SCREEN FLUID & ROTATION */
+.twin-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.twin-box{
+  background:var(--pn2);border:1px solid var(--ln);border-radius:6px;padding:12px;position:relative;overflow:hidden
+}
+.twin-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.twin-title{font-size:12px;font-weight:800;letter-spacing:1px}
+.twin-body{display:flex;gap:14px;align-items:center}
+.tank-visual{
+  width:72px;height:100px;border:2px solid var(--ln2);border-radius:12px;position:relative;
+  overflow:hidden;background:#070d17;display:flex;flex-direction:column;justify-content:flex-end
+}
+.tank-fluid{
+  width:100%;transition:height 1s cubic-bezier(0.4,0,0.2,1);position:relative;
+  background:linear-gradient(180deg,#00f0ff 0%,#0369a1 100%)
+}
+.tank-fluid.shadow-fluid{
+  background:linear-gradient(180deg,#f59e0b 0%,#b45309 100%)
+}
+.tank-wave{
+  position:absolute;top:-6px;left:0;width:200%;height:10px;
+  background:rgba(255,255,255,0.3);border-radius:40%;animation:wave 3s infinite linear
+}
+@keyframes wave{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+.impeller{
+  width:28px;height:28px;border-radius:50%;border:2px dashed var(--ok);
+  display:inline-block;animation:spin 1.2s infinite linear;vertical-align:middle;margin-right:6px
+}
+.impeller.stopped{border-color:var(--rd);animation:none}
+@keyframes spin{100%{transform:rotate(360deg)}}
+
+.stat-val{font-size:20px;font-weight:800;letter-spacing:0.5px}
+.stat-sub{font-size:11px;color:var(--mu);margin-top:2px}
+
+/* LIVE TICKER / TERMINAL */
+.term-box{
+  background:#04070d;border:1px solid var(--ln);border-radius:6px;padding:8px 10px;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;height:140px;overflow-y:auto
+}
+.term-line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px}
+.term-ts{color:var(--mu);min-width:70px}
+.term-src{color:var(--ac);font-weight:700;min-width:110px}
+.term-act{color:var(--tx);flex:1}
+.term-tag{padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700}
+
+/* BADGES & BUTTONS */
+.b{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:0.5px}
+.Aman{background:rgba(16,185,129,0.15);color:var(--ok);border:1px solid rgba(16,185,129,0.3)}
+.Tipuan{background:rgba(245,158,11,0.15);color:var(--wn);border:1px solid rgba(245,158,11,0.3)}
+.Kampanye{background:rgba(239,68,68,0.15);color:var(--rd);border:1px solid rgba(239,68,68,0.3)}
+
+button{
+  background:#131f30;color:var(--tx);border:1px solid var(--ln);border-radius:4px;
+  padding:5px 12px;font-size:11px;cursor:pointer;font-weight:700;transition:.15s;display:inline-flex;align-items:center;gap:5px
+}
+button:hover{border-color:var(--ac);color:#fff;background:#1a2b42}
+button.d{border-color:var(--rd);color:var(--rd)}button.d:hover{background:var(--rd);color:#fff}
 button.g{border-color:var(--ok);color:var(--ok)}button.g:hover{background:var(--ok);color:#fff}
-button.p{background:#1f334a;border-color:var(--ac);color:var(--ac)}button.p:hover{background:var(--ac);color:#000}
-select{background:#162333;color:var(--tx);border:1px solid var(--ln);border-radius:5px;padding:4px}
-#heat{height:230px}.msg{border-left:3px solid var(--wn);padding:5px 8px;margin:5px 0;white-space:pre-wrap;font-size:12px;background:#0d141e}
-a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}.tl div{padding:3px 0;font-size:12px;border-bottom:1px dotted var(--ln)}
-.twin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.twin-box{background:var(--pn2);border:1px solid var(--ln);border-radius:6px;padding:10px}
-.twin-title{font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
-.twin-stat{font-size:17px;font-weight:700;margin:4px 0}
-.twin-sub{font-size:11px;color:var(--mu)}
-.playground-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-#toast{display:none;padding:6px 10px;margin-bottom:8px;border-radius:5px;background:#183626;color:var(--ok);font-size:12px;font-weight:600}
-@media(max-width:960px){main{grid-template-columns:1fr}}
-</style></head><body>
+button.p{background:#162a40;border-color:var(--ac);color:var(--ac)}button.p:hover{background:var(--ac);color:#000}
+button.gold{border-color:var(--gd);color:var(--gd)}button.gold:hover{background:var(--gd);color:#000}
+
+select{background:#131f30;color:var(--tx);border:1px solid var(--ln);border-radius:4px;padding:4px 8px;font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+td,th{padding:5px 8px;border-bottom:1px solid var(--ln);text-align:left}
+th{color:var(--mu);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+
+#toast{
+  display:none;padding:8px 12px;margin-bottom:10px;border-radius:5px;
+  background:#0e2e1e;border:1px solid var(--ok);color:var(--ok);font-size:12px;font-weight:700
+}
+.playground-btns{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:1024px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
 <header>
-<h1>WAYANG</h1><span style="color:var(--mu);font-size:12px">Pusat Komando Dalang · Pertahanan IT/OT Satuan</span><span class="sp"></span>
-<a href="/api/report/latest.docx" class="p" style="text-decoration:none;font-size:12px;display:inline-block;padding:4px 10px;background:#1e3a5f;border-color:#38bdf8;color:#fff;border-radius:4px" title="Unduh Berita Acara Pemeriksaan Forensik Digital standar TNI AD">📄 Unduh BAP-FD (.docx)</a>
-<label style="font-size:12px">Tingkat Otonomi <select id="lvl"><option value="0">L0 Amati</option><option value="1">L1 Rekomendasi</option>
-<option value="2">L2 Pengalihan otomatis (Bawaan)</option><option value="3">L3 Blokir terbatas</option></select></label>
-<button class="d" id="kill" title="Kembalikan sistem ke L0 Amati">SAKLAR DARURAT → L0</button>
+  <div class="brand">
+    <span class="brand-badge">TNI AD</span>
+    <div>
+      <h1>WAYANG C4ISR</h1>
+      <div class="sub">Pusat Komando &amp; Pengendali Pertahanan Siber IT/OT Terdistribusi</div>
+    </div>
+  </div>
+  <div class="sp"></div>
+
+  <div class="live-pill" id="live-indicator">
+    <div class="live-dot"></div>
+    <span id="live-text">REALTIME STREAM (0ms)</span>
+  </div>
+
+  <div class="defcon" id="defcon-badge">DEFCON 3 · SIAGA</div>
+
+  <button onclick="toggleAudio()" id="btn-audio" title="Aktifkan/Nonaktifkan Suara Peringatan Taktis">🔊 Audio</button>
+  <a href="/api/report/latest.docx" class="p" style="text-decoration:none;border-radius:4px" title="Unduh Berita Acara Pemeriksaan Forensik Digital resmi standar TNI AD">
+    <button class="gold">📄 BAP-FD (.docx)</button>
+  </a>
+  <a href="/api/tactical/rules/stix.json" target="_blank" style="text-decoration:none">
+    <button>🛡️ STIX 2.1</button>
+  </a>
+  <a href="/api/tactical/rules/sigma.yml" target="_blank" style="text-decoration:none">
+    <button>⚡ Sigma</button>
+  </a>
+  <a href="/api/tactical/rules/nftables.conf" target="_blank" style="text-decoration:none">
+    <button>🔥 nftables</button>
+  </a>
+
+  <label style="font-size:11px;color:var(--mu)">Otonomi:
+    <select id="lvl">
+      <option value="0">L0 Amati</option>
+      <option value="1">L1 Rekomendasi</option>
+      <option value="2">L2 Pengalihan Otomatis (Bawaan)</option>
+      <option value="3">L3 Blokir Terbatas</option>
+    </select>
+  </label>
+
+  <button class="d" id="kill" title="Kembalikan semua pangkalan ke L0 Amati">SAKLAR DARURAT</button>
 </header>
+
 <main>
-<section class="card" style="grid-column:1/-1">
-<h2><span>PANGGUNG UJI INTERAKTIF (LIVE ATTACK PLAYGROUND)</span><span style="color:var(--ac);font-size:10px">Simulasi Sekali-Klik untuk Penjurian</span></h2>
-<div id="toast"></div>
-<div class="playground-btns">
-<button class="p" onclick="sim('t1')">▶ Uji T1: Botnet Recon Scan</button>
-<button class="p" onclick="sim('t2')" style="border-color:var(--wn);color:var(--wn)">⚡ Uji T2: Manipulasi ICS (Shadow Divert)</button>
-<button class="p" onclick="sim('campaign')" style="border-color:var(--rd);color:var(--rd)">🚨 Uji Kampanye Lintas 3 Satuan</button>
-<button class="p" onclick="sim('phishing')">📧 Uji Phishing Persona (cyber.steamcraft.online)</button>
-</div>
-</section>
+  <!-- PANGGUNG UJI SERANGAN (PLAYGROUND) -->
+  <section class="card" style="grid-column:1/-1">
+    <h2>
+      <span>PANGGUNG UJI INTERAKTIF (LIVE ATTACK PLAYGROUND)</span>
+      <span class="tag">Simulasi Pertahanan Siber untuk Demonstrasi Penjurian</span>
+    </h2>
+    <div id="toast"></div>
+    <div class="playground-btns">
+      <button class="p" onclick="sim('t1')">▶ [T1] Botnet Recon Scan</button>
+      <button class="p" onclick="sim('t2')" style="border-color:var(--wn);color:var(--wn)">⚡ [T2] Manipulasi Kendali ICS (Shadow Divert)</button>
+      <button class="p" onclick="sim('campaign')" style="border-color:var(--rd);color:var(--rd)">🚨 [Kampanye] Serangan Terkoordinasi Multi-Satuan</button>
+      <button class="p" onclick="sim('phishing')" style="border-color:var(--gd);color:var(--gd)">📧 [Phishing] Uji Persona &amp; Canary Token</button>
+      <button class="d" onclick="lockdownCurrent()" style="margin-left:auto">🔒 LOCKDOWN Pangkalan Terpilih</button>
+    </div>
+  </section>
 
-<section class="card" style="grid-column:1/-1">
-<h2><span>TACTICAL TWIN-SCREEN: PERBANDINGAN REAL-TIME ASET</span><span id="twin-sat" style="color:var(--ac);font-size:11px">Kodim-DEMO-03</span></h2>
-<div class="twin-grid" id="twin-view">Memuat status aset...</div>
-</section>
+  <!-- TACTICAL TWIN-SCREEN VIEW -->
+  <section class="card" style="grid-column:1/-1">
+    <h2>
+      <span>TACTICAL TWIN-SCREEN: PERBANDINGAN REALTIME ASET FISIK vs BAYANGAN DECOY</span>
+      <span class="tag" id="twin-sat">KODAM-IV-Diponegoro</span>
+    </h2>
+    <div class="twin-grid" id="twin-view">Memuat status telemetri...</div>
+  </section>
 
-<section class="card"><h2>Peta Komando Wilayah Satuan</h2><div id="map"></div><div id="units" style="margin-top:8px"></div></section>
-<section class="card"><h2>Panel Keputusan Dalang (Bayangan ke Benteng)</h2><div id="dec"></div><h2 style="margin-top:14px">Korelasi Kampanye Terdeteksi</h2><div id="camp"></div></section>
-<section class="card"><h2>Sesi Terpantau &amp; Terpetakan</h2><div id="ses"></div></section>
-<section class="card"><h2>Rekonstruksi / Putar Ulang Sesi (Forensik)</h2><div id="replay" class="tl">Pilih salah satu sesi di tabel untuk memutar ulang.</div></section>
-<section class="card"><h2>Matriks Heatmap ATT&amp;CK for ICS</h2><div id="heat"></div></section>
-<section class="card"><h2>Bot Dalang Interaktif &amp; Peta Pengintaian</h2><div id="bot"></div><div id="recon"></div></section>
+  <!-- PETA KOMANDO OPERASIONAL C4ISR -->
+  <section class="card">
+    <h2>
+      <span>Peta Wilayah Pertahanan Taktis (C4ISR GIS)</span>
+      <span class="tag">5 Komando Teritorial &amp; Khusus TNI AD</span>
+    </h2>
+    <div id="map"></div>
+    <div id="units" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div id="camp" style="margin-top:10px"></div>
+  </section>
+
+  <!-- LIVE CYBER EVENT TICKER / TERMINAL -->
+  <section class="card">
+    <h2>
+      <span>Terminal Intelijen Serangan Realtime</span>
+      <span class="tag">Feed Kejadian Modbus, HTTP, &amp; ESMTP</span>
+    </h2>
+    <div class="term-box" id="term-feed">
+      <div class="term-line"><span class="term-ts">SYSTEM</span><span class="term-src">WAYANG KERNEL</span><span class="term-act">Mesin C4ISR siap. Menunggu aktivitas jaringan...</span></div>
+    </div>
+    
+    <h2 style="margin-top:14px">
+      <span>Panel Keputusan Dalang (Bayangan ke Benteng)</span>
+      <span class="tag">Draf Tindakan Firewall</span>
+    </h2>
+    <div id="dec"></div>
+  </section>
+
+  <!-- SESI TERPANTAU & PUTAR ULANG -->
+  <section class="card">
+    <h2>
+      <span>Sesi Penyerang Terpantau &amp; Terpetakan</span>
+      <span class="tag">Pelacakan Perilaku</span>
+    </h2>
+    <div id="ses" style="max-height:220px;overflow-y:auto"></div>
+  </section>
+
+  <!-- REKONSTRUKSI & REPLAY -->
+  <section class="card">
+    <h2>
+      <span>Rekonstruksi &amp; Putar Ulang Sesi (Forensik Digital)</span>
+      <span class="tag">Audit Trail Kriptografis</span>
+    </h2>
+    <div id="replay" style="font-family:ui-monospace,monospace;font-size:11px;max-height:220px;overflow-y:auto">
+      Pilih salah satu sesi di tabel untuk memutar ulang kronologi serangan.
+    </div>
+  </section>
+
+  <!-- HEATMAP ATT&CK FOR ICS -->
+  <section class="card">
+    <h2>
+      <span>Matriks Heatmap MITRE ATT&amp;CK for ICS</span>
+      <span class="tag">Taksonomi Taktik Musuh</span>
+    </h2>
+    <div id="heat" style="height:210px"></div>
+  </section>
+
+  <!-- BOT DALANG & PERSONA AKTIF -->
+  <section class="card">
+    <h2>
+      <span>Bot Dalang Intelijen &amp; Umpan Persona</span>
+      <span class="tag">cyber.steamcraft.online</span>
+    </h2>
+    <div id="bot" style="max-height:100px;overflow-y:auto;font-size:11px"></div>
+    <div id="recon" style="margin-top:8px"></div>
+  </section>
 </main>
-<script src="/static/leaflet.js"></script><script src="/static/echarts.min.js"></script>
-<script>
-const $=id=>document.getElementById(id),J=(u,o)=>fetch(u,o).then(r=>r.json());
-const map=L.map('map',{zoomControl:true,attributionControl:false}).setView([-7.2,109.5],7);const mk={};
-const cls=s=>s.startsWith('Kampanye')?'Kampanye':s.startsWith('Tipuan')?'Tipuan':'Aman';
-const col={Aman:'#2ecc71',Tipuan:'#f39c12',Kampanye:'#e74c3c'};
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const heat=echarts.init($('heat'));
-let curSat='Kodim-DEMO-03';
 
-async function post(u,b){const res=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});try{const j=await res.json();refresh();return j;}catch(e){refresh();return {};}}
+<script src="/static/leaflet.js"></script>
+<script src="/static/echarts.min.js"></script>
+<script>
+const $=id=>document.getElementById(id), J=(u,o)=>fetch(u,o).then(r=>r.json());
+let curSat = 'KODAM-IV-Diponegoro';
+let audioEnabled = false;
+let audioCtx = null;
+let attackVectorsLayer = null;
+
+function toggleAudio(){
+  audioEnabled = !audioEnabled;
+  $('btn-audio').innerText = audioEnabled ? '🔊 Audio AKTIF' : '🔇 Audio';
+  $('btn-audio').style.color = audioEnabled ? 'var(--ok)' : 'var(--tx)';
+  if(audioEnabled && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playTacticalBeep(freq=880, type='sine', dur=0.15){
+  if(!audioEnabled || !audioCtx) return;
+  try{
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    osc.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.start(); osc.stop(audioCtx.currentTime + dur);
+  }catch(e){}
+}
+
+// Inisialisasi Peta Leaflet Taktis
+const map = L.map('map',{zoomControl:true,attributionControl:false}).setView([-7.1, 109.8], 7);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
+const markers = {};
+attackVectorsLayer = L.layerGroup().addTo(map);
+
+const cls = s => s.startsWith('Kampanye')?'Kampanye':s.startsWith('Tipuan')?'Tipuan':'Aman';
+const col = {Aman:'#10b981', Tipuan:'#f59e0b', Kampanye:'#ef4444'};
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const heat = echarts.init($('heat'));
+
+async function post(u, b){
+  const res = await fetch(u, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: b ? JSON.stringify(b) : undefined
+  });
+  try { const j = await res.json(); refresh(); return j; } catch(e){ refresh(); return {}; }
+}
+
 async function sim(type){
- const t=$('toast');t.style.display='block';t.style.background='#1b2a3a';t.style.color='#38bdf8';t.innerHTML='⏳ Menjalankan simulasi serangan...';
- try{const r=await post('/api/simulate/'+type);t.innerHTML='✅ '+r.msg;t.style.background='#143322';t.style.color='#2ecc71'}catch(e){t.innerHTML='Simulasi diproses.'}
- setTimeout(()=>{t.style.display='none'},6000);refresh();
+  const t = $('toast');
+  t.style.display = 'block'; t.style.borderColor = 'var(--ac)'; t.style.color = 'var(--ac)';
+  t.innerHTML = '⏳ Menjalankan injeksi simulasi penyerang...';
+  playTacticalBeep(650, 'triangle', 0.1);
+  try{
+    const r = await post('/api/simulate/' + type);
+    t.innerHTML = '🛡️ ' + (r.msg || 'Simulasi berhasil dijalankan');
+    t.style.borderColor = 'var(--ok)'; t.style.color = 'var(--ok)';
+    playTacticalBeep(1100, 'sine', 0.25);
+  }catch(e){
+    t.innerHTML = 'Simulasi diproses.';
+  }
+  setTimeout(()=>{ t.style.display = 'none'; }, 6000);
+  refresh();
 }
-async function openSes(sat,id){
- const r=await J(`/api/replay/${sat}/${id}`);curSat=sat;
- $('replay').innerHTML=r.map(e=>`<div><b>+${e.t}s</b> ${esc(e.action)} <span class="b Tipuan">Level ${e.depth}</span> ${esc(JSON.stringify(e.target||''))} <span style="color:var(--mu)">${esc(e.techniques.join(','))} ${esc(e.note)}</span></div>`).join('')
- +`<p style="margin-top:10px">📄 <a href="/api/report/${sat}/${id}.docx" style="font-weight:700">Unduh Berita Acara Militer (DOCX)</a> · <a href="/api/report/${sat}/${id}.html" target="_blank">Lihat Dokumen HTML</a></p>`;
- refreshTwin();
+
+async function lockdownCurrent(){
+  if(!confirm(`Apakah Anda yakin ingin me-LOCKDOWN pangkalan ${curSat}? Semua trafik OT akan diisolasi!`)) return;
+  const r = await post(`/api/tactical/lockdown/${curSat}`);
+  alert(r.msg || 'Pangkalan berhasil di-lockdown!');
+  refresh();
 }
+
+// Render Tactical Twin-Screen dengan SVG Dynamic Wave & Impeller
 async function refreshTwin(){
- try{
-  const tw=await J(`/api/twinscreen/${curSat}`);
-  const a=tw.aset_asli, p=tw.panggung_bayangan;
-  $('twin-sat').innerText=curSat;
-  $('twin-view').innerHTML=`
-   <div class="twin-box" style="border-left:3px solid var(--ok)">
-    <div class="twin-title"><span style="color:var(--ok)">🟢 ASET ASLI FISIK (OT NYATA)</span><span class="b Aman">${a.status}</span></div>
-    <div class="twin-stat">${a.tangki_level_l.toLocaleString()} Liter</div>
-    <div class="twin-sub">Status Pompa: <b>${a.pompa_status}</b> · Tekanan: ${a.tekanan_bar} bar</div>
-    <div style="margin-top:6px;font-size:11px;color:var(--ok)">🛡️ Perintah Jahat Diteruskan: <b>${a.perintah_bahaya_diterima}</b> (${a.integritas})</div>
-   </div>
-   <div class="twin-box" style="border-left:3px solid var(--wn)">
-    <div class="twin-title"><span style="color:var(--wn)">🟡 PANGGUNG BAYANGAN (DECOY GRID)</span><span class="b Tipuan">${p.status}</span></div>
-    <div class="twin-stat">${p.tangki_level_l.toLocaleString()} Liter</div>
-    <div class="twin-sub">Status Pompa: <b style="color:var(--wn)">${p.pompa_status}</b> · Tekanan: ${p.tekanan_bar} bar</div>
-    <div style="margin-top:6px;font-size:11px;color:var(--wn)">🎯 Perintah Manipulasi Ditangkap: <b>${p.perintah_bahaya_ditangkap} (Log-Only)</b> · Kedalaman: Level ${p.kedalaman_terbuka}</div>
-   </div>`;
- }catch(e){}
+  try{
+    const tw = await J(`/api/twinscreen/${curSat}`);
+    const a = tw.aset_asli, p = tw.panggung_bayangan;
+    $('twin-sat').innerText = tw.nama_satuan || curSat;
+
+    const realLevelPct = Math.min(100, Math.max(0, (a.tangki_level_l / a.tangki_kapasitas_l) * 100));
+    const shadowLevelPct = Math.min(100, Math.max(0, (p.tangki_level_l / p.tangki_kapasitas_l) * 100));
+    const pumpRunning = a.pompa_status.includes('AKTIF');
+    const shadowPumpRunning = p.pompa_status.includes('AKTIF');
+
+    $('twin-view').innerHTML = `
+      <div class="twin-box" style="border-left:4px solid var(--ok)">
+        <div class="twin-head">
+          <span class="twin-title" style="color:var(--ok)">🟢 ASET ASLI FISIK (OT NYATA)</span>
+          <span class="b Aman">${a.status}</span>
+        </div>
+        <div class="twin-body">
+          <div class="tank-visual">
+            <div class="tank-fluid" style="height:${realLevelPct}%">
+              <div class="tank-wave"></div>
+            </div>
+          </div>
+          <div style="flex:1">
+            <div class="stat-val" style="color:var(--ac)">${a.tangki_level_l.toLocaleString()} <span style="font-size:12px;color:var(--mu)">/ ${a.tangki_kapasitas_l.toLocaleString()} L (${realLevelPct.toFixed(1)}%)</span></div>
+            <div class="stat-sub">
+              <span class="impeller ${pumpRunning ? '' : 'stopped'}"></span>
+              Pompa: <b>${a.pompa_status}</b> · Tekanan: <b>${a.tekanan_bar} Bar</b> · Suhu: <b>${a.suhu_c}°C</b>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--ok);font-weight:700">
+              🛡️ Manipulasi Bahaya Diteruskan: <b>${a.perintah_bahaya_diterima}</b> (${a.integritas})
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="twin-box" style="border-left:4px solid var(--wn)">
+        <div class="twin-head">
+          <span class="twin-title" style="color:var(--wn)">🟡 PANGGUNG BAYANGAN KEMBAR (DECOY GRID)</span>
+          <span class="b Tipuan">${p.status}</span>
+        </div>
+        <div class="twin-body">
+          <div class="tank-visual">
+            <div class="tank-fluid shadow-fluid" style="height:${shadowLevelPct}%">
+              <div class="tank-wave"></div>
+            </div>
+          </div>
+          <div style="flex:1">
+            <div class="stat-val" style="color:var(--wn)">${p.tangki_level_l.toLocaleString()} <span style="font-size:12px;color:var(--mu)">/ ${p.tangki_kapasitas_l.toLocaleString()} L (${shadowLevelPct.toFixed(1)}%)</span></div>
+            <div class="stat-sub">
+              <span class="impeller ${shadowPumpRunning ? '' : 'stopped'}"></span>
+              Pompa: <b style="color:${shadowPumpRunning ? 'var(--ok)' : 'var(--rd)'}">${p.pompa_status}</b> · Tekanan: <b>${p.tekanan_bar} Bar</b>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--wn);font-weight:700">
+              🎯 Manipulasi Ditangkap: <b>${p.perintah_bahaya_ditangkap} (Log-Only)</b> · Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }catch(e){}
 }
+
+async function openSes(sat, id){
+  curSat = sat;
+  const r = await J(`/api/replay/${sat}/${id}`);
+  $('replay').innerHTML = r.map(e => `
+    <div style="padding:4px 0;border-bottom:1px solid var(--ln)">
+      <b style="color:var(--ac)">+${e.t}s</b> 
+      <span class="b Tipuan">L${e.depth}</span> 
+      <b>${esc(e.action)}</b> 
+      <span style="color:var(--mu)">${esc(JSON.stringify(e.target||''))}</span>
+      <span style="color:var(--wn)">[${esc(e.techniques.join(', '))}]</span>
+    </div>
+  `).join('') + `
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--ln)">
+      📄 <a href="/api/report/${sat}/${id}.docx" style="font-weight:700;color:var(--gd)">Unduh BAP-FD Sesi Ini (.docx)</a> · 
+      <a href="/api/report/${sat}/${id}.html" target="_blank" style="color:var(--ac)">Lihat HTML</a>
+    </div>
+  `;
+  refreshTwin();
+}
+
+// Refresh Data Utama
 async function refresh(){
- const [m,c,d,s,h,a,b,r,pers]=await Promise.all(['map','campaigns','decisions','sessions','heatmap','autonomy','bot','recon','personas'].map(x=>J('/api/'+x)));
- m.forEach(u=>{const k=cls(u.status);if(mk[u.satuan])mk[u.satuan].setStyle({color:col[k],fillColor:col[k]});
-  else mk[u.satuan]=L.circleMarker([u.lat,u.lon],{radius:11,color:col[k],fillColor:col[k],fillOpacity:.6}).addTo(map).bindTooltip(u.satuan,{permanent:true,direction:'right'})});
- $('units').innerHTML=m.map(u=>`<span class="b ${cls(u.status)}" style="margin-right:6px;cursor:pointer" onclick="curSat='${u.satuan}';refreshTwin()">${esc(u.satuan)} · ${esc(u.status)}</span>`).join('');
- $('camp').innerHTML=c.length?c.map(x=>`<div class="msg" style="border-color:var(--rd)"><b>🚨 KAMPANYE: ${esc(x.satuan.join(' → '))}</b><br>Bukti Intelijen: ${esc(x.bukti)}<br><i>${esc(x.catatan)}</i></div>`).join(''):'<span style="color:var(--mu)">Tidak ada kampanye terkoordinasi aktif.</span>';
- $('dec').innerHTML=d.length?'<table><tr><th>ID Draf</th><th>Sumber</th><th>Status</th><th>Aksi Persetujuan Dalang</th></tr>'+d.map(p=>`<tr><td><b>${p.id}</b><br><small style="color:var(--mu)">${esc(p.satuan)}</small></td><td>${esc(p.src)}</td><td><span class="b ${p.status=='approved'?'Aman':'Tipuan'}">${p.status}</span></td><td>`
-  +(p.status=='pending'?`<button class="g" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui Blokir (nftables)</button> <button onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>`:p.status=='approved'?`<button class="d" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Batalkan Blokir</button>`:'')+'</td></tr>').join('')+'</table>':'<span style="color:var(--mu)">Tidak ada draf keputusan yang menunggu persetujuan.</span>';
- $('ses').innerHTML='<table><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap ATT&amp;CK</th><th>Kedalaman</th><th>Teknik</th></tr>'+s.slice(0,10).map(x=>`<tr style="cursor:pointer" onclick="openSes('${x.satuan}','${x.session}')"><td>${esc(x.session)}<br><small style="color:var(--mu)">${esc(x.satuan)}</small></td><td>${esc(x.src)}${x.diverted?' <span class="b Tipuan">Dialihkan</span>':''}</td><td>${x.stage}</td><td>Level ${x.depth}</td><td><span style="color:var(--ac)">${esc(x.techniques.join(', '))}</span></td></tr>`).join('')+'</table>';
- const ks=Object.keys(h);heat.setOption({backgroundColor:'transparent',grid:{left:80,right:12,top:10,bottom:25},xAxis:{type:'value',axisLabel:{color:'#7a8c9e'}},yAxis:{type:'category',data:ks.map(k=>k+' '+h[k].name),axisLabel:{color:'#dce6f2',fontSize:10}},series:[{type:'bar',data:ks.map(k=>h[k].count),itemStyle:{color:'#38bdf8'}}]});
- const lv=Object.values(a)[0];if(lv&&document.activeElement!==$('lvl'))$('lvl').value=lv.level;
- $('bot').innerHTML=Object.entries(b).flatMap(([s,ms])=>ms.map(x=>`<div class="msg"><b>${esc(s)}</b>\n${esc(x.text)}</div>`)).slice(-4).join('')||'<span style="color:var(--mu)">Belum ada transmisi pesan.</span>';
- const pList=pers&&pers.length?'<div style="font-size:11px;color:var(--mu);margin-top:8px"><b>Umpan Persona Aktif (cyber.steamcraft.online):</b><br>'+pers.slice(0,4).map(p=>`• ${esc(p.nama)} (${esc(p.jabatan)}) &lt;<span style="color:var(--ac)">${esc(p.email)}</span>&gt;`).join('<br>')+'</div>':'';
- $('recon').innerHTML=(r.length?'<h2 style="margin-top:10px">Peta Pengintaian</h2>'+r.map(x=>`<div class="msg">${esc(x.kind)} · ${esc(x.id)} · ${esc(x.satuan)} · ${esc(x.src||'')}</div>`).join(''):'')+pList;
- refreshTwin();
+  const [m, c, d, s, h, a, b, r, pers, vecs, evts] = await Promise.all([
+    'map', 'campaigns', 'decisions', 'sessions', 'heatmap', 'autonomy',
+    'bot', 'recon', 'personas', 'map/vectors', 'events/recent'
+  ].map(x => J('/api/' + x).catch(()=>[])));
+
+  // 1. Render Peta Satuan
+  if(Array.isArray(m)){
+    m.forEach(u => {
+      const k = cls(u.status);
+      const isAttacked = u.status !== 'Aman';
+      const rad = u.level === 'MABES' ? 14 : 11;
+      const markerColor = col[k] || '#10b981';
+
+      if(markers[u.satuan]){
+        markers[u.satuan].setStyle({color: markerColor, fillColor: markerColor});
+      } else {
+        const marker = L.circleMarker([u.lat, u.lon], {
+          radius: rad, color: markerColor, fillColor: markerColor, fillOpacity: 0.7, weight: 2
+        }).addTo(map);
+        
+        marker.bindTooltip(`<b>${u.satuan}</b><br><small>${u.role || ''}</small>`, {permanent: false, direction: 'top'});
+        marker.on('click', ()=>{
+          curSat = u.satuan;
+          refreshTwin();
+        });
+        markers[u.satuan] = marker;
+      }
+    });
+
+    $('units').innerHTML = m.map(u => `
+      <span class="b ${cls(u.status)}" style="cursor:pointer" onclick="curSat='${u.satuan}';refreshTwin()">
+        ${u.level === 'MABES' ? '🎖️' : '🛡️'} ${esc(u.satuan)} · ${esc(u.status)}
+      </span>
+    `).join('');
+  }
+
+  // 2. Render Vektor Kampanye (Attack Flight Paths)
+  attackVectorsLayer.clearLayers();
+  if(Array.isArray(vecs)){
+    vecs.forEach(v => {
+      const latlngs = [[v.from_lat, v.from_lon], [v.to_lat, v.to_lon]];
+      const line = L.polyline(latlngs, {
+        color: '#ef4444', weight: 3, opacity: 0.8, dashArray: '6, 6'
+      }).addTo(attackVectorsLayer);
+      line.bindTooltip(`🚨 Vektor Serangan APT: ${esc(v.from_satuan)} ➔ ${esc(v.to_satuan)} (${esc(v.bukti)})`);
+    });
+  }
+
+  // 3. Kampanye Status
+  $('camp').innerHTML = (c && c.length) ? c.map(x => `
+    <div style="border-left:3px solid var(--rd);padding:6px 10px;margin:6px 0;background:rgba(239,68,68,0.1);border-radius:4px">
+      <b style="color:var(--rd)">🚨 KAMPANYE TERKOORDINASI: ${esc(x.satuan.join(' ➔ '))}</b><br>
+      <small style="color:var(--mu)">Bukti Intelijen: <b>${esc(x.bukti)}</b> · ${esc(x.catatan)}</small>
+    </div>
+  `).join('') : '<span style="color:var(--mu);font-size:11px">Belum terdeteksi kampanye lintas satuan aktif.</span>';
+
+  // 4. Keputusan Dalang (Approval Queue)
+  $('dec').innerHTML = (d && d.length) ? '<table><tr><th>ID</th><th>Sumber</th><th>Status</th><th>Tindakan Komando</th></tr>' + d.map(p => `
+    <tr>
+      <td><b>${esc(p.id)}</b><br><small style="color:var(--mu)">${esc(p.satuan)}</small></td>
+      <td><span style="color:var(--ac);font-weight:700">${esc(p.src)}</span></td>
+      <td><span class="b ${p.status=='approved'?'Aman':'Tipuan'}">${p.status}</span></td>
+      <td>${p.status=='pending' ? `
+        <button class="g" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui Blokir (nftables)</button> 
+        <button onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>` : 
+        p.status=='approved' ? `<button class="d" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Cabut Blokir</button>` : ''}
+      </td>
+    </tr>
+  `).join('') + '</table>' : '<span style="color:var(--mu);font-size:11px">Semua usulan blokir telah ditinjau.</span>';
+
+  // 5. Sesi Terpantau
+  $('ses').innerHTML = '<table><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap ATT&amp;CK</th><th>Level</th><th>Teknik Terdeteksi</th></tr>' + 
+    s.slice(0, 10).map(x => `
+      <tr style="cursor:pointer" onclick="openSes('${x.satuan}','${x.session}')">
+        <td><b>${esc(x.session)}</b><br><small style="color:var(--mu)">${esc(x.satuan)}</small></td>
+        <td><span style="color:var(--ac)">${esc(x.src)}</span>${x.diverted ? ' <span class="b Tipuan">Dialihkan</span>' : ''}</td>
+        <td>${esc(x.stage)}</td>
+        <td>Level ${x.depth}</td>
+        <td><span style="color:var(--wn)">${esc(x.techniques.join(', '))}</span></td>
+      </tr>
+    `).join('') + '</table>';
+
+  // 6. Heatmap ATT&CK
+  const ks = Object.keys(h);
+  heat.setOption({
+    backgroundColor: 'transparent',
+    grid: {left: 80, right: 15, top: 10, bottom: 20},
+    xAxis: {type: 'value', axisLabel: {color: '#8294a8'}},
+    yAxis: {type: 'category', data: ks.map(k => k + ' ' + (h[k].name||'')), axisLabel: {color: '#dce6f2', fontSize: 10}},
+    series: [{type: 'bar', data: ks.map(k => h[k].count), itemStyle: {color: '#00f0ff'}}]
+  });
+
+  // 7. Live Terminal Ticker
+  if(Array.isArray(evts) && evts.length){
+    $('term-feed').innerHTML = evts.slice(0, 15).map(e => `
+      <div class="term-line">
+        <span class="term-ts">${new Date(e.ts * 1000).toLocaleTimeString()}</span>
+        <span class="term-src">${esc(e.src)}</span>
+        <span class="term-act">
+          [<b>${esc(e.satuan)}</b>] ${esc(e.action || e.stage || 'Aktivitas Modbus')}
+          ${(e.techniques||[]).map(t => `<span class="term-tag" style="background:#311b1b;color:#f87171">${t}</span>`).join(' ')}
+          ${e.diverted ? '<span class="term-tag" style="background:#2b220c;color:#f59e0b">DIVERTED</span>' : ''}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  // 8. Otonomi & Bot
+  const lv = Object.values(a)[0];
+  if(lv && document.activeElement !== $('lvl')) $('lvl').value = lv.level;
+
+  $('bot').innerHTML = Object.entries(b).flatMap(([sat, ms]) => 
+    ms.map(x => `<div style="padding:4px 0;border-bottom:1px dotted var(--ln)"><b>${esc(sat)}:</b> ${esc(x.text)}</div>`)
+  ).slice(-4).join('') || '<span style="color:var(--mu)">Belum ada transmisi pesan bot.</span>';
+
+  const pList = pers && pers.length ? '<div style="font-size:11px;color:var(--mu);margin-top:6px"><b>Persona Umpan Aktif (cyber.steamcraft.online):</b><br>' + 
+    pers.slice(0, 4).map(p => `• ${esc(p.nama)} (${esc(p.jabatan)}) &lt;<span style="color:var(--ac)">${esc(p.email)}</span>&gt;`).join('<br>') + '</div>' : '';
+  $('recon').innerHTML = (r.length ? '<b style="color:var(--mu);font-size:11px">Peta Pengintaian Phishing:</b><br>' + 
+    r.map(x => `<div style="font-size:11px">${esc(x.kind)} · ${esc(x.id)} · ${esc(x.satuan)} · ${esc(x.src||'')}</div>`).join('') : '') + pList;
+
+  refreshTwin();
 }
-$('lvl').onchange=e=>post('/api/autonomy',{level:+e.target.value});$('kill').onclick=()=>post('/api/killswitch');
-refresh();setInterval(refresh,2500);
-</script></body></html>
+
+// Sambungan WebSocket Realtime
+function initWebSocket(){
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${proto}//${window.location.host}/ws/live`;
+  const ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    $('live-text').innerText = 'REALTIME WEBSOCKET (0ms)';
+    $('live-indicator').style.borderColor = 'rgba(16,185,129,0.3)';
+    $('live-indicator').style.color = 'var(--ok)';
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if(msg.type === 'telemetry_tick'){
+        // Update telemetri hidup ke Twin-Screen secara instan
+        if(msg.units && msg.units[curSat]){
+          refreshTwin();
+        }
+      } else if(msg.type === 'event'){
+        playTacticalBeep(920, 'square', 0.1);
+        refresh();
+      }
+    } catch(e){}
+  };
+
+  ws.onclose = () => {
+    $('live-text').innerText = 'POLLING MODE (2.5s)';
+    $('live-indicator').style.borderColor = 'rgba(245,158,11,0.3)';
+    $('live-indicator').style.color = 'var(--wn)';
+    setTimeout(initWebSocket, 4000);
+  };
+}
+
+$('lvl').onchange = e => post('/api/autonomy', {level: +e.target.value});
+$('kill').onclick = () => {
+  if(confirm('Aktifkan Saklar Darurat? Sistem akan mengembalikan seluruh pangkalan ke Level L0 Amati.')){
+    post('/api/killswitch');
+  }
+};
+
+initWebSocket();
+refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>

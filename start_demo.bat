@@ -15,5 +15,5 @@ start http://127.0.0.1:8080
 echo [3/3] Memulai Layanan Dalang Command Center, Kelir Proxy, dan Decoys...
 echo Tekan Ctrl+C untuk menghentikan sistem.
 echo ---------------------------------------------------------------------
-python -m demo --mode full --port 8080
+python run_wayang.py --port 8080
 pause
