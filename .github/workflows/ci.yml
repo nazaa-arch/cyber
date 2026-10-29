@@ -1,0 +1,37 @@
+name: WAYANG CI & Docker Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt pytest-asyncio
+
+    - name: Run WAYANG Test Suite
+      run: |
+        python -m pytest tests -q -p no:warnings
+
+    - name: Verify Evaluation Harness
+      run: |
+        export PYTHONPATH=.
+        python sim_attacker/evaluate.py
+
+    - name: Build Docker Image
+      run: |
+        docker build -t wayang-node:latest .
