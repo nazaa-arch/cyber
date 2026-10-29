@@ -102,6 +102,9 @@ OPERATIONAL_UNITS = [
 
 
 def _detect_public_url() -> str | None:
+    explicit = os.environ.get("CONSOLE_URL")
+    if explicit:
+        return explicit
     try:
         import urllib.request, json
         res = urllib.request.urlopen("http://127.0.0.1:4040/api/tunnels", timeout=1)

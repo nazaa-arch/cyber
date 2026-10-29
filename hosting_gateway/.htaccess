@@ -1,0 +1,9 @@
+# WAYANG C4ISR Subdomain Gateway (.htaccess)
+# Mengarahkan seluruh request URI ke index.php proxy gateway
+RewriteEngine On
+RewriteBase /
+
+# Jangan rewrite berkas statis lokal jika ada
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]
