@@ -32,6 +32,7 @@ a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}.tl div
 </style></head><body>
 <header>
 <h1>WAYANG</h1><span style="color:var(--mu);font-size:12px">Pusat Komando Dalang · Pertahanan IT/OT Satuan</span><span class="sp"></span>
+<a href="/api/report/latest.docx" class="p" style="text-decoration:none;font-size:12px;display:inline-block;padding:4px 10px;background:#1e3a5f;border-color:#38bdf8;color:#fff;border-radius:4px" title="Unduh Berita Acara Pemeriksaan Forensik Digital standar TNI AD">📄 Unduh BAP-FD (.docx)</a>
 <label style="font-size:12px">Tingkat Otonomi <select id="lvl"><option value="0">L0 Amati</option><option value="1">L1 Rekomendasi</option>
 <option value="2">L2 Pengalihan otomatis (Bawaan)</option><option value="3">L3 Blokir terbatas</option></select></label>
 <button class="d" id="kill" title="Kembalikan sistem ke L0 Amati">SAKLAR DARURAT → L0</button>
@@ -70,7 +71,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const heat=echarts.init($('heat'));
 let curSat='Kodim-DEMO-03';
 
-async function post(u,b){await fetch(u,{method:'POST',headers:'application/json'?{'Content-Type':'application/json'}:{},body:b?JSON.stringify(b):undefined});refresh()}
+async function post(u,b){const res=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});try{const j=await res.json();refresh();return j;}catch(e){refresh();return {};}}
 async function sim(type){
  const t=$('toast');t.style.display='block';t.style.background='#1b2a3a';t.style.color='#38bdf8';t.innerHTML='⏳ Menjalankan simulasi serangan...';
  try{const r=await post('/api/simulate/'+type);t.innerHTML='✅ '+r.msg;t.style.background='#143322';t.style.color='#2ecc71'}catch(e){t.innerHTML='Simulasi diproses.'}

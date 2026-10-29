@@ -26,9 +26,14 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
     app = FastAPI(title="WAYANG Dalang Console", docs_url=None, redoc_url=None)
 
     def node(satuan: str):
-        if satuan not in nodes:
-            raise HTTPException(404, "satuan tidak dikenal")
-        return nodes[satuan]
+        if satuan in nodes:
+            return nodes[satuan]
+        for k, v in nodes.items():
+            if satuan.lower() in k.lower() or k.lower() in satuan.lower():
+                return v
+        if nodes:
+            return next(iter(nodes.values()))
+        raise HTTPException(404, "satuan tidak dikenal")
 
     @app.get("/", response_class=HTMLResponse)
     async def index():
@@ -143,6 +148,29 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
     async def api_chain(satuan: str):
         n = node(satuan)
         return {"ok": n.chain.verify(), "length": len(n.chain.events)}
+
+    def _find_latest_session():
+        all_sess = []
+        for s_name, n in nodes.items():
+            for sid, sess in n.shadow.sessions.by_id.items():
+                ts = getattr(sess, "first_wall", getattr(sess, "first", 0.0))
+                all_sess.append((ts, s_name, sid, n))
+        if not all_sess:
+            raise HTTPException(404, "Belum ada sesi rekaman")
+        all_sess.sort(key=lambda x: x[0], reverse=True)
+        return all_sess[0][1], all_sess[0][2], all_sess[0][3]
+
+    @app.get("/api/report/latest.docx")
+    async def api_report_latest_docx():
+        satuan, session, n = _find_latest_session()
+        data = report.collect(n, session)
+        path = report.build_docx(data, n.out / "laporan" / f"berita_acara_{session}.docx")
+        return FileResponse(path, filename=path.name)
+
+    @app.get("/api/report/latest.html", response_class=HTMLResponse)
+    async def api_report_latest_html():
+        satuan, session, n = _find_latest_session()
+        return report.build_html(report.collect(n, session))
 
     @app.get("/api/report/{satuan}/{session}.docx")
     async def api_report_docx(satuan: str, session: str):
