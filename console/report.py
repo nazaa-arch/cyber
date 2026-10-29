@@ -65,7 +65,7 @@ def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
     for k, v in [("Satuan Terkait", data["satuan"]), ("ID Sesi Forensik", s["session"]),
                  ("Alamat IP Sumber", s["src"]), ("Tahap Serangan Tertinggi", s["stage"]),
                  ("Kedalaman Adaptif Terbuka", f"Level {s['depth']}"),
-                 ("Pengalihan ke Bayangan (Shadow Divert)", "Ya (Berhasil dialihkan oleh Kelir)" if s["diverted"] else "Tidak"),
+                 ("Pengalihan ke Bayangan (Shadow Divert)", "Ya (Berhasil dialihkan oleh Kelir)" if s.get("diverted", False) else "Tidak"),
                  ("Integritas Aset Asli", "100% AMAN (Tidak tersentuh; semua perintah bersifat log-only)"),
                  ("Waktu Selesai Perekaman", data["generated"])]:
         d.add_paragraph(f"• {k}: {v}")
