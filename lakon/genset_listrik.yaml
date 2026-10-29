@@ -1,0 +1,14 @@
+lakon: genset_dan_listrik_pangkalan
+deskripsi: Pemantauan genset cadangan pangkalan, UPS baterai, dan Automatic Transfer Switch (ATS)
+bayangan:
+  - id: genset_ats_01
+    proto: modbus_tcp
+    registers:
+      power_load_kw:   {addr: 30010, model: correlated, with: shift_hours, base: 45.0}
+      frequency_hz:    {addr: 30011, model: normal_jitter, mean: 50.02, noise: 0.08}
+      engine_temp_c:   {addr: 30012, model: correlated, with: power_load_kw, base: 78.5}
+      genset_cmd:      {addr: 40020, writable: true, effect: log_only}
+    hmi:
+      vendor_banner: "DeepSea Generator Controller DSE7320"
+      default_cred_bait: true
+    kedalaman: {recon: 1, enum: 2, manip: 3, persist: 4}

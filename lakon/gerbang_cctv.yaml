@@ -1,0 +1,16 @@
+lakon: gerbang_dan_cctv_satuan
+deskripsi: Pengendali akses gerbang pangkalan dan perekam video CCTV
+bayangan:
+  - id: gerbang_akses_01
+    proto: http_web
+    port_suggest: 8082
+    banner: "HikVision / NVR-GateControl Embedded Linux"
+    hmi:
+      login_bait: true
+      default_creds: ["admin:admin", "root:12345"]
+      hidden_pages: ["/system/firmware", "/logs/access_gate.log", "/api/streams"]
+    telemetry:
+      gate_status: "standby_locked"
+      door_events: ["kendaraan_dinas_masuk", "patroli_keluar", "pengecekan_pos"]
+      daily_cycles: true
+    kedalaman: {recon: 1, enum: 2, manip: 3, persist: 4}

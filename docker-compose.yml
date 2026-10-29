@@ -1,0 +1,17 @@
+# Pemasangan: docker compose up  (Bab 15)
+# Prototipe: satu layanan menjalankan satuan simulasi + Dalang Console.
+# Untuk satu satuan nyata, ganti real_addr di demo.py/SatuanNode dengan alamat aset asli
+# dan hapus RealDeviceSim. Pengerasan bayangan (Bab 14): read-only, batas CPU/RAM, tanpa egress.
+services:
+  wayang:
+    build: .
+    command: ["python", "-m", "demo", "--mode", "full", "--host", "0.0.0.0"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 2.0
+    ports:
+      - "8080:8080"      # Dalang Console
+      - "15020-15042:15020-15042"   # Kelir, bayangan Modbus, bayangan HMI per satuan

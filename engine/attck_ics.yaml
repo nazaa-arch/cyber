@@ -1,0 +1,34 @@
+# Pemetaan aksi terobservasi -> teknik ATT&CK for ICS (Bab 6.2, Pemeta ATT&CK ICS).
+# CATATAN: ID teknik adalah contoh pemetaan dan harus diverifikasi ulang dengan
+# katalog resmi ATT&CK for ICS sebelum submission (sesuai Bab 6.3).
+techniques:
+  T0801: {name: Monitor Process State, tactic: Collection}
+  T0802: {name: Automated Collection, tactic: Collection}
+  T0845: {name: Program Upload, tactic: Collection}
+  T0861: {name: Point & Tag Identification, tactic: Collection}
+  T0840: {name: Network Connection Enumeration, tactic: Discovery}
+  T0846: {name: Remote System Discovery, tactic: Discovery}
+  T0888: {name: Remote System Information Discovery, tactic: Discovery}
+  T0812: {name: Default Credentials, tactic: Lateral Movement}
+  T0859: {name: Valid Accounts, tactic: Lateral Movement}
+  T0855: {name: Unauthorized Command Message, tactic: Impair Process Control}
+  T0836: {name: Modify Parameter, tactic: Impair Process Control}
+  T0831: {name: Manipulation of Control, tactic: Impact}
+actions:
+  read_coils: [T0801]
+  read_discrete_inputs: [T0801]
+  read_holding_registers: [T0801]
+  read_input_registers: [T0801]
+  read_device_identification: [T0888]
+  write_single_register: [T0855, T0836]
+  write_multiple_registers: [T0855, T0836]
+  write_single_coil: [T0855, T0831]
+  write_multiple_coils: [T0855, T0831]
+  http_login_default_cred: [T0812]
+  http_login_honeytoken: [T0859]
+  http_tags: [T0861]
+  http_config_download: [T0845]
+  http_panel: [T0801]
+  unlisted_source_read: [T0801]
+flags:
+  sequential_scan: [T0846, T0840]

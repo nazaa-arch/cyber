@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><title>WAYANG · Dalang Console</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/leaflet.css">
+<style>
+:root{--bg:#0b0f14;--pn:#121923;--ln:#223044;--tx:#d7e2ee;--mu:#7d8fa3;--ok:#2ecc71;--wn:#f5a623;--rd:#ff4d4f;--ac:#4cc9f0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,Segoe UI,sans-serif}
+header{display:flex;gap:16px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--ln);background:#0e141c}
+header h1{font-size:18px;margin:0;letter-spacing:3px;color:var(--ac)}header .sp{flex:1}
+main{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;padding:12px}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:10px;min-height:120px}
+.card h2{margin:0 0 8px;font-size:12px;letter-spacing:2px;color:var(--mu);text-transform:uppercase}
+#map{height:300px;background:#080c11;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:4px 6px;border-bottom:1px solid var(--ln);text-align:left}
+.b{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.Aman{background:#12331f;color:var(--ok)}.Tipuan{background:#3a2a0b;color:var(--wn)}.Kampanye{background:#3b1517;color:var(--rd)}
+button{background:#1a2635;color:var(--tx);border:1px solid var(--ln);border-radius:5px;padding:4px 10px;cursor:pointer}
+button:hover{border-color:var(--ac)}button.d{border-color:var(--rd);color:var(--rd)}button.g{border-color:var(--ok);color:var(--ok)}
+select{background:#1a2635;color:var(--tx);border:1px solid var(--ln);border-radius:5px;padding:4px}
+#heat{height:240px}.msg{border-left:3px solid var(--wn);padding:4px 8px;margin:4px 0;white-space:pre-wrap;font-size:12px}
+a{color:var(--ac)}.tl div{padding:2px 0;font-size:12px;border-bottom:1px dotted var(--ln)}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>WAYANG</h1><span style="color:var(--mu)">Dalang Console</span><span class="sp"></span>
+<label>Otonomi <select id="lvl"><option value="0">L0 Amati</option><option value="1">L1 Rekomendasi</option>
+<option value="2">L2 Pengalihan otomatis</option><option value="3">L3 Blokir terbatas</option></select></label>
+<button class="d" id="kill">SAKLAR DARURAT → L0</button></header>
+<main>
+<section class="card"><h2>Peta Komando</h2><div id="map"></div><div id="units" style="margin-top:8px"></div></section>
+<section class="card"><h2>Panel Keputusan</h2><div id="dec"></div><h2 style="margin-top:12px">Kampanye</h2><div id="camp"></div></section>
+<section class="card"><h2>Sesi</h2><div id="ses"></div></section>
+<section class="card"><h2>Putar Ulang Sesi</h2><div id="replay" class="tl">Pilih sesi.</div></section>
+<section class="card"><h2>Heatmap ATT&amp;CK for ICS</h2><div id="heat"></div></section>
+<section class="card"><h2>Bot Dalang &amp; Peta Pengintaian</h2><div id="bot"></div><div id="recon"></div></section>
+</main>
+<script src="/static/leaflet.js"></script><script src="/static/echarts.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),J=(u,o)=>fetch(u,o).then(r=>r.json());
+const map=L.map('map',{zoomControl:true,attributionControl:false}).setView([-6.9,107],7);const mk={};
+const cls=s=>s.startsWith('Kampanye')?'Kampanye':s.startsWith('Tipuan')?'Tipuan':'Aman';
+const col={Aman:'#2ecc71',Tipuan:'#f5a623',Kampanye:'#ff4d4f'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const heat=echarts.init($('heat'));
+async function post(u,b){await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});refresh()}
+async function openSes(sat,id){const r=await J(`/api/replay/${sat}/${id}`);
+ $('replay').innerHTML=r.map(e=>`<div><b>+${e.t}s</b> ${esc(e.action)} d${e.depth} ${esc(JSON.stringify(e.target||''))} <span style="color:var(--mu)">${esc(e.techniques.join(','))} ${esc(e.note)}</span></div>`).join('')
+ +`<p><a href="/api/report/${sat}/${id}.docx">Berita Acara (DOCX)</a> · <a href="/api/report/${sat}/${id}.html" target="_blank">HTML</a></p>`}
+async function refresh(){
+ const [m,c,d,s,h,a,b,r,pers]=await Promise.all(['map','campaigns','decisions','sessions','heatmap','autonomy','bot','recon','personas'].map(x=>J('/api/'+x)));
+ m.forEach(u=>{const k=cls(u.status);if(mk[u.satuan])mk[u.satuan].setStyle({color:col[k],fillColor:col[k]});
+  else mk[u.satuan]=L.circleMarker([u.lat,u.lon],{radius:11,color:col[k],fillColor:col[k],fillOpacity:.5}).addTo(map).bindTooltip(u.satuan,{permanent:true,direction:'right'})});
+ $('units').innerHTML=m.map(u=>`<span class="b ${cls(u.status)}" style="margin-right:6px">${esc(u.satuan)} · ${esc(u.status)}</span>`).join('');
+ $('camp').innerHTML=c.length?c.map(x=>`<div class="msg" style="border-color:var(--rd)"><b>${esc(x.satuan.join(' → '))}</b><br>Bukti: ${esc(x.bukti)}<br><i>${esc(x.catatan)}</i></div>`).join(''):'<span style="color:var(--mu)">Tidak ada.</span>';
+ $('dec').innerHTML=d.length?'<table><tr><th>ID</th><th>Sumber</th><th>Status</th><th></th></tr>'+d.map(p=>`<tr><td>${p.id}<br><small>${esc(p.satuan)}</small></td><td>${esc(p.src)}</td><td>${p.status}</td><td>`
+  +(p.status=='pending'?`<button class="g" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui blokir</button> <button onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>`:p.status=='approved'?`<button class="d" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Batalkan</button>`:'')+'</td></tr>').join('')+'</table>':'<span style="color:var(--mu)">Tidak ada keputusan tertunda.</span>';
+ $('ses').innerHTML='<table><tr><th>Sesi</th><th>Sumber</th><th>Tahap</th><th>Dlm</th><th>Teknik</th></tr>'+s.slice(0,12).map(x=>`<tr style="cursor:pointer" onclick="openSes('${x.satuan}','${x.session}')"><td>${esc(x.session)}<br><small>${esc(x.satuan)}</small></td><td>${esc(x.src)}${x.diverted?' <span class="b Tipuan">dialihkan</span>':''}</td><td>${x.stage}</td><td>${x.depth}</td><td>${esc(x.techniques.join(' '))}</td></tr>`).join('')+'</table>';
+ const ks=Object.keys(h);heat.setOption({backgroundColor:'transparent',grid:{left:70,right:10,top:10,bottom:30},xAxis:{type:'value',axisLabel:{color:'#7d8fa3'}},yAxis:{type:'category',data:ks.map(k=>k+' '+h[k].name),axisLabel:{color:'#d7e2ee',fontSize:10}},series:[{type:'bar',data:ks.map(k=>h[k].count),itemStyle:{color:'#4cc9f0'}}]});
+ const lv=Object.values(a)[0];if(lv&&document.activeElement!==$('lvl'))$('lvl').value=lv.level;
+ $('bot').innerHTML=Object.entries(b).flatMap(([s,ms])=>ms.map(x=>`<div class="msg"><b>${esc(s)}</b>\n${esc(x.text)}</div>`)).slice(-5).join('')||'<span style="color:var(--mu)">Belum ada pesan.</span>';
+ const pList=pers&&pers.length?'<div style="font-size:11px;color:var(--mu);margin-top:6px"><b>Umpan Persona Aktif:</b><br>'+pers.slice(0,4).map(p=>`• ${esc(p.nama)} (${esc(p.jabatan)}) &lt;${esc(p.email)}&gt;`).join('<br>')+'</div>':'';
+ $('recon').innerHTML=(r.length?'<h2 style="margin-top:10px">Peta Pengintaian</h2>'+r.map(x=>`<div class="msg">${esc(x.kind)} · ${esc(x.id)} · ${esc(x.satuan)} · ${esc(x.src||'')}</div>`).join(''):'')+pList;
+}
+$('lvl').onchange=e=>post('/api/autonomy',{level:+e.target.value});$('kill').onclick=()=>post('/api/killswitch');
+refresh();setInterval(refresh,2500);
+</script></body></html>

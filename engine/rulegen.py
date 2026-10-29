@@ -1,0 +1,168 @@
+"""Generator Aturan (Bab 4.1 Pilar 4, 9.5): Bayangan -> Benteng.
+
+Keluaran dari satu sesi: aturan deteksi gaya Sigma, IOC (STIX 2.1 sederhana),
+draf nftables, dan rekomendasi hardening. Tidak ada yang diterapkan otomatis;
+semua draf menunggu persetujuan Dalang.
+"""
+from __future__ import annotations
+
+import ipaddress
+import re
+import time
+import uuid
+
+import yaml
+
+_NS = uuid.UUID("5a0d3b6e-7c1f-4f0e-9d6a-0a7e17a9a001")
+_SAFE = re.compile(r"^[A-Za-z0-9_.:-]+$")
+
+# teknik -> (id aturan, judul, deskripsi deteksi)
+RULES = {
+    "write": ({"T0855", "T0836", "T0831"},
+              "wayang_modbus_write_non_operator",
+              "Peringatkan bila ada fungsi tulis Modbus dari alamat di luar daftar operator ke subnet OT.",
+              {"fc": [5, 6, 15, 16]}),
+    "scan": ({"T0846", "T0840"},
+             "wayang_ot_sequential_scan",
+             "Peringatkan bila satu sumber membaca register/unit berurutan lebih dari ambang dalam jendela singkat.",
+             {"pola": "baca berurutan", "ambang": 10}),
+    "default_cred": ({"T0812"},
+                     "wayang_default_credential_attempt",
+                     "Peringatkan percobaan login memakai kredensial bawaan pada panel HMI/CCTV.",
+                     {"login": ["admin:admin"]}),
+    "valid_acct": ({"T0859"},
+                   "wayang_leaked_credential_reuse",
+                   "Peringatkan penggunaan kredensial/token yang bocor dari dokumen umpan.",
+                   {"token_pattern": "HT[0-9a-f]{12}"}),
+    "devid": ({"T0888"},
+              "wayang_device_identification_probe",
+              "Peringatkan permintaan Read Device Identification (fc 43) dari sumber tak terdaftar.",
+              {"fc": [43]}),
+    "read": ({"T0801", "T0861", "T0845", "T0802"},
+             "wayang_unlisted_process_read",
+             "Peringatkan pembacaan data proses/konfigurasi oleh sumber di luar daftar operator.",
+             {"fc": [1, 2, 3, 4]}),
+}
+
+HARDENING = {
+    "T0812": "Nonaktifkan kredensial bawaan pada panel HMI/CCTV terkait.",
+    "T0859": "Cabut kredensial/token yang bocor dan putar ulang semua rahasia yang sejenis.",
+    "T0855": "Batasi fungsi tulis Modbus hanya dari daftar sumber operator (ACL pada segmen OT).",
+    "T0846": "Segmentasi jaringan: batasi pemindaian dari segmen IT ke segmen OT.",
+    "T0888": "Batasi akses fungsi identifikasi perangkat ke alamat manajemen.",
+}
+
+
+def validate_ip(ip: str, whitelist: set[str] | None = None,
+                allow_loopback: bool = False) -> ipaddress._BaseAddress:
+    a = ipaddress.ip_address(ip)
+    if (a.is_loopback and not allow_loopback) or a.is_multicast or a.is_unspecified \
+            or (a.is_reserved and not a.is_private):
+        raise ValueError(f"alamat tidak layak diblokir: {ip}")
+    if whitelist and ip in whitelist:
+        raise ValueError(f"alamat ada di daftar putih: {ip}")
+    return a
+
+
+def sigma_rules(summary: dict) -> list[dict]:
+    seen = set(summary.get("techniques", []))
+    out = []
+    for key, (techs, rid, desc, sel) in RULES.items():
+        hit = sorted(seen & techs)
+        if not hit:
+            continue
+        out.append({
+            "title": rid, "id": str(uuid.uuid5(_NS, rid)), "status": "experimental",
+            "description": desc, "author": "WAYANG Generator Aturan",
+            "date": time.strftime("%Y-%m-%d"),
+            "tags": [f"attack.ics.{t.lower()}" for t in hit],
+            "logsource": {"product": "ot_network", "service": "modbus_tcp"},
+            "detection": {"selection": sel,
+                          "filter_operator": {"src": "daftar_operator"},
+                          "condition": "selection and not filter_operator"},
+            "falsepositives": ["operator baru yang belum masuk daftar putih"],
+            "level": "high" if key in ("write", "valid_acct") else "medium",
+        })
+    return out
+
+
+def ioc_bundle(summary: dict) -> dict:
+    now = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+    objs = []
+    ip = ipaddress.ip_address(summary["src"])
+    kind = "ipv4-addr" if ip.version == 4 else "ipv6-addr"
+    objs.append({
+        "type": "indicator", "spec_version": "2.1",
+        "id": "indicator--" + str(uuid.uuid5(_NS, summary["src"] + summary["session"])),
+        "created": now, "modified": now, "valid_from": now,
+        "name": f"Sumber menyentuh bayangan ({summary['satuan']})",
+        "pattern": f"[{kind}:value = '{summary['src']}']", "pattern_type": "stix",
+        "labels": ["wayang-decoy-touch"],
+        "x_wayang_techniques": summary.get("techniques", []),
+        "x_wayang_fingerprint": summary.get("fingerprint", {}).get("ngrams", [])[:20],
+    })
+    for tok in sorted(summary.get("honeytokens_planted", [])):
+        objs.append({
+            "type": "indicator", "spec_version": "2.1",
+            "id": "indicator--" + str(uuid.uuid5(_NS, tok)),
+            "created": now, "modified": now, "valid_from": now,
+            "name": "Honeytoken terbawa penyerang",
+            "pattern": f"[x-wayang-token:value = '{tok}']", "pattern_type": "stix",
+            "labels": ["wayang-honeytoken"]})
+    return {"type": "bundle", "id": "bundle--" + str(uuid.uuid5(_NS, summary["session"])),
+            "objects": objs}
+
+
+def nftables_draft(src: str, ports=(502,), ttl: str = "15m",
+                   whitelist: set[str] | None = None, allow_loopback: bool = False) -> str:
+    a = validate_ip(src, whitelist, allow_loopback)
+    for p in ports:
+        if not isinstance(p, int) or not 1 <= p <= 65535:
+            raise ValueError("port tidak valid")
+    fam = "ipv4_addr" if a.version == 4 else "ipv6_addr"
+    sel = "ip" if a.version == 4 else "ip6"
+    pl = ", ".join(str(p) for p in ports)
+    return (
+        "# DRAF WAYANG - BELUM DITERAPKAN. Butuh tinjauan dan persetujuan Dalang.\n"
+        "table inet wayang_draft {\n"
+        f"  set blocked_{a.version} {{\n    type {fam}\n    flags timeout\n"
+        f"    elements = {{ {a} timeout {ttl} }}\n  }}\n"
+        "  chain input {\n    type filter hook input priority -10; policy accept;\n"
+        f"    {sel} saddr @blocked_{a.version} tcp dport {{ {pl} }} drop\n  }}\n}}\n")
+
+
+def recommendations(summary: dict) -> list[str]:
+    out = []
+    for t in summary.get("techniques", []):
+        r = HARDENING.get(t)
+        if r and r not in out:
+            out.append(r)
+    return out
+
+
+def covered_techniques(techs) -> set[str]:
+    cov = set()
+    for tset, *_ in RULES.values():
+        cov |= tset
+    return set(techs) & cov
+
+
+def build_bundle(summary: dict, whitelist: set[str] | None = None,
+                 allow_loopback: bool = False) -> dict:
+    """Satu paket keluaran untuk satu sesi."""
+    for k in ("src", "session", "satuan"):
+        if not _SAFE.match(str(summary.get(k, ""))):
+            raise ValueError(f"nilai {k} tidak aman")
+    rules = sigma_rules(summary)
+    techs = summary.get("techniques", [])
+    return {
+        "session": summary["session"],
+        "sigma_yaml": yaml.safe_dump_all(rules, allow_unicode=True, sort_keys=False),
+        "sigma": rules,
+        "ioc": ioc_bundle(summary),
+        "nftables": nftables_draft(summary["src"], whitelist=whitelist,
+                                   allow_loopback=allow_loopback),
+        "hardening": recommendations(summary),
+        "ratio_benteng": (len(covered_techniques(techs)) / len(techs)) if techs else 1.0,
+    }
+

@@ -1,0 +1,12 @@
+lakon: depo_bbm_satuan
+bayangan:
+  - id: depo_bbm_01
+    proto: modbus_tcp
+    registers:
+      tank_level:    {addr: 30001, model: tank, capacity_l: 20000, draw_profile: harian}
+      pump_pressure: {addr: 30002, model: correlated, with: tank_level, noise: 0.02}
+      pump_cmd:      {addr: 40012, writable: true, effect: log_only}
+    hmi:
+      vendor_banner: generik
+      default_cred_bait: true
+    kedalaman: {recon: 1, enum: 2, manip: 3, persist: 4}
