@@ -1,7 +1,7 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-35%2F35%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-40%2F40%20passed-brightgreen.svg)]()
 [![Rancangan Keamanan Fisik](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(by%20design)-blue.svg)]()
 [![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-1.50ms%20(loopback)-orange.svg)]()
 [![End-to-End Alert](https://img.shields.io/badge/TTFA%20Telegram-45--120ms%20(e2e)-orange.svg)]()

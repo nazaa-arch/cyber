@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from collections import Counter, deque
+from collections import Counter, deque, OrderedDict
 
 from engine.adaptive import AdaptiveEngine
 
@@ -108,28 +108,27 @@ class SessionRegistry:
         self.idle = idle_s
         self.prefix = prefix
         self.max_sessions = max_sessions
-        self.by_src: dict[str, Session] = {}
-        self.by_id: dict[str, Session] = {}
+        self.by_src: OrderedDict[str, Session] = OrderedDict()
+        self.by_id: OrderedDict[str, Session] = OrderedDict()
         self._n = 0
 
     def prune(self, target_size: int | None = None) -> int:
-        """Membersihkan sesi tertua (LRU) saat kapasitas penuh untuk mencegah kehabisan RAM (OOM)."""
-        target = target_size if target_size is not None else self.max_sessions
-        if len(self.by_id) <= target:
-            return 0
-
-        # Prioritaskan pembersihan sesi unpinned yang paling lama idle
-        candidates = sorted(
-            self.by_id.values(),
-            key=lambda s: (s.pinned, s.last)
-        )
-
+        """Membersihkan sesi tertua (LRU) dengan OrderedDict untuk mencegah kehabisan RAM (OOM)."""
+        target = max(0, target_size if target_size is not None else (self.max_sessions - 1))
         removed = 0
-        to_remove = len(self.by_id) - target
-        for s in candidates:
-            if removed >= to_remove:
-                break
-            self.by_id.pop(s.id, None)
+        while len(self.by_id) > target and self.by_id:
+            # 1. Prioritaskan mengeluarkan sesi unpinned tertua dari antrean LRU
+            unpinned_id = None
+            for sid, s in self.by_id.items():
+                if not s.pinned:
+                    unpinned_id = sid
+                    break
+            if unpinned_id is not None:
+                s = self.by_id.pop(unpinned_id)
+            else:
+                # 2. Fallback jika semua pinned: keluarkan sesi paling awal (FIFO / LRU evict)
+                _, s = self.by_id.popitem(last=False)
+
             if self.by_src.get(s.src) == s:
                 self.by_src.pop(s.src, None)
             removed += 1
@@ -140,9 +139,14 @@ class SessionRegistry:
         s = self.by_src.get(src)
         if s is None or now - s.last > self.idle:
             if len(self.by_id) >= self.max_sessions:
-                self.prune(self.max_sessions - 100)
+                margin = max(1, min(50, self.max_sessions // 10))
+                self.prune(self.max_sessions - margin)
             self._n += 1
             s = Session(f"{self.prefix}-{self._n:05d}", src, now)
             self.by_src[src] = s
             self.by_id[s.id] = s
+        else:
+            # Pindahkan ke paling belakang OrderedDict (tanda baru saja diakses / LRU refresh)
+            self.by_id.move_to_end(s.id)
+            self.by_src.move_to_end(src)
         return s

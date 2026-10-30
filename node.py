@@ -20,6 +20,7 @@ from engine.autonomy import Autonomy, Blocklist
 from engine.gamelan import Gamelan
 from engine.pipeline import Pipeline
 from engine.social import SocialDecoys
+from engine.watchdog import WatchdogFailToWire
 from evidence.hashchain import HashChain
 from evidence.session_store import SessionStore
 from kelir.mirror import StateMirror
@@ -79,6 +80,7 @@ class SatuanNode:
         self.shadow = ShadowDevice("depo_bbm_01", satuan, seed, self.sessions, self.bus,
                                    time_scale=time_scale, start_hour=start_hour)
         self.mirror = StateMirror(real_addr, mirror_interval)
+        self.watchdog = WatchdogFailToWire(satuan, bus=self.bus)
         self.kelir = Kelir(satuan, real_addr, self.shadow, self.sessions,
                            SessionScorer(self.whitelist), self.bus, self.autonomy,
                            self.blocklist, self.mirror)

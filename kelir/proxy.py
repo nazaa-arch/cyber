@@ -39,13 +39,38 @@ class Kelir:
         self.zero_trust = zero_trust
         self.divert_counts: dict[str, int] = {}
         self.active_conns = 0
+        self.active_operator_conns = 0
         self.active_per_ip: dict[str, int] = {}
         self.max_global_conns = 300
         self.max_per_ip_conns = 20
-        self.reserved_operator_slots = 25
+        self.reserved_operator_slots = 30  # Komponen C: Alokasi eksklusif operator sah (QoS Anti-Starvation)
         self.stats = {"forwarded": 0, "diverted_frames": 0, "fail_closed": 0, "blocked": 0,
                       "forwarded_operator": 0, "forwarded_unlisted_reads": 0,
                       "conns_rejected_pool": 0, "conns_rejected_rate": 0}
+
+    @property
+    def load_percentage(self) -> float:
+        unlisted_cap = max(1, self.max_global_conns - self.reserved_operator_slots)
+        active_unlisted = max(0, self.active_conns - self.active_operator_conns)
+        return (active_unlisted / unlisted_cap) * 100.0
+
+    @property
+    def degradation_tier(self) -> int:
+        """
+        Komponen A: Multi-Tier Degradation Ladder (Tangga Degradasi Cerdas):
+        Tingkat 1 (Beban Normal < 75%): High-Interaction fisik kontinu & ladder cycle
+        Tingkat 2 (Beban Tinggi 75-90%): Stateless Mirror Decoy (hemat 90% CPU)
+        Tingkat 3 (Kritis 90-98%): OT Tarpit (tahan soket buffer penyerang)
+        Tingkat 4 (Kapasitas Penuh >= 98%): Blokir langsung di kernel / nftables
+        """
+        load = self.load_percentage
+        if load < 75.0:
+            return 1
+        elif load < 90.0:
+            return 2
+        elif load < 98.0:
+            return 3
+        return 4
 
     @property
     def maintenance_mode(self) -> bool:
@@ -86,7 +111,7 @@ class Kelir:
         up = None
         is_operator = src in self.scorer.whitelist
 
-        # TCP Connection Governor: Cegah serangan Slowloris socket exhaustion & DoS pool
+        # Komponen C: Isolasi Jalur Prioritas Operator (QoS Dedicated Pool)
         cur_ip_conns = self.active_per_ip.get(src, 0)
         if not is_operator:
             if cur_ip_conns >= self.max_per_ip_conns:
@@ -94,10 +119,13 @@ class Kelir:
                 writer.close()
                 return
             unlisted_cap = self.max_global_conns - self.reserved_operator_slots
-            if self.active_conns >= unlisted_cap:
+            active_unlisted = self.active_conns - self.active_operator_conns
+            if active_unlisted >= unlisted_cap:
                 self.stats["conns_rejected_pool"] = self.stats.get("conns_rejected_pool", 0) + 1
                 writer.close()
                 return
+        else:
+            self.active_operator_conns += 1
 
         self.active_conns += 1
         self.active_per_ip[src] = cur_ip_conns + 1
@@ -120,6 +148,8 @@ class Kelir:
                 writer.write(mp.build_mbap(tid, unit, bytes(resp)))
                 await writer.drain()
         finally:
+            if is_operator:
+                self.active_operator_conns = max(0, self.active_operator_conns - 1)
             self.active_conns = max(0, self.active_conns - 1)
             if src in self.active_per_ip:
                 self.active_per_ip[src] = max(0, self.active_per_ip[src] - 1)
@@ -207,6 +237,20 @@ class Kelir:
         return await self._forward(holder, tid, unit, pdu, whitelisted=False)
 
     def _to_shadow(self, s, src, unit, pdu):
+        tier = self.degradation_tier
+        if tier >= 4:
+            # Tingkat 4 (Kapasitas Penuh 100%): Dorong blokir langsung ke kernel Linux / nftables
+            self.blocklist.add(src, ttl_s=3600, reason="Kapasitas Penuh 100% - Kernel L4 Drop", who="kernel-drop")
+            self._event(s, "kernel_l4_drop", tier=4, load_pct=round(self.load_percentage, 1))
+            self.stats["fail_closed"] += 1
+            return None
+
+        # Tingkat 2 & 3: Turunkan ke mode Stateless Mirror Decoy (hemat 90% CPU)
+        if tier >= 2:
+            self.shadow.degradation_tier = 1
+        else:
+            self.shadow.degradation_tier = 0
+
         try:
             out = self.shadow.handle(src, unit, pdu, via="kelir")
         except Exception:
@@ -217,6 +261,11 @@ class Kelir:
             return None
         self.stats["diverted_frames"] += 1
         resp, delay = out
+
+        # Tingkat 3 (Kritis 90-98%): OT Tarpit - Tahan soket buffer penyerang
+        if tier == 3:
+            delay = max(delay, 0.85)
+
         return _Delayed(resp, delay)
 
     async def _forward(self, holder, tid, unit, pdu, whitelisted: bool):
