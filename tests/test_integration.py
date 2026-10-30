@@ -39,7 +39,7 @@ def test_end_to_end_night_scenario(tmp_path):
                 assert w[0] == 6
             assert not real3.writes
             div = [e for e in n3.store.all_events() if e["action"] == "shadow_divert"]
-            assert div and "tulis register" in div[0]["reason"]
+            assert div and ("tulis register" in div[0]["reason"] or "zero_trust" in div[0]["reason"])
             assert n3.pipeline.verify_chain()
             props = n3.approvals.pending()
             assert props

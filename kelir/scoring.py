@@ -105,7 +105,7 @@ class SessionScorer:
         self.policies: dict[str, SourcePolicy] = {}
         self.maintenance_mode = maintenance_mode
         if policies:
-            self._load_policies(policies)
+            self.load_policies(policies)
         for pol in self.policies.values():
             if pol.source:
                 self.whitelist.add(pol.source)
@@ -114,7 +114,7 @@ class SessionScorer:
         assert abs(sum(self.weights.values()) - 1.0) < 1e-9, "bobot harus berjumlah 1"
         self.threshold = threshold
 
-    def _load_policies(self, raw_policies: dict | list):
+    def load_policies(self, raw_policies: dict | list):
         items = []
         if isinstance(raw_policies, dict):
             for k, v in raw_policies.items():
@@ -147,6 +147,10 @@ class SessionScorer:
                 max_rate_hz=max_rate,
                 on_violation=on_violation
             )
+            if src:
+                self.whitelist.add(src)
+
+    _load_policies = load_policies
 
     def check_source_policy(self, src: str, unit: int, req, req_rate_hz: float = 0.0) -> tuple[bool, str | None]:
         """

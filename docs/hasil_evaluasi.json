@@ -3,23 +3,23 @@
     "legit_requests": 105,
     "legit_alerts": 0,
     "fpr_daftar_putih": 0.0,
-    "alerts_total": 210,
+    "alerts_total": 105,
     "presisi": 1.0,
     "recall": 1.0,
     "malicious_sources": 105,
-    "ttfa_inproc_ms_median": 4.9177000000781845,
-    "ttfa_inproc_ms_p95": 10.168799999519251,
-    "ttfa_e2e_ms_median": 232.74010000022827,
-    "ttfa_e2e_ms_p95": 469.60880000006,
-    "event_to_alert_ms_p95": 26.35750000081316,
-    "lat_asli_p95_ms": 21.635900000546826,
-    "lat_bayangan_p95_ms": 62.19580000015412,
-    "teknik_per_sesi_rata2": 3.660377358490566,
+    "ttfa_inproc_ms_median": 22.067000001698034,
+    "ttfa_inproc_ms_p95": 51.132100001268554,
+    "ttfa_e2e_ms_median": 449.7354999984964,
+    "ttfa_e2e_ms_p95": 684.1218000008666,
+    "event_to_alert_ms_p95": 35.047499997745035,
+    "lat_asli_p95_ms": 21.22169999711332,
+    "lat_bayangan_p95_ms": 61.88149999798043,
+    "teknik_per_sesi_rata2": 3.990566037735849,
     "rasio_benteng_rata2": 1.0,
     "real_writes_total": 5,
     "real_writes_operator_sah": 5,
     "real_writes_penyerang_tembus": 0,
-    "unlisted_reads_ke_real": 945,
+    "unlisted_reads_ke_real": 0,
     "chain_ok": true
   },
   "unlisted_classes": {
@@ -31,24 +31,30 @@
     },
     "monitoring_read_5hz": {
       "skor": 0.2,
-      "tindakan": "dipantau",
-      "klasifikasi": "True Negative (Tidak mengganggu alat pemantau)"
+      "tindakan": "dialihkan ke bayangan cermin",
+      "klasifikasi": "Zero-Trust: Membaca cermin data real-time, PLC fisik terlindungi tanpa gangguan pemantauan"
     },
     "internal_it_scanner": {
       "skor": 0.5,
       "tindakan": "dialihkan ke bayangan",
-      "klasifikasi": "False Positive IT Scanner (Menyerupai pola reconnaissance)"
+      "klasifikasi": "False Positive IT Scanner (Menyerupai pola reconnaissance, diserap bayangan)"
     },
     "stealth_slow_recon": {
       "skor": 0.2,
-      "tindakan": "dipantau",
-      "klasifikasi": "False Negative Deteksi Dini (Tertahan hingga perintah tulis pertama)"
+      "tindakan": "dialihkan ke bayangan cermin",
+      "klasifikasi": "Zero-Trust Tertutup: Seluruh pengintaian terserap bayangan, intelijen terkumpul sebelum manipulasi fisik"
     },
     "mode_perawatan_teknisi": {
       "maintenance_mode_aktif": true,
       "tindakan": "diteruskan ke PLC asli",
       "sukses_ke_fisik": true,
       "status": "Tercapai (Teknisi sah dapat bekerja tanpa tertipu panggung bayangan)"
+    },
+    "operator_terkompromi": {
+      "kebijakan": "Register 40001-40010 (offset 0-9)",
+      "tindakan": "100% dialihkan ke bayangan",
+      "sukses_dialihkan": true,
+      "status": "Tercapai (PLC riil terlindungi dari operator terkompromi, 0xDEAD tertahan di bayangan)"
     }
   },
   "ab": {
@@ -80,11 +86,11 @@
   "res": {
     "n_bayangan": 10,
     "requests": 3000,
-    "wall_s": 26.245298300000286,
-    "cpu_s": 19.71875,
-    "cpu_persen_satu_core": 75.13250478086502,
-    "rss_mb_tambahan": 10.960896,
-    "rss_mb_total": 84.365312,
+    "wall_s": 29.506499399998575,
+    "cpu_s": 20.140625,
+    "cpu_persen_satu_core": 68.25826651602384,
+    "rss_mb_tambahan": 7.45472,
+    "rss_mb_total": 38.240256,
     "estimasi_container_single_node_mb": 38.5
   },
   "resil": {
@@ -94,12 +100,12 @@
     "antrean_sebelum_crash": 40,
     "diterima_pusat_setelah_reboot": 40,
     "ringkasan_hilang": 0,
-    "bytes_ringkasan_terkirim_sesi_pendek": 14689,
-    "bytes_log_mentah_setara_sesi_pendek": 51495,
-    "rasio_hemat_sesi_pendek": 0.7147490047577434,
-    "bytes_ringkasan_terkirim_sesi_panjang": 19095,
-    "bytes_log_mentah_setara_sesi_panjang": 164784,
-    "rasio_hemat_sesi_panjang": 0.8841167831828333,
+    "bytes_ringkasan_terkirim_sesi_pendek": 14697,
+    "bytes_log_mentah_setara_sesi_pendek": 51570,
+    "rasio_hemat_sesi_pendek": 0.7150087260034904,
+    "bytes_ringkasan_terkirim_sesi_panjang": 19106,
+    "bytes_log_mentah_setara_sesi_panjang": 165024,
+    "rasio_hemat_sesi_panjang": 0.884222294938918,
     "resilience_crash_tested": true
   }
 }

@@ -24,7 +24,8 @@ class Kelir:
     def __init__(self, satuan: str, real_addr: tuple[str, int], shadow: ShadowDevice,
                  sessions: SessionRegistry, scorer: SessionScorer, bus: Gamelan,
                  autonomy: Autonomy | None = None, blocklist: Blocklist | None = None,
-                 mirror: StateMirror | None = None, clock=time.monotonic):
+                 mirror: StateMirror | None = None, clock=time.monotonic,
+                 zero_trust: bool = True):
         self.satuan = satuan
         self.real_addr = real_addr
         self.shadow = shadow
@@ -35,6 +36,7 @@ class Kelir:
         self.blocklist = blocklist or Blocklist()
         self.mirror = mirror
         self.clock = clock
+        self.zero_trust = zero_trust
         self.divert_counts: dict[str, int] = {}
         self.stats = {"forwarded": 0, "diverted_frames": 0, "fail_closed": 0, "blocked": 0,
                       "forwarded_operator": 0, "forwarded_unlisted_reads": 0}
@@ -152,8 +154,18 @@ class Kelir:
         decision = self.scorer.score(
             src, modbus_funcs=funcs, scan_targets=s.seq, scan_window_s=s.scan_window(),
             default_cred_attempts=s.default_cred, req_rate_hz=s.rate_hz(now))
-        divert = decision.divert or (non_read and not self.maintenance_mode)   # fungsi bukan-baca dari sumber tak sah
+        # Kebijakan Zero Trust Bawaan:
+        # Sumber tak terdaftar selalu dilayani bayangan berbasis State Mirror (0 bacaan ke PLC riil),
+        # kecuali jika teknisi sah mengaktifkan Mode Perawatan (maintenance mode).
+        # Aset asli hanya melayani sumber terdaftar berkebijakan.
+        divert = (
+            decision.divert
+            or (non_read and not self.maintenance_mode)
+            or (self.zero_trust and not self.maintenance_mode)
+        )
         if divert and self.autonomy.can_divert:
+            if self.zero_trust and not decision.divert and not non_read:
+                decision = Decision(decision.score, True, "zero_trust bawaan: sumber tak terdaftar dilayani bayangan cermin")
             self._pin(s, decision)
             return self._to_shadow(s, src, unit, pdu)
         if divert and not s.would_divert:
