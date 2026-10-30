@@ -557,20 +557,46 @@ header#main-header::after {
   box-shadow: 0 0 14px rgba(153, 27, 27, 0.5);
 }
 
-/* Toast Notification Bar */
+/* Floating HUD Toast Notification (Layer mengambang di atas tanpa menggeser layout) */
 #toast {
   display: none;
-  background: var(--navy-800);
-  border-bottom: 1px solid var(--gold);
+  position: fixed;
+  top: 116px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  background: rgba(7, 21, 39, 0.95);
+  background-image: var(--batik-dark);
+  background-size: 160px 160px;
+  border: 1px solid var(--gold);
   color: var(--gold-soft);
-  padding: 6px 18px;
-  font-size: .6875rem;
-  font-weight: 600;
+  padding: 8px 24px;
+  border-radius: var(--radius);
+  font-family: var(--font-head);
+  font-size: .7188rem;
+  font-weight: 700;
   letter-spacing: .04em;
   text-align: center;
-  animation: slide-toast .2s ease-out;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.8), 0 0 14px rgba(201, 162, 39, 0.25);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  max-width: 92vw;
+  animation: slide-toast .22s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes slide-toast { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+#toast::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  margin-right: 9px;
+  vertical-align: 1px;
+}
+@keyframes slide-toast {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
 
 /* ==========================================================================
    ZONE 3: PRIMARY C4ISR OPERATIONAL THEATER (3-COLUMN LAYOUT)
