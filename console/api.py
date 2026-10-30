@@ -343,33 +343,145 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
         sh = n.shadow
         has_pump_off = any(not s.pump_on for s in sh.sessions.by_id.values())
         total_diverted = sum(1 for s in sh.sessions.by_id.values() if s.diverted)
-        return {
-            "satuan": satuan,
-            "nama_satuan": n.satuan,
-            "aset_asli": {
-                "nama": f"PLC Depo BBM Satuan {n.satuan} (Aset Fisik Asli)",
-                "status": "OPERASIONAL NORMAL",
-                "tangki_level_l": 14250,
-                "tangki_kapasitas_l": 20000,
-                "pompa_status": "AKTIF (BERJALAN)",
-                "tekanan_bar": 2.12,
-                "suhu_c": 27.2,
-                "perintah_bahaya_diterima": 0,
-                "integritas": "100% AMAN TERLINDUNGI"
-            },
-            "panggung_bayangan": {
-                "nama": f"Bayangan Kembar Digital ({sh.id})",
-                "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
-                "tangki_level_l": round(sh.values.get("tank_level_l", 12382.6), 1),
-                "tangki_kapasitas_l": 20000,
-                "pompa_status": "MATI (EFEK PALSU)" if has_pump_off else "AKTIF (BERJALAN)",
-                "tekanan_bar": round(sh.values.get("pump_pressure_bar", 2.04), 2),
-                "suhu_c": round(sh.values.get("temp_c", 27.8), 1),
-                "perintah_bahaya_ditangkap": sum(len(s.writes) for s in sh.sessions.by_id.values()),
-                "kedalaman_terbuka": max([s.engine.depth for s in sh.sessions.by_id.values()] or [1]),
-                "dwell_time_aktif": True
+        writes_caught = sum(len(s.writes) for s in sh.sessions.by_id.values())
+        depth = max([s.engine.depth for s in sh.sessions.by_id.values()] or [1])
+
+        sat_lower = n.satuan.lower()
+        if "brawijaya" in sat_lower or "listrik" in sat_lower or "genset" in sat_lower:
+            asset_type = "genset"
+            kw_base = 46.8
+            shadow_kw = 0.0 if has_pump_off else round(sh.values.get("power_load_kw", kw_base), 1)
+            shadow_hz = 0.0 if has_pump_off else round(sh.values.get("frequency_hz", 50.02), 2)
+            shadow_volt = 0.0 if has_pump_off else 380.0
+            return {
+                "satuan": satuan,
+                "nama_satuan": n.satuan,
+                "asset_type": "genset",
+                "role": "Sistem Daya Listrik Darurat (ATS/UPS & Genset Pangkalan)",
+                "aset_asli": {
+                    "nama": "Schneider Electric ATS Controller (380V 50Hz)",
+                    "status": "OPERASIONAL NORMAL",
+                    "power_source": "PLN UTAMA (MAINS ON LOAD)",
+                    "power_load_kw": kw_base,
+                    "power_max_kw": 80.0,
+                    "power_load_pct": 58.5,
+                    "frequency_hz": 50.02,
+                    "voltage_v": 382.4,
+                    "engine_temp_c": 78.5,
+                    "ats_status": "NORMAL (GRID ACTIVE)",
+                    "solar_cadangan_l": 850,
+                    "perintah_bahaya_diterima": 0,
+                    "integritas": "100% AMAN TERLINDUNGI"
+                },
+                "panggung_bayangan": {
+                    "nama": f"Bayangan DSE7320 Genset Controller ({sh.id})",
+                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
+                    "power_source": "GENSET TRIP / MATI (EFEK PALSU)" if has_pump_off else "PLN UTAMA (SIMULASI)",
+                    "power_load_kw": shadow_kw,
+                    "power_max_kw": 80.0,
+                    "power_load_pct": 0.0 if has_pump_off else 56.2,
+                    "frequency_hz": shadow_hz,
+                    "voltage_v": shadow_volt,
+                    "engine_temp_c": round(sh.values.get("engine_temp_c", 78.5), 1),
+                    "ats_status": "TRIP TERPUTUS (EFEK PALSU)" if has_pump_off else "NORMAL (EFEK PALSU)",
+                    "solar_cadangan_l": 850,
+                    "perintah_bahaya_ditangkap": writes_caught,
+                    "kedalaman_terbuka": depth,
+                    "dwell_time_aktif": True
+                }
             }
-        }
+        elif "siliwangi" in sat_lower or "cctv" in sat_lower or "gerbang" in sat_lower or "perimeter" in sat_lower:
+            asset_type = "cctv"
+            return {
+                "satuan": satuan,
+                "nama_satuan": n.satuan,
+                "asset_type": "cctv",
+                "role": "Komando Perimeter & Gerbang CCTV Pangkalan",
+                "aset_asli": {
+                    "nama": "Perimeter Barrier Gate & Video Surveillance Gateway",
+                    "status": "OPERASIONAL NORMAL",
+                    "gate_status": "TERTUTUP / TERKUNCI (0°)",
+                    "gate_is_open": False,
+                    "cctv_feed_status": "4 FEED AKTIF (1080p 30fps H.265)",
+                    "perimeter_beam": "INFRARED BEAM AKTIF (AMAN)",
+                    "anpr_verified": "14 KENDARAAN TERVERIFIKASI",
+                    "perintah_bahaya_diterima": 0,
+                    "integritas": "100% AMAN TERLINDUNGI"
+                },
+                "panggung_bayangan": {
+                    "nama": f"Bayangan HikVision NVR & Gate Decoy ({sh.id})",
+                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
+                    "gate_status": "TERBUKA LEBAR (EFEK PALSU 90°)" if has_pump_off else "TERTUTUP (SIMULASI 0°)",
+                    "gate_is_open": has_pump_off,
+                    "cctv_feed_status": "LOOPED STATIC DECOY FEED (PALSU)",
+                    "perimeter_beam": "BYPASS TERDETEKSI (SIMULASI)" if has_pump_off else "NORMAL (SIMULASI)",
+                    "anpr_verified": "LOGIN ADMIN DECOY CAPTURED",
+                    "perintah_bahaya_ditangkap": writes_caught,
+                    "kedalaman_terbuka": depth,
+                    "dwell_time_aktif": True
+                }
+            }
+        elif "mabes" in sat_lower or "pusat" in sat_lower or "siber" in sat_lower or "c4isr" in sat_lower:
+            asset_type = "c4isr"
+            return {
+                "satuan": satuan,
+                "nama_satuan": n.satuan,
+                "asset_type": "c4isr",
+                "role": "Pusat Komando & Pengendali Siber Operasi Terpadu (C4ISR)",
+                "aset_asli": {
+                    "nama": "Gateway Dalang AI & Validator Kriptografis Hash-Chain",
+                    "status": "OPERASIONAL NORMAL",
+                    "throughput_gbps": 1.25,
+                    "hashchain_status": "100% INTEGRITAS TERTUTUP (SHA-256)",
+                    "ledger_blocks": 1482,
+                    "consensus_nodes": "5/5 SATUAN TERHUBUNG (100%)",
+                    "ai_autonomy_level": "LEVEL 2 (DYNAMIC REACTION)",
+                    "perintah_bahaya_diterima": 0,
+                    "integritas": "100% AMAN TERLINDUNGI"
+                },
+                "panggung_bayangan": {
+                    "nama": f"Bayangan C4ISR HoneyGrid & Deception Gateway ({sh.id})",
+                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
+                    "throughput_gbps": 0.08,
+                    "hashchain_status": "TRAP TOKEN INJEKSI SELESAI" if total_diverted else "STANDBY",
+                    "ledger_blocks": 1482,
+                    "consensus_nodes": "DECOY PEER GRID AKTIF",
+                    "ai_autonomy_level": "DECEPTION TRAP",
+                    "perintah_bahaya_ditangkap": writes_caught,
+                    "kedalaman_terbuka": depth,
+                    "dwell_time_aktif": True
+                }
+            }
+        else:
+            return {
+                "satuan": satuan,
+                "nama_satuan": n.satuan,
+                "asset_type": "bbm",
+                "role": "Depo Bahan Bakar Minyak (BBM) Taktis Satuan",
+                "aset_asli": {
+                    "nama": f"PLC Depo BBM Satuan {n.satuan} (Aset Fisik Asli)",
+                    "status": "OPERASIONAL NORMAL",
+                    "tangki_level_l": 14250,
+                    "tangki_kapasitas_l": 20000,
+                    "pompa_status": "AKTIF (BERJALAN)",
+                    "tekanan_bar": 2.12,
+                    "suhu_c": 27.2,
+                    "perintah_bahaya_diterima": 0,
+                    "integritas": "100% AMAN TERLINDUNGI"
+                },
+                "panggung_bayangan": {
+                    "nama": f"Bayangan Kembar Digital ({sh.id})",
+                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
+                    "tangki_level_l": round(sh.values.get("tank_level_l", 12382.6), 1),
+                    "tangki_kapasitas_l": 20000,
+                    "pompa_status": "MATI (EFEK PALSU)" if has_pump_off else "AKTIF (BERJALAN)",
+                    "tekanan_bar": round(sh.values.get("pump_pressure_bar", 2.04), 2),
+                    "suhu_c": round(sh.values.get("temp_c", 27.8), 1),
+                    "perintah_bahaya_ditangkap": writes_caught,
+                    "kedalaman_terbuka": depth,
+                    "dwell_time_aktif": True
+                }
+            }
 
     # Tactical Export Endpoints
     @app.get("/api/tactical/rules/stix.json")

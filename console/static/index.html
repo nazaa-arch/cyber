@@ -866,6 +866,180 @@ main#ops-theater {
 }
 @keyframes scada-wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
+/* Genset & Power Grid Graphic */
+.scada-power-wrap {
+  width: 74px;
+  height: 94px;
+  background: #020710;
+  border: 1.5px solid var(--line-gold);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px;
+}
+.scada-power-bolt {
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px var(--cyan));
+}
+.scada-power-bolt.trip {
+  filter: drop-shadow(0 0 6px var(--crimson));
+  animation: pulse-trip 1s infinite alternate;
+}
+@keyframes pulse-trip { 0% { opacity: 0.3; } 100% { opacity: 1; } }
+.scada-power-bars {
+  width: 100%;
+  height: 38px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.scada-power-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--teal) 0%, #0d4b59 100%);
+  transition: height 0.6s ease;
+}
+.scada-power-fill.gold {
+  background: linear-gradient(180deg, var(--gold) 0%, #6e5008 100%);
+}
+.scada-power-fill.trip {
+  background: linear-gradient(180deg, var(--crimson) 0%, #610d18 100%);
+}
+.scada-power-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: var(--on-dark-muted);
+}
+
+/* CCTV & Barrier Gate Graphic */
+.scada-cctv-wrap {
+  width: 82px;
+  height: 94px;
+  background: #020710;
+  border: 1.5px solid var(--line-gold);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px;
+}
+.scada-cctv-lens {
+  width: 100%;
+  height: 48px;
+  background: #071322;
+  border: 1px solid rgba(0,255,200,0.25);
+  border-radius: 3px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3px;
+  overflow: hidden;
+}
+.scada-cctv-rec {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  color: #ff334b;
+  font-weight: 800;
+}
+.scada-cctv-dot {
+  width: 5px;
+  height: 5px;
+  background: #ff334b;
+  border-radius: 50%;
+  animation: pulse-trip 0.8s infinite alternate;
+}
+.scada-cctv-grid {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(0,255,200,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,255,200,0.06) 1px, transparent 1px);
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+.scada-gate-bar-wrap {
+  width: 100%;
+  height: 28px;
+  border-top: 1px dashed rgba(255,255,255,0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.scada-gate-arm {
+  width: 88%;
+  height: 5px;
+  background: repeating-linear-gradient(45deg, #ff334b, #ff334b 6px, #ffffff 6px, #ffffff 12px);
+  border-radius: 2px;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left center;
+}
+.scada-gate-arm.open {
+  transform: rotate(-65deg);
+  background: repeating-linear-gradient(45deg, var(--gold), var(--gold) 6px, #ffffff 6px, #ffffff 12px);
+}
+.scada-gate-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 700;
+  margin-top: 2px;
+  color: var(--on-dark-muted);
+}
+
+/* C4ISR Hash-Chain Graphic */
+.scada-c4isr-wrap {
+  width: 78px;
+  height: 94px;
+  background: #020710;
+  border: 1.5px solid var(--line-gold);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 2px;
+}
+.scada-chain-node {
+  width: 90%;
+  height: 22px;
+  background: #081b2e;
+  border: 1px solid var(--teal);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.5313rem;
+  font-weight: 800;
+  color: var(--cyan);
+}
+.scada-chain-node.gold {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.scada-chain-link {
+  width: 2px;
+  height: 8px;
+  background: var(--line-gold);
+}
+
 .scada-metrics {
   flex: 1;
   display: flex;
@@ -1703,79 +1877,238 @@ async function lockdownCurrent() {
   refresh();
 }
 
-// Render SCADA Tactical Twin-Screen
+// Render SCADA Tactical Twin-Screen (BBM, Genset, CCTV/Gerbang, C4ISR)
 async function refreshTwin() {
   try {
     const tw = await J(`/api/twinscreen/${curSat}`);
     const a = tw.aset_asli, p = tw.panggung_bayangan;
     $('twin-sat').innerText = tw.nama_satuan || curSat;
+    const type = tw.asset_type || 'bbm';
 
-    const realLevelPct = Math.min(100, Math.max(0, (a.tangki_level_l / a.tangki_kapasitas_l) * 100));
-    const shadowLevelPct = Math.min(100, Math.max(0, (p.tangki_level_l / p.tangki_kapasitas_l) * 100));
-    const pumpRunning = a.pompa_status.includes('AKTIF');
-    const shadowPumpRunning = p.pompa_status.includes('AKTIF');
+    let realGraphic = '', realMetrics = '', shadowGraphic = '', shadowMetrics = '';
+
+    if (type === 'genset') {
+      realGraphic = `
+        <div class="scada-power-wrap">
+          <span class="scada-power-bolt">⚡</span>
+          <div class="scada-power-bars"><div class="scada-power-fill" style="height:${a.power_load_pct}%"></div></div>
+          <span class="scada-power-lbl">${a.frequency_hz} Hz</span>
+        </div>
+      `;
+      realMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono">${a.power_load_kw} kW</span>
+          <span class="metric-max mono">/ ${a.power_max_kw} kW (${a.power_load_pct}%)</span>
+        </div>
+        <div class="scada-submetrics">
+          <span>Daya: <b>${a.power_source}</b> · ${a.voltage_v} V · Suhu: ${a.engine_temp_c}°C</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--emerald)">
+          Integritas Aset: <b>${a.integritas}</b> · Manipulasi Diteruskan: <b>${a.perintah_bahaya_diterima} (0-Harm)</b>
+        </div>
+      `;
+
+      const isTrip = p.power_load_kw === 0;
+      shadowGraphic = `
+        <div class="scada-power-wrap">
+          <span class="scada-power-bolt ${isTrip ? 'trip' : ''}">⚡</span>
+          <div class="scada-power-bars"><div class="scada-power-fill ${isTrip ? 'trip' : 'gold'}" style="height:${p.power_load_pct}%"></div></div>
+          <span class="scada-power-lbl" style="color:${isTrip ? 'var(--crimson)' : 'var(--gold)'}">${p.frequency_hz} Hz</span>
+        </div>
+      `;
+      shadowMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono" style="color:${isTrip ? 'var(--crimson)' : 'var(--gold)'}">${p.power_load_kw} kW</span>
+          <span class="metric-max mono">/ ${p.power_max_kw} kW (${p.power_load_pct}%)</span>
+        </div>
+        <div class="scada-submetrics">
+          <span>Umpan ATS: <b style="color:${isTrip ? 'var(--crimson)' : 'var(--gold)'}">${p.power_source}</b> · ${p.voltage_v} V</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--gold)">
+          Perangkap Aktif: <b>${p.perintah_bahaya_ditangkap} Ditangkap</b> · Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
+        </div>
+      `;
+
+    } else if (type === 'cctv') {
+      realGraphic = `
+        <div class="scada-cctv-wrap">
+          <div class="scada-cctv-lens">
+            <div class="scada-cctv-rec"><span class="scada-cctv-dot"></span><span>LIVE</span></div>
+            <div class="scada-cctv-grid"></div>
+            <span style="font-family:var(--font-mono);font-size:0.4375rem;color:var(--cyan);z-index:2">CAM-01 [POS PERIMETER]</span>
+          </div>
+          <div class="scada-gate-bar-wrap">
+            <div class="scada-gate-arm"></div>
+            <span class="scada-gate-lbl">PALANG TERKUNCI</span>
+          </div>
+        </div>
+      `;
+      realMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono" style="font-size:1rem">${a.gate_status}</span>
+        </div>
+        <div class="scada-submetrics">
+          <span>Surveillance: <b>${a.cctv_feed_status}</b> · Sensor: ${a.perimeter_beam}</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--emerald)">
+          Integritas Aset: <b>${a.integritas}</b> · Manipulasi Diteruskan: <b>${a.perintah_bahaya_diterima} (0-Harm)</b>
+        </div>
+      `;
+
+      shadowGraphic = `
+        <div class="scada-cctv-wrap">
+          <div class="scada-cctv-lens" style="border-color:${p.gate_is_open ? 'var(--gold)' : 'rgba(0,255,200,0.25)'}">
+            <div class="scada-cctv-rec"><span class="scada-cctv-dot" style="background:${p.gate_is_open ? 'var(--gold)' : '#ff334b'}"></span><span style="color:${p.gate_is_open ? 'var(--gold)' : '#ff334b'}">${p.gate_is_open ? 'DECOY' : 'LIVE'}</span></div>
+            <div class="scada-cctv-grid"></div>
+            <span style="font-family:var(--font-mono);font-size:0.4375rem;color:var(--gold);z-index:2">LOOPED BAIT FEED</span>
+          </div>
+          <div class="scada-gate-bar-wrap">
+            <div class="scada-gate-arm ${p.gate_is_open ? 'open' : ''}"></div>
+            <span class="scada-gate-lbl" style="color:${p.gate_is_open ? 'var(--gold)' : 'var(--on-dark-muted)'}">${p.gate_is_open ? 'EFEK PALSU: 90° BUKA' : 'PALANG TERKUNCI'}</span>
+          </div>
+        </div>
+      `;
+      shadowMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono" style="color:var(--gold);font-size:1rem">${p.gate_status}</span>
+        </div>
+        <div class="scada-submetrics">
+          <span>Umpan Gerbang: <b style="color:${p.gate_is_open ? 'var(--gold)' : 'var(--emerald)'}">${p.gate_status}</b> · ${p.cctv_feed_status}</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--gold)">
+          Perangkap Aktif: <b>${p.perintah_bahaya_ditangkap} Ditangkap</b> · Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
+        </div>
+      `;
+
+    } else if (type === 'c4isr') {
+      realGraphic = `
+        <div class="scada-c4isr-wrap">
+          <div class="scada-chain-node">BLK #${a.ledger_blocks - 1}</div>
+          <div class="scada-chain-link"></div>
+          <div class="scada-chain-node">BLK #${a.ledger_blocks}</div>
+          <div class="scada-chain-link"></div>
+          <div class="scada-chain-node" style="color:var(--emerald)">VALID ✓</div>
+        </div>
+      `;
+      realMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono">${a.throughput_gbps} Gbps</span>
+          <span class="metric-max mono">Backbone Siber C4ISR Kemenhan</span>
+        </div>
+        <div class="scada-submetrics">
+          <span>Ledger: <b>${a.hashchain_status}</b> · Konsensus: ${a.consensus_nodes}</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--emerald)">
+          Integritas Aset: <b>${a.integritas}</b> · Manipulasi Diteruskan: <b>${a.perintah_bahaya_diterima} (0-Harm)</b>
+        </div>
+      `;
+
+      shadowGraphic = `
+        <div class="scada-c4isr-wrap">
+          <div class="scada-chain-node gold">HONEYNET</div>
+          <div class="scada-chain-link"></div>
+          <div class="scada-chain-node gold">TRAP TOKEN</div>
+          <div class="scada-chain-link"></div>
+          <div class="scada-chain-node gold">ACTIVE</div>
+        </div>
+      `;
+      shadowMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono" style="color:var(--gold);font-size:1rem">${p.consensus_nodes}</span>
+        </div>
+        <div class="scada-submetrics">
+          <span>Deception Grid: <b>${p.hashchain_status}</b> · AI Mode: ${p.ai_autonomy_level}</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--gold)">
+          Perangkap Aktif: <b>${p.perintah_bahaya_ditangkap} Ditangkap</b> · Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
+        </div>
+      `;
+
+    } else {
+      // Classic BBM (Tank Fluida & Pompa)
+      const realLevelPct = Math.min(100, Math.max(0, (a.tangki_level_l / a.tangki_kapasitas_l) * 100));
+      const shadowLevelPct = Math.min(100, Math.max(0, (p.tangki_level_l / p.tangki_kapasitas_l) * 100));
+      const pumpRunning = a.pompa_status.includes('AKTIF');
+      const shadowPumpRunning = p.pompa_status.includes('AKTIF');
+
+      realGraphic = `
+        <div class="scada-tank-wrap">
+          <div class="scada-tank-ruler">
+            <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          </div>
+          <div class="scada-fluid" style="height:${realLevelPct}%">
+            <div class="scada-fluid-wave"></div>
+          </div>
+        </div>
+      `;
+      realMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono">${a.tangki_level_l.toLocaleString()}</span>
+          <span class="metric-max mono">/ ${a.tangki_kapasitas_l.toLocaleString()} L (${realLevelPct.toFixed(1)}%)</span>
+        </div>
+        <div class="scada-submetrics">
+          <span class="impeller-wheel ${pumpRunning ? '' : 'stopped'}"></span>
+          <span>Pompa: <b>${a.pompa_status}</b> · ${a.tekanan_bar} Bar · ${a.suhu_c}°C</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--emerald)">
+          Integritas Aset: <b>${a.integritas}</b> · Manipulasi Diteruskan: <b>${a.perintah_bahaya_diterima} (0-Harm)</b>
+        </div>
+      `;
+
+      shadowGraphic = `
+        <div class="scada-tank-wrap">
+          <div class="scada-tank-ruler">
+            <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          </div>
+          <div class="scada-fluid gold" style="height:${shadowLevelPct}%">
+            <div class="scada-fluid-wave"></div>
+          </div>
+        </div>
+      `;
+      shadowMetrics = `
+        <div class="metric-row-big">
+          <span class="metric-val mono" style="color:var(--gold)">${p.tangki_level_l.toLocaleString()}</span>
+          <span class="metric-max mono">/ ${p.tangki_kapasitas_l.toLocaleString()} L (${shadowLevelPct.toFixed(1)}%)</span>
+        </div>
+        <div class="scada-submetrics">
+          <span class="impeller-wheel ${shadowPumpRunning ? '' : 'stopped'}"></span>
+          <span>Umpan Pompa: <b style="color:${shadowPumpRunning ? 'var(--emerald)' : 'var(--crimson-soft)'}">${p.pompa_status}</b> · ${p.tekanan_bar} Bar</span>
+        </div>
+        <div class="scada-audit-pill" style="color:var(--gold)">
+          Perangkap Aktif: <b>${p.perintah_bahaya_ditangkap} Ditangkap</b> · Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
+        </div>
+      `;
+    }
 
     $('twin-view').innerHTML = `
       <div class="scada-panel real">
         <div class="scada-head">
-          <span class="scada-title" style="color:var(--cyan)">Aset Fisik Nyata (OT Terlindungi)</span>
+          <span class="scada-title" style="color:var(--cyan)">${a.nama || 'Aset Fisik Nyata (OT Terlindungi)'}</span>
           <span class="unit-status-pill status-aman">${a.status}</span>
         </div>
         <div class="scada-content">
-          <div class="scada-tank-wrap">
-            <div class="scada-tank-ruler">
-              <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
-            </div>
-            <div class="scada-fluid" style="height:${realLevelPct}%">
-              <div class="scada-fluid-wave"></div>
-            </div>
-          </div>
+          ${realGraphic}
           <div class="scada-metrics">
-            <div class="metric-row-big">
-              <span class="metric-val mono">${a.tangki_level_l.toLocaleString()}</span>
-              <span class="metric-max mono">/ ${a.tangki_kapasitas_l.toLocaleString()} L (${realLevelPct.toFixed(1)}%)</span>
-            </div>
-            <div class="scada-submetrics">
-              <span class="impeller-wheel ${pumpRunning ? '' : 'stopped'}"></span>
-              <span>Pompa: <b>${a.pompa_status}</b> · ${a.tekanan_bar} Bar · ${a.suhu_c}°C</span>
-            </div>
-            <div class="scada-audit-pill" style="color:var(--emerald)">
-              Integritas Aset: <b>${a.integritas}</b> · Manipulasi Diteruskan: <b>${a.perintah_bahaya_diterima} (0-Harm)</b>
-            </div>
+            ${realMetrics}
           </div>
         </div>
       </div>
 
       <div class="scada-panel shadow">
         <div class="scada-head">
-          <span class="scada-title" style="color:var(--gold)">Panggung Bayangan (Decoy Sandbox)</span>
+          <span class="scada-title" style="color:var(--gold)">${p.nama || 'Panggung Bayangan (Decoy Sandbox)'}</span>
           <span class="unit-status-pill status-tipuan">${p.status}</span>
         </div>
         <div class="scada-content">
-          <div class="scada-tank-wrap">
-            <div class="scada-tank-ruler">
-              <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
-            </div>
-            <div class="scada-fluid gold" style="height:${shadowLevelPct}%">
-              <div class="scada-fluid-wave"></div>
-            </div>
-          </div>
+          ${shadowGraphic}
           <div class="scada-metrics">
-            <div class="metric-row-big">
-              <span class="metric-val mono" style="color:var(--gold)">${p.tangki_level_l.toLocaleString()}</span>
-              <span class="metric-max mono">/ ${p.tangki_kapasitas_l.toLocaleString()} L (${shadowLevelPct.toFixed(1)}%)</span>
-            </div>
-            <div class="scada-submetrics">
-              <span class="impeller-wheel ${shadowPumpRunning ? '' : 'stopped'}"></span>
-              <span>Umpan Pompa: <b style="color:${shadowPumpRunning ? 'var(--emerald)' : 'var(--crimson-soft)'}">${p.pompa_status}</b> · ${p.tekanan_bar} Bar</span>
-            </div>
-            <div class="scada-audit-pill" style="color:var(--gold)">
-              Perangkap Aktif: <b>${p.perintah_bahaya_ditangkap} Ditangkap</b> · Penyesuaian Kedalaman: <b>Level ${p.kedalaman_terbuka}</b>
-            </div>
+            ${shadowMetrics}
           </div>
         </div>
       </div>
     `;
+  } catch (e) {}
+}
   } catch (e) {}
 }
 
