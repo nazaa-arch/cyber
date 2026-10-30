@@ -41,21 +41,34 @@ def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
         except Exception:
             pass
 
-    # Kop Resmi Standar Militer
-    kop = d.add_paragraph("TENTARA NASIONAL INDONESIA ANGKATAN DARAT\n"
-                          "SATUAN PERTAHANAN SIBER KODAM / KOREM / KODIM\n"
-                          f"SATUAN TUGAS: {data['satuan']}\n"
+    # Header Dokumen Simulasi Purwarupa (Bukan Dokumen Resmi Negara)
+    watermark_box = d.add_paragraph(
+        "===================================================================\n"
+        "*** DOKUMEN SIMULASI PURWARUPA - BUKAN DOKUMEN RESMI NEGARA / TNI AD ***\n"
+        "PURWARUPA RISET PERTAHANAN SIBER IT/OT - KARTIKA CYBER HACKATHON 2026\n"
+        "Mendukung Integritas Bukti Digital & Chain of Custody Kriptografis (RFC 6962)\n"
+        "==================================================================="
+    )
+    watermark_box.paragraph_format.space_after = Pt(4)
+    for run in watermark_box.runs:
+        run.font.size = Pt(8)
+        run.bold = True
+
+    # Kop Purwarupa Riset Pertahanan
+    kop = d.add_paragraph("KARTIKA CYBER HACKATHON 2026 - PUSAT RISET PERTAHANAN SIBER\n"
+                          "SIMULASI C4ISR DECEPTION GRID TERDISTRIBUSI\n"
+                          f"NODE PANGKALAN TERUJI: {data['satuan']}\n"
                           "-----------------------------------------------------------------")
     kop.paragraph_format.space_after = Pt(2)
     for run in kop.runs:
         run.font.size = Pt(9)
         run.bold = True
 
-    h0 = d.add_heading("BERITA ACARA PEMERIKSAAN INSIDEN SIBER (BAP-FD)", 0)
+    h0 = d.add_heading("BERITA ACARA PEMERIKSAAN INSIDEN SIBER (BAP-FD) - SIMULASI", 0)
     h0.paragraph_format.space_before = Pt(6)
-    d.add_paragraph(f"Nomor Dokumen : BA-FD/{data['satuan']}/{s['session']}\n"
-                    f"Klasifikasi   : RAHASIA / TERBATAS\n"
-                    f"Waktu Laporan : {data['generated']}")
+    d.add_paragraph(f"Nomor Berkas : SIMULASI-BA-FD/{data['satuan']}/{s['session']}\n"
+                    f"Klasifikasi  : SIMULASI / TERBATAS (Riset & Evaluasi Purwarupa)\n"
+                    f"Waktu Uji    : {data['generated']}")
 
     p = d.add_paragraph(f"[{DISCLAIMER}]")
     p.runs[0].bold = True
@@ -66,7 +79,7 @@ def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
                  ("Alamat IP Sumber", s["src"]), ("Tahap Serangan Tertinggi", s["stage"]),
                  ("Kedalaman Adaptif Terbuka", f"Level {s['depth']}"),
                  ("Pengalihan ke Bayangan (Shadow Divert)", "Ya (Berhasil dialihkan oleh Kelir)" if s.get("diverted", False) else "Tidak"),
-                 ("Integritas Aset Asli", "100% AMAN (Tidak tersentuh; semua perintah bersifat log-only)"),
+                 ("Integritas Aset Asli", "Terisolasi Penuh (0 instruksi berbahaya diteruskan ke fisik riil dalam simulasi)"),
                  ("Waktu Selesai Perekaman", data["generated"])]:
         d.add_paragraph(f"• {k}: {v}")
 
@@ -112,10 +125,10 @@ def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
             d.add_paragraph(f"• Rekomendasi Hardening: {h}")
 
     sig = d.add_paragraph(
-        "\n\n                                                    Mengesahkan,\n"
-        "                                                    Perwira Jaga / An. Komandan Satuan,\n\n\n\n"
+        "\n\n                                                    Mengesahkan Pengujian,\n"
+        "                                                    Penguji Teknis / Tim Pengembang Purwarupa,\n\n\n\n"
         "                                                    ( .................................................. )\n"
-        "                                                    Pangkat / Korps / NRP"
+        "                                                    Verifikator Forensik Digital (Simulasi)"
     )
     sig.runs[0].font.size = Pt(10)
     
@@ -133,8 +146,15 @@ def build_html(data: dict) -> str:
     techs = "".join(f"<li>{x['id']} {html.escape(x['nama'])} ({html.escape(x['taktik'])})</li>"
                     for x in data["techniques"])
     logo_tag = '<img src="/static/Logo.jpeg" style="height:48px;vertical-align:middle;margin-right:12px;border-radius:4px">'
+    watermark_html = (
+        "<div style='background:#fef2f2;border:1px solid #f87171;color:#991b1b;padding:8px 12px;margin-bottom:16px;border-radius:4px;font-size:12px;font-weight:bold;text-align:center'>"
+        "*** DOKUMEN SIMULASI PURWARUPA - BUKAN DOKUMEN RESMI NEGARA / TNI AD ***<br>"
+        "Mendukung Integritas Bukti Digital & Chain of Custody Kriptografis (RFC 6962)"
+        "</div>"
+    )
     return (f"<html><body style='font-family:Segoe UI,sans-serif;padding:24px;background:#f8fafc;color:#0f172a'>"
-            f"<h1>{logo_tag}Berita Acara Insiden Siber (Draf)</h1><p><b>{DISCLAIMER}</b></p>"
+            f"{watermark_html}"
+            f"<h1>{logo_tag}Berita Acara Insiden Siber (Simulasi Purwarupa)</h1><p><b>{DISCLAIMER}</b></p>"
             f"<p>Satuan: {html.escape(data['satuan'])} · Sesi: {html.escape(s['session'])} · "
             f"Sumber: {html.escape(s['src'])}</p><p>Rantai hash: "
             f"{'LULUS' if data['chain_ok'] else 'GAGAL'}</p><ul>{techs}</ul>"

@@ -93,6 +93,13 @@ class Kelir:
     async def _route(self, src: str, tid: int, unit: int, pdu: bytes, holder: dict):
         now = self.clock()
         if src in self.scorer.whitelist:                       # operator sah
+            # Batasan Keamanan Zero Trust:
+            # IP whitelist memverifikasi asal jaringan, namun frame tetap diparsing
+            # untuk mencegah paket biner malformed/eksploitasi buffer tembus ke PLC riil.
+            try:
+                req = mp.parse_pdu(pdu)
+            except mp.ProtoError:
+                return None  # Tolak frame cacat (fail-closed)
             return await self._forward(holder, tid, unit, pdu, whitelisted=True)
 
         s = self.sessions.get(src, now)
