@@ -1,19 +1,32 @@
 @echo off
-title WAYANG - Dalang Command Center (Kartika Cyber 2026)
+chcp 65001 >nul
+title WAYANG C4ISR - Pusat Komando Pertahanan Siber TNI AD
 cls
-echo =====================================================================
-echo           WAYANG: ADAPTIVE DECEPTION GRID UNTUK TNI AD
-echo        Infrastruktur Pertahanan Siber Terdistribusi IT/OT
-echo =====================================================================
+color 0B
+
+echo ===============================================================================
+echo            TENTARA NASIONAL INDONESIA ANGKATAN DARAT (TNI AD)
+echo         WAYANG C4ISR: ADAPTIVE DECEPTION GRID UNTUK IT/OT MILITER
+echo ===============================================================================
 echo.
-echo [1/3] Menyiapkan environment Python...
+cd /d "%~dp0"
 set PYTHONPATH=.
 
-echo [2/3] Membuka Peramban ke Dalang Console (http://127.0.0.1:8080)...
+echo [1/3] Mengaktifkan Tunnel Publik Ngrok (cyber.steamcraft.online)...
+start "WAYANG Ngrok Tunnel" /min ngrok http 8080 --url https://revival-majesty-lucrative.ngrok-free.dev
+
+echo [2/3] Membuka Konsol C4ISR di Peramban...
+start https://cyber.steamcraft.online
 start http://127.0.0.1:8080
 
-echo [3/3] Memulai Layanan Dalang Command Center, Kelir Proxy, dan Decoys...
+echo [3/3] Menjalankan Engine C4ISR Dalang & Kelir Modbus Proxy...
+echo.
+echo ===============================================================================
+echo  SISTEM AKTIF!
+echo  - Akses Lokal  : http://127.0.0.1:8080
+echo  - Akses Publik : https://cyber.steamcraft.online (SSL Let's Encrypt Aktif)
+echo ===============================================================================
 echo Tekan Ctrl+C untuk menghentikan sistem.
-echo ---------------------------------------------------------------------
+echo -------------------------------------------------------------------------------
 python run_wayang.py --port 8080
 pause
