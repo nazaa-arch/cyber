@@ -8,7 +8,8 @@ Write-Host "====================================================================
 Write-Host "   RED-TEAM ATTACK LAUNCHER (PURE POWERSHELL - NO NMAP NEEDED)" -ForegroundColor Yellow
 Write-Host "   Target IP : $TargetIP"
 Write-Host "   Port      : $Port (KODAM IV Diponegoro - Depo BBM)"
-Write-Host "   Dasbor HUD: https://cyber.steamcraft.online"
+Write-Host "   HUD Live  : http://192.168.1.11:8080 (Buka di Laptop/HP Anda)" -ForegroundColor Cyan
+Write-Host "   HUD Ngrok : https://revival-majesty-lucrative.ngrok-free.dev" -ForegroundColor Cyan
 Write-Host "==========================================================================" -ForegroundColor Red
 Write-Host ""
 
@@ -75,5 +76,8 @@ if ($Skenario -eq "3" -or $Skenario -eq "all") {
     Write-Host ""
 }
 
-Write-Host "[SELESAI] Buka Dasbor HUD di browser: https://cyber.steamcraft.online" -ForegroundColor Green
-Write-Host "Periksa lonjakan log ancaman dan status alarm penulisan dialihkan!"
+Write-Host "[SELESAI] Buka Dasbor Live di browser untuk melihat radar:" -ForegroundColor Green
+Write-Host "   - Dari Laptop Ini / Laptop Lain (1 Wi-Fi): http://192.168.1.11:8080" -ForegroundColor Cyan
+Write-Host "   - Dari Internet Luar (Instan Tanpa Loading): https://revival-majesty-lucrative.ngrok-free.dev" -ForegroundColor Cyan
+Write-Host "   - Dari Laptop Server Utama: http://127.0.0.1:8080" -ForegroundColor Cyan
+Write-Host "Periksa lonjakan log ancaman, diverged metric, dan status alert di Dalang Console!"

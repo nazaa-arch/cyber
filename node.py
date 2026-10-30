@@ -121,11 +121,14 @@ class SatuanNode:
                 await asyncio.sleep(0.05)
             self.ports["hmi"] = (self._uv.servers[0].sockets[0].getsockname()[1]
                                  if self._uv.servers else hp)
-        if self.tg_channel:
+        if self.tg_channel and not getattr(SatuanNode, "_tg_polling_active", False):
+            SatuanNode._tg_polling_active = True
+            self._is_tg_poller = True
             self.tg_channel.start_polling()
 
     async def stop(self) -> None:
-        if self.tg_channel:
+        if getattr(self, "_is_tg_poller", False) and self.tg_channel:
+            SatuanNode._tg_polling_active = False
             self.tg_channel.stop_polling()
         self.mirror.stop()
         for s in self._servers:
