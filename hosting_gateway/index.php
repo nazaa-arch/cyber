@@ -6,8 +6,8 @@
  * ke backend mesin pertahanan WAYANG Dalang Console.
  */
 
-// Target URL backend tunnel lokal
-$backend_url = "https://revival-majesty-lucrative.ngrok-free.dev";
+// Target URL backend cloud 24/7 (Render)
+$backend_url = "https://wayang-c4isr.onrender.com";
 
 $request_uri = $_SERVER['REQUEST_URI'];
 $target_url = rtrim($backend_url, '/') . $request_uri;
