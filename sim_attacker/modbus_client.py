@@ -20,9 +20,13 @@ class ModbusClient:
         self.r = self.w = None
 
     async def __aenter__(self):
-        self.r, self.w = await asyncio.open_connection(
-            self.host, self.port,
-            local_addr=(self.local_addr, 0) if self.local_addr else None)
+        try:
+            self.r, self.w = await asyncio.open_connection(
+                self.host, self.port,
+                local_addr=(self.local_addr, 0) if self.local_addr else None)
+        except OSError:
+            # Fallback if host OS (e.g. Windows) forbids binding non-local IP
+            self.r, self.w = await asyncio.open_connection(self.host, self.port)
         return self
 
     async def __aexit__(self, *a):

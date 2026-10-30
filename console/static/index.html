@@ -4,30 +4,43 @@
 <meta charset="utf-8">
 <title>WAYANG · Deception Grid Adaptif IT/OT TNI AD</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="WAYANG adalah deception grid adaptif untuk pertahanan siber IT/OT: umpan, sensor tipuan, dan bukti interaksi penyerang dalam satu sistem C4ISR terpadu TNI Angkatan Darat.">
 <link rel="icon" type="image/jpeg" href="/static/Logo.jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/leaflet.css">
 <style>
 /* ==========================================================================
-   WAYANG C4ISR DEFENSE DESIGN SYSTEM (PANDUAN IDENTITAS RESMI TNI AD)
-   Standards: MIL-STD-2525D Symbology · C4ISR High-Density Tactical Cockpit
-   Palette: Sovereign Navy (#0B1F44) · Tactical Gold (#D4AF37) · Ivory (#F8F9FA) · Tech Blue (#2E6BFF)
+   WAYANG C4ISR COCKPIT — INDONESIAN DEFENSE ELEGANCE DESIGN SYSTEM
+   Signature visual tokens aligned with main landing page identity:
+   Deep Navy (#05101E, #071527) · Sovereign Gold (#C9A227) · Ivory (#F5F5F0) · Teal (#1F6F8B)
+   Batik Kawung Vector Geometry · 45° Diamond Motifs · Precision Frame Corners
    ========================================================================== */
 :root {
-  --navy: #0B1F44;
-  --navy-surface: #071329;
-  --navy-card: #0A1936;
-  --navy-hover: #0F244C;
-  --gold: #D4AF37;
-  --gold-dim: rgba(212, 175, 55, 0.15);
-  --gold-glow: rgba(212, 175, 55, 0.35);
-  --ivory: #F8F9FA;
-  --ivory-dim: #94A3B8;
-  --ivory-muted: #64748B;
-  --tech: #2E6BFF;
-  --tech-glow: rgba(46, 107, 255, 0.35);
+  --navy-950: #05101E;
+  --navy-900: #071527;
+  --navy-850: #091B32;
+  --navy-800: #0B1F3A;
+  --navy-700: #122E52;
+  --navy-600: #1B3F6E;
+  
+  --gold: #C9A227;
+  --gold-soft: #E6CB84;
+  --gold-ink: #7A5F0E;
+  --gold-dim: rgba(201, 162, 39, 0.12);
+  --gold-glow: rgba(201, 162, 39, 0.35);
+
+  --teal: #1F6F8B;
+  --teal-ink: #17586E;
+  --teal-dim: rgba(31, 111, 139, 0.18);
+  
+  --ivory: #F5F5F0;
+  --ivory-2: #ECECE3;
+  --ink: #0B1F3A;
+  --ink-muted: #45556D;
+  --on-dark: #E9EEF6;
+  --on-dark-muted: #A6B6CB;
   
   --emerald: #10B981;
   --emerald-dim: rgba(16, 185, 129, 0.15);
@@ -35,43 +48,53 @@
   --amber-dim: rgba(245, 158, 11, 0.15);
   --crimson: #EF4444;
   --crimson-dim: rgba(239, 68, 68, 0.15);
-  --cyan: #06B6D4;
+  --cyan: #38BDF8;
 
-  --bg: #040914;
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-navy: #152B52;
-  --border-highlight: rgba(212, 175, 55, 0.28);
+  --line-light: rgba(11, 31, 58, 0.16);
+  --line-dark: rgba(233, 238, 246, 0.12);
+  --line-gold: rgba(201, 162, 39, 0.28);
+  --focus-ring: var(--gold);
+  --radius: 2px;
+
+  --font-head: "Montserrat", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Signature Batik Kawung Vector Textures */
+  --batik-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' fill='none'%3E%3Cg stroke='%23C9A227' stroke-opacity='.12' stroke-width='1.1'%3E%3Cpath d='M80 26 134 80 80 134 26 80Z'/%3E%3Cpath d='M80 52 108 80 80 108 52 80Z'/%3E%3C/g%3E%3Ccircle cx='80' cy='80' r='3' fill='%23C9A227' fill-opacity='.25'/%3E%3Cpath d='M0 -7L7 0 0 7-7 0Z' fill='%23C9A227' fill-opacity='.18'/%3E%3Cg fill='%23C9A227' fill-opacity='.18'%3E%3Ccircle cx='80' cy='26' r='1.8'/%3E%3Ccircle cx='134' cy='80' r='1.8'/%3E%3Ccircle cx='80' cy='134' r='1.8'/%3E%3Ccircle cx='26' cy='80' r='1.8'/%3E%3C/g%3E%3C/svg%3E");
+  --batik-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' fill='none'%3E%3Cg stroke='%230B1F3A' stroke-opacity='.075' stroke-width='1.1'%3E%3Cpath d='M80 26 134 80 80 134 26 80Z'/%3E%3Cpath d='M80 52 108 80 80 108 52 80Z'/%3E%3C/g%3E%3Ccircle cx='80' cy='80' r='3' fill='%23C9A227' fill-opacity='.2'/%3E%3Cpath d='M0 -7L7 0 0 7-7 0Z' fill='%23C9A227' fill-opacity='.15'/%3E%3Cg fill='%230B1F3A' fill-opacity='.1'%3E%3Ccircle cx='80' cy='26' r='1.8'/%3E%3Ccircle cx='134' cy='80' r='1.8'/%3E%3Ccircle cx='80' cy='134' r='1.8'/%3E%3Ccircle cx='26' cy='80' r='1.8'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 
 body {
-  background-color: var(--bg);
-  background-image: 
-    linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 32px 32px;
-  color: var(--ivory);
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--navy-950);
+  background-image: var(--batik-dark);
+  background-size: 200px 200px;
+  color: var(--on-dark);
+  font-family: var(--font-body);
   font-size: 12px;
-  line-height: 1.45;
-  letter-spacing: 0.15px;
+  line-height: 1.5;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Typography Overrides */
+::selection { background: var(--gold); color: var(--navy-950); }
+
+/* Typography */
 h1, h2, h3, h4, .brand-title, .brand-tag, .tactical-label, .hud-title, .metric-val, button, .tab-btn {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-head);
 }
 .mono, .hex-view, .term-line, #clock-wib, #clock-utc, .packet-cell {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-family: var(--font-mono);
   font-feature-settings: "tnum" 1;
 }
 
-/* SVG Icon Helper */
+/* Icons */
 .icon-svg {
   width: 14px;
   height: 14px;
@@ -82,62 +105,178 @@ h1, h2, h3, h4, .brand-title, .brand-tag, .tactical-label, .hud-title, .metric-v
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+  flex: none;
 }
 
-/* HUD Panel Corners (Military Reticle Detail) */
+/* ==========================================================================
+   SIGNATURE DESIGN MOTIFS FROM TEMPLATE
+   ========================================================================== */
+
+/* Kicker Badge with 45° Rotated Gold Diamond */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 9px;
+  background: rgba(233, 238, 246, 0.05);
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  color: var(--ivory);
+  font-family: var(--font-head);
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+}
+.kicker::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  flex: none;
+}
+
+/* Precision Corner Brackets (Military Reticle & Javanese Frame) */
 .hud-panel {
   position: relative;
-  background: var(--navy-card);
-  border: 1px solid var(--border-navy);
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  background: var(--navy-900);
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
 }
-.hud-panel::before, .hud-panel::after {
-  content: "";
+.corner {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  pointer-events: none;
+  width: 12px;
+  height: 12px;
   border-color: var(--gold);
-  opacity: 0.45;
+  border-style: solid;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.85;
 }
-.hud-panel::before { top: -1px; left: -1px; border-top: 1.5px solid; border-left: 1.5px solid; }
-.hud-panel::after  { bottom: -1px; right: -1px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
+.corner--tl { top: -1px; left: -1px; border-width: 1.5px 0 0 1.5px; }
+.corner--tr { top: -1px; right: -1px; border-width: 1.5px 1.5px 0 0; }
+.corner--bl { bottom: -1px; left: -1px; border-width: 0 0 1.5px 1.5px; }
+.corner--br { bottom: -1px; right: -1px; border-width: 0 1.5px 1.5px 0; }
+
+/* Buttons System */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-family: var(--font-head);
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+.btn--gold {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--navy-950);
+}
+.btn--gold:hover {
+  background: #DBB63C;
+  border-color: #DBB63C;
+  color: var(--navy-950);
+  box-shadow: 0 0 12px var(--gold-glow);
+}
+.btn--ghost {
+  background: transparent;
+  border-color: rgba(233, 238, 246, 0.22);
+  color: var(--on-dark);
+}
+.btn--ghost:hover {
+  border-color: var(--gold);
+  color: var(--gold-soft);
+  background: rgba(201, 162, 39, 0.06);
+}
+.btn--navy {
+  background: var(--navy-800);
+  border-color: rgba(201, 162, 39, 0.32);
+  color: var(--ivory);
+}
+.btn--navy:hover {
+  background: var(--navy-700);
+  border-color: var(--gold);
+  color: #FFF;
+}
+.btn--danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+}
+.btn--danger:hover {
+  background: var(--crimson);
+  border-color: var(--crimson);
+  color: #FFF;
+  box-shadow: 0 0 14px rgba(239,68,68,0.5);
+}
+.btn--sm {
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: .6875rem;
+}
 
 /* ==========================================================================
    ZONE 1: SUPREME C4ISR COMMAND HUD (TOP BAR)
    ========================================================================== */
 header#main-header {
-  height: 58px;
-  background: linear-gradient(180deg, #091733 0%, #060F21 100%);
-  border-bottom: 1px solid var(--border-navy);
+  height: 60px;
+  background-color: var(--navy-950);
+  background-image: var(--batik-dark);
+  background-size: 180px 180px;
+  border-bottom: 1px solid var(--line-gold);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 18px;
   gap: 14px;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
   transition: box-shadow .3s ease;
+}
+
+/* Central diamond divider in header border */
+header#main-header::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
 }
 
 .brand-block {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
 }
 .brand-emblem-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  background: #030814;
-  border: 1px solid var(--border-highlight);
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius);
+  background: var(--navy-950);
+  border: 1px solid var(--line-gold);
+  box-shadow: 0 0 12px rgba(201, 162, 39, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  position: relative;
   transition: transform .2s, border-color .2s;
 }
 .brand-emblem-box:hover {
@@ -156,90 +295,78 @@ header#main-header {
 .brand-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .brand-title {
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 2.5px;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: .24em;
   color: #FFFFFF;
   text-transform: uppercase;
-}
-.brand-tag {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  color: var(--gold);
-  background: var(--gold-dim);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  padding: 1px 6px;
-  border-radius: 2px;
-  text-transform: uppercase;
+  line-height: 1.1;
 }
 .brand-sub {
-  font-size: 9px;
+  font-size: .5313rem;
   font-weight: 600;
-  letter-spacing: 0.8px;
-  color: var(--ivory-dim);
+  letter-spacing: .18em;
+  color: var(--on-dark-muted);
   text-transform: uppercase;
-  margin-top: 1px;
+  margin-top: 3px;
 }
 
-/* DEFCON Military Threat Level Selector */
+/* DEFCON Stepped Threat Meter */
 .defcon-strip {
   display: flex;
   align-items: center;
   gap: 3px;
-  background: #030914;
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  background: var(--navy-900);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 3px 5px;
-  margin-left: 12px;
+  margin-left: 8px;
 }
 .defcon-label {
-  font-size: 9px;
+  font-size: .5625rem;
   font-weight: 800;
-  letter-spacing: 1px;
-  color: var(--ivory-muted);
-  padding: 0 6px 0 2px;
+  letter-spacing: .12em;
+  color: var(--on-dark-muted);
+  padding: 0 6px 0 3px;
+  text-transform: uppercase;
 }
 .defcon-step {
-  padding: 3px 8px;
-  font-size: 10px;
+  padding: 2px 7px;
+  font-size: .625rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   border: 1px solid transparent;
-  color: var(--ivory-muted);
+  color: var(--on-dark-muted);
   background: transparent;
   cursor: pointer;
   transition: all .15s;
 }
 .defcon-step:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(233, 238, 246, 0.08);
   color: var(--ivory);
 }
 .defcon-step.active-5 { background: var(--emerald-dim); border-color: var(--emerald); color: var(--emerald); }
-.defcon-step.active-4 { background: rgba(6,182,212,0.15); border-color: var(--cyan); color: var(--cyan); }
-.defcon-step.active-3 { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+.defcon-step.active-4 { background: rgba(56,189,248,0.15); border-color: var(--cyan); color: var(--cyan); }
+.defcon-step.active-3 { background: var(--gold-dim); border-color: var(--gold); color: var(--gold-soft); }
 .defcon-step.active-2 { background: rgba(249,115,22,0.15); border-color: #f97316; color: #f97316; }
 .defcon-step.active-1 { background: var(--crimson-dim); border-color: var(--crimson); color: var(--crimson); box-shadow: 0 0 10px rgba(239,68,68,0.4); }
-
-/* Hidden compatibility select */
 #defcon-select { display: none; }
 
 .header-spacer { flex: 1; }
 
-/* Telemetry & Clocks */
+/* Clocks & Telemetry */
 .clock-display {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #030914;
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  gap: 12px;
+  background: var(--navy-900);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: .6875rem;
   color: var(--ivory);
 }
 .clock-item {
@@ -248,9 +375,9 @@ header#main-header {
   gap: 5px;
 }
 .clock-tag {
-  font-size: 8.5px;
+  font-size: .5625rem;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: .12em;
   color: var(--gold);
 }
 
@@ -258,14 +385,14 @@ header#main-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #030914;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--navy-900);
+  border: 1px solid rgba(16, 185, 129, 0.35);
   padding: 4px 9px;
-  border-radius: 3px;
-  font-size: 10px;
+  border-radius: var(--radius);
+  font-size: .625rem;
   font-weight: 700;
   color: var(--emerald);
-  letter-spacing: 0.5px;
+  letter-spacing: .04em;
 }
 .live-led {
   width: 6px;
@@ -275,109 +402,69 @@ header#main-header {
   box-shadow: 0 0 8px var(--emerald);
   animation: led-blink 1.8s infinite;
 }
-@keyframes led-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-/* Header Action Buttons */
-.hud-btn {
-  background: #08152B;
-  color: var(--ivory);
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all .15s ease;
-}
-.hud-btn:hover {
-  background: var(--navy-hover);
-  border-color: var(--tech);
-  color: #FFFFFF;
-}
-.hud-btn-gold {
-  border-color: rgba(212, 175, 55, 0.4);
-  color: var(--gold);
-  background: var(--gold-dim);
-}
-.hud-btn-gold:hover {
-  background: rgba(212, 175, 55, 0.25);
-  border-color: var(--gold);
-  color: #FFF;
-}
-.hud-btn-danger {
-  border-color: rgba(239, 68, 68, 0.4);
-  color: var(--crimson);
-  background: var(--crimson-dim);
-}
-.hud-btn-danger:hover {
-  background: var(--crimson);
-  color: #FFF;
-}
+@keyframes led-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* ==========================================================================
    ZONE 2: SUB-COMMAND OPERATIONS & DRILL DECK
    ========================================================================== */
 .tactical-deck {
   height: 44px;
-  background: #061122;
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--navy-900);
+  border-bottom: 1px solid var(--line-dark);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 18px;
   gap: 12px;
-  font-size: 11px;
+  font-size: .6875rem;
+}
+.deck-label {
+  font-family: var(--font-head);
+  font-size: .5625rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: var(--on-dark-muted);
+  text-transform: uppercase;
 }
 
 .autonomy-control {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
-.deck-label {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  color: var(--ivory-muted);
-  text-transform: uppercase;
-}
-
 .autonomy-tabs {
   display: flex;
-  background: #030814;
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  background: var(--navy-950);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .autonomy-opt {
-  padding: 4px 10px;
-  font-size: 10px;
+  padding: 3px 9px;
+  font-family: var(--font-head);
+  font-size: .625rem;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: .04em;
   cursor: pointer;
   background: transparent;
   border: none;
-  color: var(--ivory-muted);
+  color: var(--on-dark-muted);
   transition: all .15s;
 }
 .autonomy-opt:hover {
   color: var(--ivory);
-  background: rgba(255,255,255,0.04);
+  background: rgba(233, 238, 246, 0.05);
 }
 .autonomy-opt.active {
-  background: var(--tech);
+  background: var(--teal);
   color: #FFFFFF;
-  box-shadow: 0 0 10px var(--tech-glow);
+  box-shadow: 0 0 10px rgba(31, 111, 139, 0.4);
 }
 #lvl { display: none; }
 
 .deck-divider {
   width: 1px;
-  height: 22px;
-  background: var(--border-subtle);
+  height: 20px;
+  background: var(--line-dark);
   margin: 0 4px;
 }
 
@@ -386,63 +473,21 @@ header#main-header {
   align-items: center;
   gap: 6px;
 }
-.drill-btn {
-  background: #091730;
-  border: 1px solid var(--border-navy);
-  color: var(--ivory-dim);
-  padding: 4px 9px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  border-radius: 3px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: all .15s;
-}
-.drill-btn:hover {
-  color: #FFF;
-  border-color: var(--tech);
-  background: #0E244C;
-}
-.drill-btn.warn:hover { border-color: var(--amber); }
-.drill-btn.danger:hover { border-color: var(--crimson); }
 
 .kill-switch-btn {
   margin-left: auto;
-  background: linear-gradient(180deg, #421010 0%, #290808 100%);
-  border: 1px solid var(--crimson);
-  color: #FCA5A5;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border-radius: 3px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 0 12px rgba(239,68,68,0.25);
-  transition: all .15s;
-}
-.kill-switch-btn:hover {
-  background: var(--crimson);
-  color: #FFF;
-  box-shadow: 0 0 16px rgba(239,68,68,0.6);
 }
 
 /* Toast Notification Bar */
 #toast {
   display: none;
-  background: #071E16;
-  border-bottom: 1px solid var(--emerald);
-  color: #6EE7B7;
-  padding: 6px 16px;
-  font-size: 11px;
+  background: var(--navy-800);
+  border-bottom: 1px solid var(--gold);
+  color: var(--gold-soft);
+  padding: 6px 18px;
+  font-size: .6875rem;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: .04em;
   text-align: center;
   animation: slide-toast .2s ease-out;
 }
@@ -454,24 +499,25 @@ header#main-header {
 main#ops-theater {
   flex: 1;
   display: grid;
-  grid-template-columns: 270px minmax(0, 1.45fr) 380px;
-  gap: 10px;
-  padding: 10px 14px 14px;
+  grid-template-columns: 275px minmax(0, 1.45fr) 385px;
+  gap: 12px;
+  padding: 12px 16px 16px;
 }
 
-/* Panel Headers */
+/* Panel Header */
 .panel-head {
-  padding: 8px 12px;
-  background: #081429;
-  border-bottom: 1px solid var(--border-navy);
+  padding: 9px 12px;
+  background: var(--navy-850);
+  border-bottom: 1px solid var(--line-gold);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .panel-title {
-  font-size: 10.5px;
+  font-family: var(--font-head);
+  font-size: .6875rem;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: .14em;
   color: var(--gold);
   text-transform: uppercase;
   display: flex;
@@ -479,14 +525,14 @@ main#ops-theater {
   gap: 6px;
 }
 .panel-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--ivory-muted);
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-body);
+  font-size: .5938rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--on-dark-muted);
 }
 
-/* COLUMN 1: TERRITORIAL COMMAND NODES */
+/* COLUMN 1: TERRITORIAL NODES */
 .col-territory {
   display: flex;
   flex-direction: column;
@@ -501,20 +547,20 @@ main#ops-theater {
   overflow-y: auto;
 }
 .unit-card {
-  background: #071326;
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  padding: 8px 10px;
+  background: var(--navy-950);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  padding: 9px 11px;
   cursor: pointer;
   transition: all .15s ease;
   position: relative;
 }
 .unit-card:hover {
-  background: var(--navy-hover);
-  border-color: var(--tech);
+  background: var(--navy-800);
+  border-color: rgba(201, 162, 39, 0.35);
 }
 .unit-card.selected {
-  background: #0B2042;
+  background: var(--navy-800);
   border-color: var(--gold);
   box-shadow: inset 3px 0 0 var(--gold);
 }
@@ -525,65 +571,70 @@ main#ops-theater {
   margin-bottom: 3px;
 }
 .unit-name {
-  font-size: 11px;
+  font-family: var(--font-head);
+  font-size: .6875rem;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: .06em;
   color: #FFF;
 }
 .unit-status-pill {
-  font-size: 8.5px;
+  font-family: var(--font-head);
+  font-size: .5625rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: .08em;
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: var(--radius);
   text-transform: uppercase;
 }
 .status-aman { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
-.status-tipuan { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212, 175, 55, 0.35); }
+.status-tipuan { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201, 162, 39, 0.35); }
 .status-kampanye { background: var(--crimson-dim); color: var(--crimson); border: 1px solid rgba(239, 68, 68, 0.35); }
 
 .unit-role {
-  font-size: 10px;
-  color: var(--ivory-dim);
-  line-height: 1.3;
+  font-size: .625rem;
+  color: var(--on-dark-muted);
+  line-height: 1.35;
 }
 .unit-meta {
   margin-top: 4px;
-  font-size: 9px;
-  color: var(--ivory-muted);
+  font-size: .5625rem;
+  color: rgba(166, 182, 203, 0.7);
   display: flex;
   justify-content: space-between;
 }
 
-/* Slogan / Doctrine Compact Dossier */
+/* Compact Doctrine Card */
 .doctrine-card {
-  padding: 10px;
-  background: #061122;
-  border-top: 1px solid var(--border-navy);
-  font-size: 10px;
-  color: var(--ivory-dim);
-  line-height: 1.4;
+  padding: 11px 12px;
+  background: var(--navy-950);
+  background-image: var(--batik-dark);
+  background-size: 160px 160px;
+  border-top: 1px solid var(--line-gold);
+  font-size: .625rem;
+  color: var(--on-dark-muted);
+  line-height: 1.5;
 }
 .doctrine-quote {
-  font-style: italic;
-  color: var(--gold);
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  color: var(--gold-soft);
+  letter-spacing: .02em;
+  margin-bottom: 3px;
 }
 
-/* COLUMN 2: CENTER OPERATIONS THEATER */
+/* COLUMN 2: CENTER OPERATIONS THEATER (GIS Map + P&ID Twin-Screen) */
 .col-theater {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* Map Deck */
 .map-container {
   height: 330px;
   position: relative;
-  background: #030712;
-  border-radius: 0 0 3px 3px;
+  background: var(--navy-950);
+  border-radius: 0 0 var(--radius) var(--radius);
   overflow: hidden;
 }
 #map {
@@ -595,26 +646,26 @@ main#ops-theater {
   top: 10px;
   right: 10px;
   z-index: 500;
-  background: rgba(4, 9, 20, 0.85);
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  background: rgba(5, 16, 30, 0.9);
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius);
   padding: 5px 9px;
-  font-size: 9.5px;
-  color: var(--ivory-dim);
+  font-size: .5938rem;
+  color: var(--on-dark-muted);
   backdrop-filter: blur(4px);
   pointer-events: none;
 }
 .map-campaign-bar {
   padding: 6px 12px;
-  background: #071329;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 10px;
+  background: var(--navy-950);
+  border-top: 1px solid var(--line-dark);
+  font-size: .625rem;
   min-height: 32px;
   display: flex;
   align-items: center;
 }
 
-/* SCADA Industrial Twin-Screen */
+/* SCADA Twin-Screen */
 .twin-theater {
   flex: 1;
   display: flex;
@@ -627,16 +678,16 @@ main#ops-theater {
   padding: 10px;
   flex: 1;
 }
-
 .scada-panel {
-  background: #061226;
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  background: var(--navy-950);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
-.scada-panel.real { border-left: 3px solid var(--tech); }
+.scada-panel.real { border-left: 3px solid var(--teal); }
 .scada-panel.shadow { border-left: 3px solid var(--gold); }
 
 .scada-head {
@@ -646,9 +697,10 @@ main#ops-theater {
   margin-bottom: 8px;
 }
 .scada-title {
-  font-size: 11px;
+  font-family: var(--font-head);
+  font-size: .6875rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 .scada-content {
@@ -662,9 +714,9 @@ main#ops-theater {
 .scada-tank-wrap {
   width: 64px;
   height: 94px;
-  background: #030814;
-  border: 2px solid var(--border-navy);
-  border-radius: 6px;
+  background: #020710;
+  border: 1.5px solid var(--line-gold);
+  border-radius: 4px;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -692,10 +744,10 @@ main#ops-theater {
   width: 100%;
   transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  background: linear-gradient(180deg, #2E6BFF 0%, #0F2D6B 100%);
+  background: linear-gradient(180deg, #1F6F8B 0%, #0F3A4A 100%);
 }
 .scada-fluid.gold {
-  background: linear-gradient(180deg, #D4AF37 0%, #685210 100%);
+  background: linear-gradient(180deg, #C9A227 0%, #5E4910 100%);
 }
 .scada-fluid-wave {
   position: absolute;
@@ -721,29 +773,27 @@ main#ops-theater {
   gap: 6px;
 }
 .metric-val {
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: .02em;
   color: #FFF;
 }
 .metric-max {
-  font-size: 11px;
-  color: var(--ivory-muted);
+  font-size: .6875rem;
+  color: var(--on-dark-muted);
 }
 .scada-submetrics {
-  font-size: 10.5px;
-  color: var(--ivory-dim);
+  font-size: .625rem;
+  color: var(--on-dark-muted);
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
-/* Mechanical Impeller Graphic */
 .impeller-wheel {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 2px dashed var(--emerald);
+  border: 1.5px dashed var(--emerald);
   display: inline-block;
   animation: impeller-spin 1.2s infinite linear;
 }
@@ -756,12 +806,12 @@ main#ops-theater {
 .scada-audit-pill {
   margin-top: 4px;
   padding: 4px 8px;
-  border-radius: 2px;
-  font-size: 10px;
+  border-radius: var(--radius);
+  font-size: .5938rem;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  background: #030814;
-  border: 1px solid var(--border-navy);
+  letter-spacing: .04em;
+  background: var(--navy-900);
+  border: 1px solid var(--line-dark);
 }
 
 /* COLUMN 3: INTEL & FORENSICS RAIL */
@@ -769,23 +819,22 @@ main#ops-theater {
   display: flex;
   flex-direction: column;
 }
-
-/* Tab Switcher for Forensics */
 .rail-tabs {
   display: flex;
-  background: #061021;
-  border-bottom: 1px solid var(--border-navy);
+  background: var(--navy-950);
+  border-bottom: 1px solid var(--line-gold);
   padding: 2px 4px 0;
   gap: 2px;
 }
 .rail-tab-btn {
   flex: 1;
-  padding: 7px 4px;
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
+  padding: 8px 4px;
+  font-family: var(--font-head);
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--ivory-muted);
+  color: var(--on-dark-muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -795,53 +844,54 @@ main#ops-theater {
 }
 .rail-tab-btn:hover {
   color: var(--ivory);
-  background: rgba(255,255,255,0.03);
+  background: rgba(233, 238, 246, 0.04);
 }
 .rail-tab-btn.active {
   color: var(--gold);
   border-bottom-color: var(--gold);
-  background: #091730;
+  background: var(--navy-900);
 }
 
 .rail-tab-body {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* Wireshark-Style Incident Terminal */
+/* Wireshark-Style Terminal Feed */
 .term-stream {
-  background: #030712;
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  background: #020710;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 6px;
-  font-size: 10.5px;
+  font-size: .6563rem;
   height: 240px;
   overflow-y: auto;
 }
 .term-line {
-  padding: 3px 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 3px 5px;
+  border-bottom: 1px solid rgba(233, 238, 246, 0.04);
   display: flex;
   gap: 8px;
   cursor: pointer;
   align-items: center;
+  transition: background-color .15s;
 }
 .term-line:hover {
-  background: rgba(46, 107, 255, 0.1);
+  background: rgba(31, 111, 139, 0.15);
 }
 .term-ts {
-  color: var(--ivory-muted);
-  min-width: 60px;
-  font-size: 9.5px;
+  color: var(--on-dark-muted);
+  min-width: 58px;
+  font-size: .5938rem;
 }
 .term-src {
   color: var(--cyan);
   font-weight: 700;
-  min-width: 95px;
+  min-width: 90px;
 }
 .term-act {
   color: var(--ivory);
@@ -851,51 +901,52 @@ main#ops-theater {
   text-overflow: ellipsis;
 }
 .term-tag {
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-size: 8.5px;
+  padding: 1px 5px;
+  border-radius: var(--radius);
+  font-size: .5313rem;
   font-weight: 800;
-  font-family: 'Montserrat', sans-serif;
-  letter-spacing: 0.3px;
+  font-family: var(--font-head);
+  letter-spacing: .06em;
 }
 
-/* MITRE ATT&CK Compact ICS Matrix */
+/* MITRE ATT&CK for ICS Matrix */
 .attck-matrix-deck {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
 }
 .attck-col {
-  background: #040914;
-  border: 1px solid var(--border-navy);
-  border-radius: 2px;
+  background: var(--navy-950);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 4px;
 }
 .attck-col-title {
-  font-size: 8px;
+  font-family: var(--font-head);
+  font-size: .5rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: .1em;
   color: var(--gold);
   text-transform: uppercase;
   margin-bottom: 4px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--line-dark);
   padding-bottom: 2px;
 }
 .attck-cell {
-  background: #08152B;
-  border: 1px solid var(--border-subtle);
-  border-radius: 2px;
+  background: var(--navy-900);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 2px 4px;
   margin-bottom: 2px;
-  font-size: 8.5px;
+  font-size: .5313rem;
   font-weight: 700;
-  color: var(--ivory-muted);
+  color: var(--on-dark-muted);
   display: flex;
   justify-content: space-between;
 }
 .attck-cell.active {
-  background: rgba(46, 107, 255, 0.25);
-  border-color: var(--tech);
+  background: rgba(31, 111, 139, 0.3);
+  border-color: var(--teal);
   color: #FFF;
 }
 .attck-cell.danger {
@@ -904,78 +955,104 @@ main#ops-theater {
   color: #FFF;
 }
 
-/* Tables for Approvals and Sessions */
+/* C4ISR Table */
 .c4-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10.5px;
+  font-size: .6563rem;
 }
 .c4-table th {
-  padding: 4px 6px;
-  background: #050E1F;
-  color: var(--ivory-muted);
-  font-size: 9px;
+  padding: 5px 6px;
+  background: var(--navy-950);
+  color: var(--on-dark-muted);
+  font-family: var(--font-head);
+  font-size: .5625rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  border-bottom: 1px solid var(--border-navy);
+  border-bottom: 1px solid var(--line-gold);
   text-align: left;
 }
 .c4-table td {
-  padding: 5px 6px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 6px;
+  border-bottom: 1px solid var(--line-dark);
 }
 .c4-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(233, 238, 246, 0.03);
 }
 
-/* Modals */
+/* Modals System */
 .modal-overlay {
   display: none;
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(2, 6, 15, 0.85);
+  background: rgba(5, 16, 30, 0.88);
   z-index: 2000;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(8px);
 }
 .modal-card {
-  background: #08152B;
-  border: 1px solid var(--border-highlight);
-  border-radius: 4px;
-  width: 740px;
+  position: relative;
+  background: var(--navy-900);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  width: 760px;
   max-width: 94%;
   max-height: 85vh;
   overflow-y: auto;
-  padding: 16px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  padding: 22px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.85);
 }
 .modal-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border-navy);
-  padding-bottom: 10px;
-  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line-gold);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
 }
 .modal-title {
-  font-size: 13px;
+  font-family: var(--font-head);
+  font-size: .8125rem;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: .14em;
   color: var(--gold);
   text-transform: uppercase;
 }
 .hex-view {
-  background: #02050D;
-  border: 1px solid var(--border-navy);
-  border-radius: 3px;
+  background: #020710;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
   padding: 10px;
-  font-size: 11px;
-  color: #7DD3FC;
+  font-size: .6875rem;
+  color: var(--cyan);
   overflow-x: auto;
   white-space: pre;
   line-height: 1.5;
+}
+
+/* Stage Emblem for Doktrin Modal (Identical to 123.html) */
+.emblem-stage {
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  background-color: var(--ivory);
+  background-image: var(--batik-light);
+  background-size: 120px 120px;
+  padding: 16px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  margin-bottom: 16px;
+}
+.emblem-stage img {
+  height: 72px;
+  width: auto;
+  border: 1px solid var(--gold);
+  background: var(--navy-950);
+  padding: 4px;
+  border-radius: var(--radius);
 }
 
 @media (max-width: 1200px) {
@@ -991,16 +1068,20 @@ main#ops-theater {
      ZONE 1: SUPREME C4ISR COMMAND HUD (TOP BAR)
      ========================================================================== -->
 <header id="main-header">
-  <div class="brand-block">
-    <div class="brand-emblem-box" onclick="openAboutModal()" title="Buka Profil Doktrin &amp; Filosofi WAYANG">
+  <div class="brand-block" onclick="openAboutModal()" title="Buka Profil Doktrin &amp; Filosofi Identitas WAYANG">
+    <div class="brand-emblem-box">
+      <div class="corner corner--tl"></div>
+      <div class="corner corner--tr"></div>
+      <div class="corner corner--bl"></div>
+      <div class="corner corner--br"></div>
       <img src="/static/Logo.jpeg" alt="TNI AD WAYANG">
     </div>
     <div class="brand-titles">
       <div class="brand-title-row">
         <span class="brand-title">WAYANG</span>
-        <span class="brand-tag">C4ISR DECEPTION GRID</span>
+        <span class="kicker">C4ISR DECEPTION GRID</span>
       </div>
-      <span class="brand-sub">Sistem Pertahanan Adaptif IT/OT TNI Angkatan Darat</span>
+      <span class="brand-sub">Sistem Pertahanan Adaptif IT/OT · Komando Teritorial TNI AD</span>
     </div>
   </div>
 
@@ -1023,7 +1104,7 @@ main#ops-theater {
 
   <div class="header-spacer"></div>
 
-  <!-- Realtime Clocks -->
+  <!-- Clocks -->
   <div class="clock-display">
     <div class="clock-item">
       <span class="clock-tag">WIB</span>
@@ -1035,38 +1116,38 @@ main#ops-theater {
     </div>
   </div>
 
-  <!-- WSS Latency Status -->
+  <!-- WebSocket Latency -->
   <div class="live-link-pill" id="live-indicator">
     <div class="live-led"></div>
     <span id="live-text" class="mono">WSS 0ms</span>
   </div>
 
-  <!-- Tactical HUD Action Buttons -->
-  <button class="hud-btn" onclick="toggleAudio()" id="btn-audio" title="Saklar Audio Peringatan">
+  <!-- Action Buttons Styled with Template Button Hierarchy -->
+  <button class="btn btn--ghost btn--sm" onclick="toggleAudio()" id="btn-audio" title="Saklar Audio Taktis">
     <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
     Audio
   </button>
-  <button class="hud-btn" onclick="openPacketModal()" title="Buka Deep Packet Inspector (MBAP Frame Dissector)">
+  <button class="btn btn--navy btn--sm" onclick="openPacketModal()" title="Buka Deep Packet Inspector (MBAP Frame Dissector)">
     <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
     DPI Hex
   </button>
-  <button class="hud-btn" onclick="openMerkleModal()" title="Verifikasi Pohon Merkle RFC 6962">
+  <button class="btn btn--navy btn--sm" onclick="openMerkleModal()" title="Verifikasi Pohon Merkle RFC 6962">
     <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
     Merkle
   </button>
   <a href="/api/tactical/rules/stix.json" target="_blank" style="text-decoration:none">
-    <button class="hud-btn" title="Ekspor Aturan Intelijen Ancaman STIX 2.1">
+    <button class="btn btn--navy btn--sm" title="Ekspor Aturan Intelijen Ancaman STIX 2.1">
       <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
       STIX 2.1
     </button>
   </a>
   <a href="/api/report/latest.docx" style="text-decoration:none">
-    <button class="hud-btn hud-btn-gold" title="Unduh Berita Acara Pemeriksaan Forensik Digital resmi TNI AD">
+    <button class="btn btn--gold btn--sm" title="Unduh Berita Acara Pemeriksaan Forensik Digital (BAP-FD) resmi TNI AD">
       <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
       BAP-FD (.docx)
     </button>
   </a>
-  <button class="hud-btn hud-btn-gold" onclick="openAboutModal()" title="Lihat Doktrin Pertahanan &amp; Filosofi Logo">
+  <button class="btn btn--gold btn--sm" onclick="openAboutModal()" title="Lihat Doktrin Pertahanan &amp; Filosofi Logo">
     <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
     Doktrin
   </button>
@@ -1076,9 +1157,9 @@ main#ops-theater {
      ZONE 2: SUB-COMMAND OPERATIONS & DRILL DECK
      ========================================================================== -->
 <div class="tactical-deck">
-  <!-- Autonomy Policy Level Selector -->
+  <!-- Autonomy Level Selector -->
   <div class="autonomy-control">
-    <span class="deck-label">Otonomi Pertahanan</span>
+    <span class="kicker">Otonomi Pertahanan</span>
     <div class="autonomy-tabs">
       <button class="autonomy-opt" onclick="setAutonomyUI(0)">L0 Amati</button>
       <button class="autonomy-opt" onclick="setAutonomyUI(1)">L1 Rekomendasi</button>
@@ -1098,30 +1179,30 @@ main#ops-theater {
   <!-- Operational Drill Launcher -->
   <div class="drill-launcher">
     <span class="deck-label">Uji Taktis</span>
-    <button class="drill-btn" onclick="sim('t1')" title="Simulasi Reconnaissance Port &amp; Device Scan">
+    <button class="btn btn--ghost btn--sm" onclick="sim('t1')" title="Simulasi Reconnaissance Port &amp; Device Scan">
       <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       [T1] Recon Scan
     </button>
-    <button class="drill-btn warn" onclick="sim('t2')" title="Simulasi Serangan Manipulasi PLC Modbus">
+    <button class="btn btn--navy btn--sm" onclick="sim('t2')" title="Simulasi Serangan Manipulasi PLC Modbus">
       <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
       [T2] Shadow Divert
     </button>
-    <button class="drill-btn danger" onclick="sim('campaign')" title="Simulasi Serangan APT Terkoordinasi Multi-Satuan">
+    <button class="btn btn--danger btn--sm" onclick="sim('campaign')" title="Simulasi Serangan APT Terkoordinasi Multi-Satuan">
       <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
       [APT] Kampanye Terpadu
     </button>
-    <button class="drill-btn" onclick="sim('phishing')" title="Simulasi Akses Kredensial &amp; Canary Token">
+    <button class="btn btn--ghost btn--sm" onclick="sim('phishing')" title="Simulasi Akses Kredensial &amp; Canary Token">
       <svg class="icon-svg" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
       [Canary] Persona
     </button>
-    <button class="drill-btn danger" onclick="lockdownCurrent()" title="Isolasi Total Satuan yang Dipilih">
+    <button class="btn btn--danger btn--sm" onclick="lockdownCurrent()" title="Isolasi Total Satuan yang Dipilih">
       <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
       Lockdown Satuan
     </button>
   </div>
 
   <!-- Emergency Failsafe Interlock -->
-  <button class="kill-switch-btn" id="kill" title="Kembalikan semua pangkalan ke Level L0 Amati (Failsafe)">
+  <button class="btn btn--danger btn--sm kill-switch-btn" id="kill" title="Kembalikan semua pangkalan ke Level L0 Amati (Failsafe)">
     <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
     Saklar Darurat L0
   </button>
@@ -1134,9 +1215,13 @@ main#ops-theater {
      ========================================================================== -->
 <main id="ops-theater">
 
-  <!-- COLUMN 1: TERRITORIAL COMMAND NODES (270px) -->
+  <!-- COLUMN 1: TERRITORIAL COMMAND NODES (275px) -->
   <div class="col-territory">
     <div class="hud-panel" style="flex:1;display:flex;flex-direction:column">
+      <div class="corner corner--tl"></div>
+      <div class="corner corner--tr"></div>
+      <div class="corner corner--bl"></div>
+      <div class="corner corner--br"></div>
       <div class="panel-head">
         <span class="panel-title">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
@@ -1145,7 +1230,7 @@ main#ops-theater {
         <span class="panel-badge">5 Satuan Terhubung</span>
       </div>
       <div class="territory-list" id="territory-nodes">
-        <!-- Generated dynamically via JS -->
+        <!-- Dynamically rendered via JS -->
       </div>
       <div class="doctrine-card">
         <div class="doctrine-quote">“Mengelabuhi Penyerang, Melindungi Aset Nyata”</div>
@@ -1159,12 +1244,16 @@ main#ops-theater {
     
     <!-- Geospatial Tactical Map Deck -->
     <div class="hud-panel">
+      <div class="corner corner--tl"></div>
+      <div class="corner corner--tr"></div>
+      <div class="corner corner--bl"></div>
+      <div class="corner corner--br"></div>
       <div class="panel-head">
         <span class="panel-title">
           <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
           Peta Wilayah Pertahanan Siber C4ISR
         </span>
-        <span class="panel-badge">ESRI Mil-Dark · Radius Pantau Radar 120km</span>
+        <span class="panel-badge">ESRI Mil-Dark · Radar Pantau 120km</span>
       </div>
       <div class="map-container">
         <div id="map"></div>
@@ -1174,13 +1263,17 @@ main#ops-theater {
         </div>
       </div>
       <div class="map-campaign-bar" id="camp">
-        <span style="color:var(--ivory-muted)">Belum terdeteksi kampanye lintas satuan aktif.</span>
+        <span style="color:var(--on-dark-muted)">Belum terdeteksi kampanye lintas satuan aktif.</span>
       </div>
       <div id="units" style="display:none"></div>
     </div>
 
     <!-- SCADA Industrial Twin-Screen -->
     <div class="hud-panel twin-theater">
+      <div class="corner corner--tl"></div>
+      <div class="corner corner--tr"></div>
+      <div class="corner corner--bl"></div>
+      <div class="corner corner--br"></div>
       <div class="panel-head">
         <span class="panel-title">
           <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
@@ -1189,14 +1282,18 @@ main#ops-theater {
         <span class="panel-badge" id="twin-sat">KODAM-IV-Diponegoro</span>
       </div>
       <div class="twin-deck" id="twin-view">
-        <div style="color:var(--ivory-muted);padding:20px;grid-column:1/-1;text-align:center">Memuat telemetri PLC industri...</div>
+        <div style="color:var(--on-dark-muted);padding:20px;grid-column:1/-1;text-align:center">Memuat telemetri PLC industri...</div>
       </div>
     </div>
 
   </div>
 
-  <!-- COLUMN 3: INTEL & FORENSICS RAIL (380px) -->
+  <!-- COLUMN 3: INTEL & FORENSICS RAIL (385px) -->
   <div class="col-forensics hud-panel">
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
     
     <!-- Tab Switcher -->
     <div class="rail-tabs">
@@ -1206,21 +1303,21 @@ main#ops-theater {
       <button class="rail-tab-btn" onclick="switchRailTab('ses', this)">Sesi Forensik</button>
     </div>
 
-    <!-- TAB 1: Real-time Incident Stream (Default) -->
+    <!-- TAB 1: Incident Stream (Default) -->
     <div class="rail-tab-body" id="tab-pane-stream">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="deck-label">Wireshark/Zeek Live Stream</span>
-        <span style="font-size:9px;color:var(--ivory-muted)">Klik baris untuk inspeksi paket raw</span>
+        <span class="kicker">Wireshark/Zeek Stream</span>
+        <span style="font-size:.5625rem;color:var(--on-dark-muted)">Klik baris untuk inspeksi DPI</span>
       </div>
       <div class="term-stream mono" id="term-feed">
         <div class="term-line"><span class="term-ts">SYSTEM</span><span class="term-src">WAYANG KERNEL</span><span class="term-act">Mesin C4ISR siap. Menunggu aktivitas jaringan...</span></div>
       </div>
       
-      <div style="margin-top:6px;border-top:1px solid var(--border-navy);padding-top:8px">
+      <div style="margin-top:6px;border-top:1px solid var(--line-gold);padding-top:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span class="deck-label">Kronologi Sesi Terpilih</span>
+          <span class="kicker">Kronologi Sesi Terpilih</span>
         </div>
-        <div id="replay" class="mono" style="font-size:10.5px;max-height:160px;overflow-y:auto;color:var(--ivory-dim)">
+        <div id="replay" class="mono" style="font-size:.6563rem;max-height:160px;overflow-y:auto;color:var(--on-dark-muted)">
           Pilih salah satu sesi di tab Sesi Forensik untuk memutar ulang jejak digital.
         </div>
       </div>
@@ -1228,22 +1325,22 @@ main#ops-theater {
 
     <!-- TAB 2: MITRE ATT&CK for ICS Matrix -->
     <div class="rail-tab-body" id="tab-pane-attck" style="display:none">
-      <span class="deck-label" style="margin-bottom:4px">Pemetaan Perilaku Taktis (MITRE for ICS)</span>
+      <span class="kicker" style="margin-bottom:4px">Pemetaan Taktis MITRE for ICS</span>
       <div class="attck-matrix-deck" id="attck-matrix"></div>
-      <div style="font-size:9.5px;color:var(--ivory-muted);margin-top:10px;line-height:1.4">
+      <div style="font-size:.5938rem;color:var(--on-dark-muted);margin-top:10px;line-height:1.4">
         Setiap manipulasi fungsi Modbus dianalisis secara heuristik dan dipetakan langsung ke taktik ICS (T0801, T0840, T0855).
       </div>
     </div>
 
-    <!-- TAB 3: Dalang Firewall Approvals (Bayangan ke Benteng) -->
+    <!-- TAB 3: Dalang Firewall Approvals -->
     <div class="rail-tab-body" id="tab-pane-dec" style="display:none">
-      <span class="deck-label" style="margin-bottom:4px">Antrean Persetujuan Blokir nftables</span>
+      <span class="kicker" style="margin-bottom:4px">Antrean Blokir nftables</span>
       <div id="dec" style="max-height:360px;overflow-y:auto"></div>
     </div>
 
-    <!-- TAB 4: Tracked Attacker Sessions -->
+    <!-- TAB 4: Tracked Sessions -->
     <div class="rail-tab-body" id="tab-pane-ses" style="display:none">
-      <span class="deck-label" style="margin-bottom:4px">Sesi Penyerang Terobservasi</span>
+      <span class="kicker" style="margin-bottom:4px">Sesi Penyerang Terobservasi</span>
       <div id="ses" style="max-height:360px;overflow-y:auto"></div>
     </div>
 
@@ -1255,55 +1352,62 @@ main#ops-theater {
      MODALS: PHILOSOPHY, DPI INSPECTOR, MERKLE PROOF
      ========================================================================== -->
 
-<!-- MODAL DOKTRIN & FILOSOFI IDENTITAS RESMI -->
+<!-- MODAL DOKTRIN & FILOSOFI IDENTITAS RESMI (STYLED WITH TEMPLATE SIGNATURE) -->
 <div class="modal-overlay" id="modal-about" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-card">
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
+    
     <div class="modal-head">
       <div class="modal-title">Identitas Resmi &amp; Doktrin Pertahanan Siber WAYANG</div>
-      <button class="hud-btn" onclick="$('modal-about').style.display='none'">✕ Tutup</button>
+      <button class="btn btn--ghost btn--sm" onclick="$('modal-about').style.display='none'">✕ Tutup</button>
     </div>
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;background:#050E1F;padding:12px;border-radius:4px;border:1px solid var(--border-navy)">
-      <img src="/static/Logo.jpeg" alt="Logo Resmi WAYANG" style="height:76px;width:auto;border-radius:4px;border:1px solid var(--gold);padding:3px;background:#020610">
+
+    <!-- Stage Emblem Showcase matching template's .emblem-stage -->
+    <div class="emblem-stage">
+      <img src="/static/Logo.jpeg" alt="Logo Resmi WAYANG TNI AD">
       <div>
-        <h2 style="margin:0;color:#fff;font-size:17px;font-weight:900;letter-spacing:1px">WAYANG C4ISR DECEPTION GRID</h2>
-        <div style="color:var(--gold);font-weight:800;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase">Pertahanan Adaptif IT/OT Komando Teritorial TNI AD</div>
-        <div style="margin-top:6px;font-style:italic;color:var(--ivory);font-size:11.5px">“Mengelabuhi Penyerang, Melindungi Aset Nyata”</div>
+        <h2 style="font-family:var(--font-head);margin:0;color:var(--ink);font-size:1.1875rem;font-weight:800;letter-spacing:.08em">WAYANG C4ISR DECEPTION GRID</h2>
+        <div style="color:var(--teal-ink);font-weight:700;font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase">Pertahanan Adaptif IT/OT Komando Teritorial TNI AD</div>
+        <div style="margin-top:6px;font-style:italic;color:var(--ink-muted);font-size:.75rem">“Mengelabuhi Penyerang, Melindungi Aset Nyata”</div>
       </div>
     </div>
     
-    <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px">4 Pilar Filosofi Desain:</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
-      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--gold)">
-        <b style="color:var(--gold)">Filosofi Wayang</b><br>
-        <span style="color:var(--ivory-dim)">Strategi pengelabuan taktis, ketelitian dalang, dan adaptasi skenario bayangan berlapis.</span>
+    <div class="kicker" style="margin:8px 0 10px">4 Pilar Doktrin Pertahanan:</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.6875rem">
+      <div style="background:var(--navy-950);padding:10px 12px;border-radius:var(--radius);border-left:3px solid var(--gold);border-top:1px solid var(--line-dark);border-right:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)">
+        <b style="color:var(--gold-soft);font-family:var(--font-head);letter-spacing:.04em">Filosofi Wayang</b><br>
+        <span style="color:var(--on-dark-muted)">Strategi pengelabuan taktis, ketelitian dalang, dan adaptasi skenario bayangan berlapis.</span>
       </div>
-      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--tech)">
-        <b style="color:var(--tech)">Sistem Siber Modern</b><br>
-        <span style="color:var(--ivory-dim)">Perlindungan protokol industri SCADA/ICS OT (Modbus, DNP3, IEC 60870) secara terdistribusi.</span>
+      <div style="background:var(--navy-950);padding:10px 12px;border-radius:var(--radius);border-left:3px solid var(--teal);border-top:1px solid var(--line-dark);border-right:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)">
+        <b style="color:var(--cyan);font-family:var(--font-head);letter-spacing:.04em">Sistem Siber Modern</b><br>
+        <span style="color:var(--on-dark-muted)">Perlindungan protokol industri SCADA/ICS OT (Modbus, DNP3, IEC 60870) secara terdistribusi.</span>
       </div>
-      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--emerald)">
-        <b style="color:var(--emerald)">Perisai Keamanan (Shield)</b><br>
-        <span style="color:var(--ivory-dim)">Isolasi mutlak tanpa kompromi (0-write ke fisik) menjamin integritas aset strategis pangkalan.</span>
+      <div style="background:var(--navy-950);padding:10px 12px;border-radius:var(--radius);border-left:3px solid var(--emerald);border-top:1px solid var(--line-dark);border-right:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)">
+        <b style="color:var(--emerald);font-family:var(--font-head);letter-spacing:.04em">Perisai Keamanan (Shield)</b><br>
+        <span style="color:var(--on-dark-muted)">Isolasi mutlak tanpa kompromi (0-write ke fisik) menjamin integritas aset strategis pangkalan.</span>
       </div>
-      <div style="background:#050E1F;padding:8px 10px;border-radius:3px;border-left:3px solid var(--crimson)">
-        <b style="color:var(--crimson)">Kearifan Nusantara</b><br>
-        <span style="color:var(--ivory-dim)">Kedaulatan teknologi karya bangsa Indonesia untuk menjaga keutuhan NKRI.</span>
+      <div style="background:var(--navy-950);padding:10px 12px;border-radius:var(--radius);border-left:3px solid var(--crimson);border-top:1px solid var(--line-dark);border-right:1px solid var(--line-dark);border-bottom:1px solid var(--line-dark)">
+        <b style="color:#FCA5A5;font-family:var(--font-head);letter-spacing:.04em">Kearifan Nusantara</b><br>
+        <span style="color:var(--on-dark-muted)">Kedaulatan teknologi karya bangsa Indonesia untuk menjaga keutuhan NKRI.</span>
       </div>
     </div>
 
-    <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:14px 0 6px">Palet Warna Standar Militer:</div>
-    <div style="display:flex;gap:8px;font-size:10px">
-      <div style="flex:1;background:#0B1F44;border:1px solid rgba(255,255,255,0.2);padding:6px;border-radius:3px;text-align:center">
-        <b>Navy Blue</b><br><code>#0B1F44</code><br><span style="color:var(--ivory-muted)">Keamanan</span>
+    <div class="kicker" style="margin:16px 0 10px">Palet Warna Resmi (Design Tokens):</div>
+    <div style="display:flex;gap:10px;font-size:.625rem">
+      <div style="flex:1;background:var(--navy-950);border:1px solid var(--line-gold);padding:8px;border-radius:var(--radius);text-align:center">
+        <b>Sovereign Navy</b><br><code>#05101E</code><br><span style="color:var(--on-dark-muted)">Keamanan</span>
       </div>
-      <div style="flex:1;background:#D4AF37;color:#000;padding:6px;border-radius:3px;text-align:center">
-        <b>Gold</b><br><code>#D4AF37</code><br><span>Kemuliaan</span>
+      <div style="flex:1;background:var(--gold);color:var(--navy-950);padding:8px;border-radius:var(--radius);text-align:center">
+        <b>Royal Gold</b><br><code>#C9A227</code><br><span>Kemuliaan</span>
       </div>
-      <div style="flex:1;background:#F8F9FA;color:#000;padding:6px;border-radius:3px;text-align:center">
-        <b>Ivory</b><br><code>#F8F9FA</code><br><span>Kejelasan</span>
+      <div style="flex:1;background:var(--ivory);color:var(--navy-950);padding:8px;border-radius:var(--radius);text-align:center">
+        <b>Ivory White</b><br><code>#F5F5F0</code><br><span>Kejernihan</span>
       </div>
-      <div style="flex:1;background:#2E6BFF;color:#fff;padding:6px;border-radius:3px;text-align:center">
-        <b>Tech Blue</b><br><code>#2E6BFF</code><br><span>Inovasi</span>
+      <div style="flex:1;background:var(--teal);color:#fff;padding:8px;border-radius:var(--radius);text-align:center">
+        <b>Defense Teal</b><br><code>#1F6F8B</code><br><span>Ketahanan</span>
       </div>
     </div>
   </div>
@@ -1312,9 +1416,13 @@ main#ops-theater {
 <!-- MODAL DEEP PACKET INSPECTOR (WIRESHARK-STYLE) -->
 <div class="modal-overlay" id="modal-dpi" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-card">
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
     <div class="modal-head">
       <div class="modal-title">Deep Packet Inspector (Modbus/TCP Frame Dissector)</div>
-      <button class="hud-btn" onclick="$('modal-dpi').style.display='none'">✕ Tutup</button>
+      <button class="btn btn--ghost btn--sm" onclick="$('modal-dpi').style.display='none'">✕ Tutup</button>
     </div>
     <div id="packet-details">Memuat frame paket...</div>
   </div>
@@ -1323,9 +1431,13 @@ main#ops-theater {
 <!-- MODAL MERKLE PROOF RFC 6962 -->
 <div class="modal-overlay" id="modal-merkle" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-card">
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
     <div class="modal-head">
       <div class="modal-title">Pembuktian Kriptografis RFC 6962 Merkle Tree</div>
-      <button class="hud-btn" onclick="$('modal-merkle').style.display='none'">✕ Tutup</button>
+      <button class="btn btn--ghost btn--sm" onclick="$('modal-merkle').style.display='none'">✕ Tutup</button>
     </div>
     <div id="merkle-details">Memverifikasi pohon Merkle...</div>
   </div>
@@ -1371,8 +1483,8 @@ setInterval(updateClock, 1000); updateClock();
 // Audio Tactical Feedback Engine
 function toggleAudio() {
   audioEnabled = !audioEnabled;
-  $('btn-audio').style.color = audioEnabled ? 'var(--emerald)' : 'var(--ivory)';
-  $('btn-audio').style.borderColor = audioEnabled ? 'var(--emerald)' : 'var(--border-navy)';
+  $('btn-audio').style.color = audioEnabled ? 'var(--emerald)' : 'var(--on-dark)';
+  $('btn-audio').style.borderColor = audioEnabled ? 'var(--emerald)' : 'rgba(233, 238, 246, 0.22)';
   if (audioEnabled && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
@@ -1406,7 +1518,7 @@ function changeDefcon(val) {
   } else if (val === '2') {
     h.style.boxShadow = '0 0 18px rgba(245, 158, 11, 0.6)';
   } else {
-    h.style.boxShadow = '0 2px 16px rgba(0,0,0,0.6)';
+    h.style.boxShadow = '0 4px 24px rgba(0, 0, 0, 0.55)';
   }
 }
 
@@ -1426,14 +1538,14 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_D
 }).addTo(map);
 
 // Military Radar Surveillance Perimeter Rings (120 km)
-L.circle([-6.1754, 106.8272], { radius: 120000, color: 'rgba(46, 107, 255, 0.35)', weight: 1.5, fill: false, dashArray: '4, 8' }).addTo(map);
-L.circle([-7.8014, 110.3647], { radius: 120000, color: 'rgba(212, 175, 55, 0.35)', weight: 1.5, fill: false, dashArray: '4, 8' }).addTo(map);
+L.circle([-6.1754, 106.8272], { radius: 120000, color: 'rgba(31, 111, 139, 0.45)', weight: 1.5, fill: false, dashArray: '4, 8' }).addTo(map);
+L.circle([-7.8014, 110.3647], { radius: 120000, color: 'rgba(201, 162, 39, 0.45)', weight: 1.5, fill: false, dashArray: '4, 8' }).addTo(map);
 
 const markers = {};
 attackVectorsLayer = L.layerGroup().addTo(map);
 
 const cls = s => s.startsWith('Kampanye') ? 'Kampanye' : s.startsWith('Tipuan') ? 'Tipuan' : 'Aman';
-const col = { Aman: '#10B981', Tipuan: '#D4AF37', Kampanye: '#EF4444' };
+const col = { Aman: '#10B981', Tipuan: '#C9A227', Kampanye: '#EF4444' };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 async function post(u, b) {
@@ -1483,7 +1595,7 @@ async function refreshTwin() {
     $('twin-view').innerHTML = `
       <div class="scada-panel real">
         <div class="scada-head">
-          <span class="scada-title" style="color:var(--tech)">Aset Fisik Nyata (OT Terlindungi)</span>
+          <span class="scada-title" style="color:var(--cyan)">Aset Fisik Nyata (OT Terlindungi)</span>
           <span class="unit-status-pill status-aman">${a.status}</span>
         </div>
         <div class="scada-content">
@@ -1548,22 +1660,22 @@ async function refreshTwin() {
 async function openPacketModal() {
   $('modal-dpi').style.display = 'flex';
   const el = $('packet-details');
-  el.innerHTML = '<span style="color:var(--ivory-muted)">Mengekstrak frame raw Modbus/TCP...</span>';
+  el.innerHTML = '<span style="color:var(--on-dark-muted)">Mengekstrak frame raw Modbus/TCP...</span>';
   try {
     const pkts = await J('/api/packets/recent');
     if (!pkts || !pkts.length) {
-      el.innerHTML = '<p style="color:var(--ivory-muted)">Belum ada frame paket Modbus yang tercatat.</p>';
+      el.innerHTML = '<p style="color:var(--on-dark-muted)">Belum ada frame paket Modbus yang tercatat.</p>';
       return;
     }
     const p = pkts[0];
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;background:#050E1F;padding:10px;border-radius:3px;border:1px solid var(--border-navy)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;background:var(--navy-950);padding:10px;border-radius:var(--radius);border:1px solid var(--line-gold)">
         <div><b>ID Frame:</b> <span class="mono" style="color:var(--cyan)">${esc(p.id)}</span></div>
         <div><b>Alamat Sumber IP:</b> <span class="mono" style="color:var(--gold)">${esc(p.src_ip || p.src)}</span></div>
         <div><b>Satuan Target:</b> ${esc(p.satuan)}</div>
         <div><b>Sidik Jari Alat Penyerang:</b> <span class="unit-status-pill status-tipuan">${esc(p.tool_detected)}</span></div>
       </div>
-      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Diseksi Header MBAP (Modbus Application Protocol):</div>
+      <div class="kicker" style="margin:8px 0 6px">Diseksi Header MBAP (Modbus Application Protocol):</div>
       <table class="c4-table mono" style="margin-bottom:12px">
         <tr><th>Transaction ID</th><th>Protocol ID</th><th>Length</th><th>Unit ID</th><th>Function Code</th></tr>
         <tr>
@@ -1574,7 +1686,7 @@ async function openPacketModal() {
           <td><b style="color:var(--gold)">FC 0${p.pdu.function_code || 3}</b></td>
         </tr>
       </table>
-      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Raw Packet Hex Dump &amp; ASCII Sidebar:</div>
+      <div class="kicker" style="margin:8px 0 6px">Raw Packet Hex Dump &amp; ASCII Sidebar:</div>
       <div class="hex-view">0000   00 0A 00 00 00 06 01 06 75 31 27 0F   ........u1'.
 000C   [MBAP VALID - INTERCEPTED AND LOGGED BY KELIR PROXY]</div>
     `;
@@ -1587,20 +1699,20 @@ async function openPacketModal() {
 async function openMerkleModal() {
   $('modal-merkle').style.display = 'flex';
   const el = $('merkle-details');
-  el.innerHTML = '<span style="color:var(--ivory-muted)">Menghitung pohon Merkle RFC 6962...</span>';
+  el.innerHTML = '<span style="color:var(--on-dark-muted)">Menghitung pohon Merkle RFC 6962...</span>';
   try {
     const m = await J(`/api/chain/${curSat}/merkle`);
     el.innerHTML = `
-      <div style="margin-bottom:12px;background:#050E1F;padding:10px;border-radius:3px;border:1px solid var(--border-navy)">
+      <div style="margin-bottom:12px;background:var(--navy-950);padding:10px;border-radius:var(--radius);border:1px solid var(--line-gold)">
         <div><b>Pangkalan:</b> <span class="mono" style="color:var(--cyan)">${esc(m.satuan)}</span></div>
         <div style="margin-top:2px"><b>Status Integritas:</b> <span class="unit-status-pill status-aman">TERVERIFIKASI (VALID RFC 6962)</span></div>
         <div style="margin-top:2px"><b>Total Daun Bukti Forensik:</b> ${m.total_leaves} kejadian audit</div>
       </div>
-      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Merkle Root Hash (SHA-256):</div>
+      <div class="kicker" style="margin:8px 0 6px">Merkle Root Hash (SHA-256):</div>
       <div class="hex-view">${esc(m.merkle_root)}</div>
-      <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:10px 0 4px">Tanda Tangan Kriptografis Pangkalan (HMAC-SHA256):</div>
+      <div class="kicker" style="margin:10px 0 6px">Tanda Tangan Kriptografis Pangkalan (HMAC-SHA256):</div>
       <div class="hex-view">${esc(m.signature)}</div>
-      <p style="margin-top:10px;font-size:10.5px;color:var(--ivory-muted);line-height:1.4">
+      <p style="margin-top:10px;font-size:.6563rem;color:var(--on-dark-muted);line-height:1.5">
         Jalur audit Merkle Tree ini menjamin keabsahan seluruh kronologi insiden siber untuk pembuktian forensik di hadapan audit militer tanpa kemungkinan penyangkalan (*Non-Repudiation*).
       </p>
     `;
@@ -1627,7 +1739,7 @@ function renderMatrix(activeTechs = []) {
         const isDanger = ['T0855', 'T0836', 'T0831'].includes(c.id) && isActive;
         return `<div class="attck-cell ${isDanger ? 'danger' : (isActive ? 'active' : '')}">
           <span>${c.id}</span>
-          <span style="font-size:8px;font-weight:400">${c.n}</span>
+          <span style="font-size:7.5px;font-weight:400">${c.n}</span>
         </div>`;
       }).join('')}
     </div>
@@ -1641,17 +1753,17 @@ async function openSes(sat, id) {
   renderMatrix(allTechs);
 
   $('replay').innerHTML = r.map(e => `
-    <div style="padding:4px 0;border-bottom:1px solid var(--border-subtle);cursor:pointer" onclick="openPacketModal()">
+    <div style="padding:4px 0;border-bottom:1px solid var(--line-dark);cursor:pointer" onclick="openPacketModal()">
       <span style="color:var(--cyan)">+${e.t}s</span>
-      <span class="unit-status-pill status-tipuan" style="font-size:8px">L${e.depth}</span>
+      <span class="unit-status-pill status-tipuan" style="font-size:7.5px">L${e.depth}</span>
       <b>${esc(e.action)}</b>
-      <span style="color:var(--ivory-muted)">${esc(JSON.stringify(e.target || ''))}</span>
+      <span style="color:var(--on-dark-muted)">${esc(JSON.stringify(e.target || ''))}</span>
       <span style="color:var(--gold)">[${esc((e.techniques || []).join(', '))}]</span>
     </div>
   `).join('') + `
-    <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-navy);font-size:10px">
+    <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line-gold);font-size:.625rem">
       <a href="/api/report/${sat}/${id}.docx" style="font-weight:700;color:var(--gold);text-decoration:none">Unduh BAP-FD Sesi Ini (.docx)</a> · 
-      <a href="/api/report/${sat}/${id}.html" target="_blank" style="color:var(--tech);text-decoration:none">Lihat HTML</a>
+      <a href="/api/report/${sat}/${id}.html" target="_blank" style="color:var(--cyan);text-decoration:none">Lihat HTML</a>
     </div>
   `;
   refreshTwin();
@@ -1722,28 +1834,28 @@ async function refresh() {
     <div style="color:var(--crimson);font-weight:700">
       KAMPANYE TERKOORDINASI: ${esc(x.satuan.join(' ➔ '))} (Bukti: ${esc(x.bukti)})
     </div>
-  `).join('') : '<span style="color:var(--ivory-muted)">Belum terdeteksi kampanye lintas satuan aktif.</span>';
+  `).join('') : '<span style="color:var(--on-dark-muted)">Belum terdeteksi kampanye lintas satuan aktif.</span>';
 
   // 4. Dalang Approvals Queue
   $('dec').innerHTML = (d && d.length) ? '<table class="c4-table"><tr><th>ID</th><th>Sumber IP</th><th>Status</th><th>Aksi</th></tr>' + d.map(p => `
     <tr>
-      <td><b>${esc(p.id)}</b><br><small style="color:var(--ivory-muted)">${esc(p.satuan)}</small></td>
+      <td><b>${esc(p.id)}</b><br><small style="color:var(--on-dark-muted)">${esc(p.satuan)}</small></td>
       <td><span class="mono" style="color:var(--cyan)">${esc(p.src)}</span></td>
       <td><span class="unit-status-pill ${p.status === 'approved' ? 'status-aman' : 'status-tipuan'}">${p.status}</span></td>
       <td>${p.status === 'pending' ? `
-        <button class="drill-btn" style="color:var(--emerald)" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui Blokir</button>
-        <button class="drill-btn" onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>` :
-        p.status === 'approved' ? `<button class="drill-btn danger" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Cabut</button>` : ''}
+        <button class="btn btn--sm" style="color:var(--emerald);border-color:rgba(16,185,129,0.3)" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui</button>
+        <button class="btn btn--ghost btn--sm" onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>` :
+        p.status === 'approved' ? `<button class="btn btn--danger btn--sm" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Cabut</button>` : ''}
       </td>
     </tr>
-  `).join('') + '</table>' : '<span style="color:var(--ivory-muted);font-size:11px">Semua usulan blokir telah ditinjau.</span>';
+  `).join('') + '</table>' : '<span style="color:var(--on-dark-muted);font-size:.6875rem">Semua usulan blokir telah ditinjau.</span>';
 
   // 5. Tracked Sessions
   $('ses').innerHTML = '<table class="c4-table"><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap</th><th>Level</th><th>Teknik</th></tr>' +
     s.slice(0, 10).map(x => `
       <tr style="cursor:pointer" onclick="openSes('${x.satuan}','${x.session}')">
-        <td><b>${esc(x.session)}</b><br><small style="color:var(--ivory-muted)">${esc(x.satuan)}</small></td>
-        <td><span class="mono" style="color:var(--cyan)">${esc(x.src)}</span>${x.diverted ? ' <span class="unit-status-pill status-tipuan" style="font-size:8px">Bayangan</span>' : ''}</td>
+        <td><b>${esc(x.session)}</b><br><small style="color:var(--on-dark-muted)">${esc(x.satuan)}</small></td>
+        <td><span class="mono" style="color:var(--cyan)">${esc(x.src)}</span>${x.diverted ? ' <span class="unit-status-pill status-tipuan" style="font-size:7.5px">Bayangan</span>' : ''}</td>
         <td>${esc(x.stage)}</td>
         <td>L${x.depth}</td>
         <td><span style="color:var(--gold)">${esc((x.techniques || []).join(', '))}</span></td>
@@ -1813,7 +1925,7 @@ function initWebSocket() {
 
   ws.onclose = () => {
     $('live-text').innerText = 'POLLING 2.5s';
-    $('live-indicator').style.borderColor = 'rgba(212, 175, 55, 0.4)';
+    $('live-indicator').style.borderColor = 'rgba(201, 162, 39, 0.4)';
     $('live-indicator').style.color = 'var(--gold)';
     setTimeout(initWebSocket, 4000);
   };
