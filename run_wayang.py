@@ -233,9 +233,11 @@ async def amain(args):
 
 
 def main():
+    default_host = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
+    default_port = int(os.environ.get("PORT", "8080"))
     parser = argparse.ArgumentParser(description="WAYANG C4ISR Realtime Defense Engine")
-    parser.add_argument("--host", default="127.0.0.1", help="Host interface")
-    parser.add_argument("--port", type=int, default=8080, help="Port Web Dalang Console")
+    parser.add_argument("--host", default=default_host, help="Host interface")
+    parser.add_argument("--port", type=int, default=default_port, help="Port Web Dalang Console")
     parser.add_argument("--base-port", type=int, default=15020, help="Base port Modbus/HMI")
     parser.add_argument("--out", default=None, help="Direktori keluaran log/audit")
     parser.add_argument("--mode", default="realtime", choices=["realtime", "full", "console"], help="Mode operasi")
