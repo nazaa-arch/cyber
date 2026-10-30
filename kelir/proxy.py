@@ -36,7 +36,16 @@ class Kelir:
         self.mirror = mirror
         self.clock = clock
         self.divert_counts: dict[str, int] = {}
-        self.stats = {"forwarded": 0, "diverted_frames": 0, "fail_closed": 0, "blocked": 0}
+        self.stats = {"forwarded": 0, "diverted_frames": 0, "fail_closed": 0, "blocked": 0,
+                      "forwarded_operator": 0, "forwarded_unlisted_reads": 0}
+
+    @property
+    def maintenance_mode(self) -> bool:
+        return self.scorer.maintenance_mode
+
+    @maintenance_mode.setter
+    def maintenance_mode(self, v: bool):
+        self.scorer.maintenance_mode = bool(v)
 
     # ---------- util ----------
     def _event(self, s, action: str, **extra) -> None:
@@ -105,7 +114,7 @@ class Kelir:
             if s.pinned:
                 return self._to_shadow(s, src, unit, pdu)
 
-            allowed, violation = self.scorer.check_source_policy(src, unit, req)
+            allowed, violation = self.scorer.check_source_policy(src, unit, req, req_rate_hz=s.rate_hz(now))
             if not allowed:
                 # Skenario Operator Terkompromi: Perintah melanggar batas otorisasi
                 s.observe(now, req.action, unit=unit, table=req.table, addr=req.addr,
@@ -143,7 +152,7 @@ class Kelir:
         decision = self.scorer.score(
             src, modbus_funcs=funcs, scan_targets=s.seq, scan_window_s=s.scan_window(),
             default_cred_attempts=s.default_cred, req_rate_hz=s.rate_hz(now))
-        divert = decision.divert or non_read   # fungsi bukan-baca dari sumber tak sah
+        divert = decision.divert or (non_read and not self.maintenance_mode)   # fungsi bukan-baca dari sumber tak sah
         if divert and self.autonomy.can_divert:
             self._pin(s, decision)
             return self._to_shadow(s, src, unit, pdu)
@@ -185,6 +194,10 @@ class Kelir:
         if fr is None:
             return None
         self.stats["forwarded"] += 1
+        if whitelisted:
+            self.stats["forwarded_operator"] = self.stats.get("forwarded_operator", 0) + 1
+        else:
+            self.stats["forwarded_unlisted_reads"] = self.stats.get("forwarded_unlisted_reads", 0) + 1
         self.shadow.profile.match((time.perf_counter() - t0) * 1000)
         return fr[2]
 

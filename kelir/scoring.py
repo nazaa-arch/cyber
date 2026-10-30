@@ -5,8 +5,13 @@ Transparan dan dapat dijelaskan: setiap keputusan disertai alasan terbaca.
 
 Prinsip Zero Trust ICS:
 Daftar putih IP bukan identitas tunggal. Sumber terdaftar (operator pos) tetap
-dibatasi oleh kebijakan operasional granular (Unit ID, Function Code, dan rentang
-register tulis). Pelanggaran batas kendali dialihkan ke panggung bayangan.
+dibatasi oleh kebijakan operasional granular (Unit ID, Function Code, rentang
+register tulis, dan laju maksimum polling). Pelanggaran batas kendali dialihkan
+ke panggung bayangan.
+
+Invarian Keselamatan Kritis:
+Perintah tulis dari sumber tak terdaftar (unlisted write) SELALU dialihkan ke
+panggung bayangan tanpa bergantung pada bobot heuristik.
 """
 from __future__ import annotations
 
@@ -68,6 +73,7 @@ class SourcePolicy:
     allow_units: set[int] = field(default_factory=set)
     allow_functions: set[int] = field(default_factory=set)
     allow_write_registers: set[int] = field(default_factory=set)
+    max_rate_hz: float = 10.0
     on_violation: str = "divert"  # "divert" (alihkan ke bayangan) atau "drop" (buang)
 
 
@@ -93,9 +99,11 @@ class SessionScorer:
     def __init__(self, whitelist: set[str] | None = None,
                  policies: dict[str, dict] | list[dict] | None = None,
                  weights: dict[str, float] | None = None,
-                 threshold: float = DEFAULT_THRESHOLD):
+                 threshold: float = DEFAULT_THRESHOLD,
+                 maintenance_mode: bool = False):
         self.whitelist = set(whitelist or ())
         self.policies: dict[str, SourcePolicy] = {}
+        self.maintenance_mode = maintenance_mode
         if policies:
             self._load_policies(policies)
         for pol in self.policies.values():
@@ -128,6 +136,7 @@ class SessionScorer:
             f = allow.get("functions")
             allow_funcs = set(f) if isinstance(f, (list, tuple, set)) else ({f} if f is not None else set())
             w_regs = parse_register_spec(allow.get("write_registers"))
+            max_rate = float(item.get("max_rate_hz", allow.get("max_rate_hz", 10.0)))
             on_violation = item.get("on_violation", "divert")
             self.policies[src] = SourcePolicy(
                 name=name,
@@ -135,14 +144,18 @@ class SessionScorer:
                 allow_units=allow_units,
                 allow_functions=allow_funcs,
                 allow_write_registers=w_regs,
+                max_rate_hz=max_rate,
                 on_violation=on_violation
             )
 
-    def check_source_policy(self, src: str, unit: int, req) -> tuple[bool, str | None]:
+    def check_source_policy(self, src: str, unit: int, req, req_rate_hz: float = 0.0) -> tuple[bool, str | None]:
         """
         Memeriksa apakah permintaan dari sumber terdaftar memenuhi kebijakan per-sumber.
         Mengembalikan (allowed: bool, violation_reason: str | None).
         """
+        if self.maintenance_mode:
+            return True, None
+
         if src not in self.policies:
             return True, None
 
@@ -165,17 +178,39 @@ class SessionScorer:
                 if cur_addr not in pol.allow_write_registers and cur_reg not in pol.allow_write_registers:
                     return False, f"Tulis ke register {cur_reg} (offset {cur_addr}) di luar rentang {pol.name}"
 
+        if pol.max_rate_hz and req_rate_hz > pol.max_rate_hz:
+            return False, f"Laju permintaan {req_rate_hz:.1f} Hz melebihi batas {pol.max_rate_hz:.1f} Hz untuk {pol.name}"
+
         return True, None
 
     def score(self, src: str, modbus_funcs: list[int] | None = None,
               scan_targets: int = 0, scan_window_s: float = 0.0,
               default_cred_attempts: int = 0,
               req_rate_hz: float = 0.0, legit_rate_hz: float = 5.0) -> Decision:
-        # Operator sah di daftar putih tetap diteruskan ke aset asli
-        # (pembatasan fungsi/register divalidasi oleh check_source_policy).
+        # 1. Mode perawatan: bypass seluruh pengalihan untuk teknisi sah
+        if self.maintenance_mode:
+            return Decision(0.0, False, "mode perawatan aktif: pengalihan dinonaktifkan")
+
+        # 2. Sumber terdaftar dengan kebijakan per-sumber
+        if src in self.policies:
+            p = self.policies[src]
+            funcs = modbus_funcs or []
+            bad = sorted(f for f in funcs if p.allow_functions and f not in p.allow_functions)
+            rate_violation = (req_rate_hz > p.max_rate_hz) if p.max_rate_hz else False
+            if bad or rate_violation:
+                reasons = []
+                if bad:
+                    reasons.append(f"fungsi terlarang {bad}")
+                if rate_violation:
+                    reasons.append(f"laju {req_rate_hz:.1f} Hz melebihi batas {p.max_rate_hz:.1f} Hz")
+                return Decision(1.0, True, f"dialihkan karena: sumber terdaftar melanggar kebijakan ({', '.join(reasons)})")
+            return Decision(0.0, False, "sesuai kebijakan operator")
+
+        # 3. Sumber di daftar putih tanpa kebijakan khusus
         if src in self.whitelist:
             return Decision(0.0, False, "sumber ada di daftar putih")
 
+        # 4. Sumber tak terdaftar: hitung sinyal heuristik
         funcs = modbus_funcs or []
         s = Signals(
             unlisted_source=1.0,
@@ -197,6 +232,9 @@ class SessionScorer:
             parts.append("laju di luar pola polling sah")
         if not parts:
             parts.append("sumber tak terdaftar")
-        divert = total >= self.threshold
+
+        # Invarian keselamatan kritis: perintah tulis dari sumber tak terdaftar SELALU dialihkan
+        # tanpa bergantung pada bobot sinyal lainnya.
+        divert = (s.write_function > 0.0) or (total >= self.threshold)
         verb = "dialihkan" if divert else "dipantau"
         return Decision(total, divert, f"{verb} karena: " + " + ".join(parts), s)

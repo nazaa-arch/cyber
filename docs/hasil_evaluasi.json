@@ -3,53 +3,103 @@
     "legit_requests": 105,
     "legit_alerts": 0,
     "fpr_daftar_putih": 0.0,
-    "alerts_total": 24,
+    "alerts_total": 210,
     "presisi": 1.0,
     "recall": 1.0,
-    "malicious_sources": 12,
-    "ttfa_ms_median": 1.5037500415928662,
-    "ttfa_ms_p95": 2.2551999427378178,
-    "event_to_alert_ms_p95": 7.074399967677891,
-    "lat_asli_p95_ms": 16.303200041875243,
-    "lat_bayangan_p95_ms": 46.537899994291365,
-    "teknik_per_sesi_rata2": 3.6153846153846154,
+    "malicious_sources": 105,
+    "ttfa_inproc_ms_median": 4.9177000000781845,
+    "ttfa_inproc_ms_p95": 10.168799999519251,
+    "ttfa_e2e_ms_median": 232.74010000022827,
+    "ttfa_e2e_ms_p95": 469.60880000006,
+    "event_to_alert_ms_p95": 26.35750000081316,
+    "lat_asli_p95_ms": 21.635900000546826,
+    "lat_bayangan_p95_ms": 62.19580000015412,
+    "teknik_per_sesi_rata2": 3.660377358490566,
     "rasio_benteng_rata2": 1.0,
     "real_writes_total": 5,
-    "real_writes_diharapkan_operator_sah": 5,
+    "real_writes_operator_sah": 5,
+    "real_writes_penyerang_tembus": 0,
+    "unlisted_reads_ke_real": 945,
     "chain_ok": true
   },
+  "unlisted_classes": {
+    "teknisi_baru_tulis": {
+      "skor": 0.55,
+      "tindakan": "dialihkan ke bayangan",
+      "klasifikasi": "False Positive (Dampak Operasional: setting tidak sampai ke PLC)",
+      "mitigasi": "Gunakan Mode Perawatan"
+    },
+    "monitoring_read_5hz": {
+      "skor": 0.2,
+      "tindakan": "dipantau",
+      "klasifikasi": "True Negative (Tidak mengganggu alat pemantau)"
+    },
+    "internal_it_scanner": {
+      "skor": 0.5,
+      "tindakan": "dialihkan ke bayangan",
+      "klasifikasi": "False Positive IT Scanner (Menyerupai pola reconnaissance)"
+    },
+    "stealth_slow_recon": {
+      "skor": 0.2,
+      "tindakan": "dipantau",
+      "klasifikasi": "False Negative Deteksi Dini (Tertahan hingga perintah tulis pertama)"
+    },
+    "mode_perawatan_teknisi": {
+      "maintenance_mode_aktif": true,
+      "tindakan": "diteruskan ke PLC asli",
+      "sukses_ke_fisik": true,
+      "status": "Tercapai (Teknisi sah dapat bekerja tanpa tertipu panggung bayangan)"
+    }
+  },
   "ab": {
-    "statis": {
-      "dwell_sim_s_rata2": 18.499652452268815,
-      "langkah_rata2": 15,
-      "teknik_unik_rata2": 6,
+    "CuriousAttacker": {
+      "statis_dwell_s_mean": 12.360088229937748,
+      "statis_dwell_s_sd": 1.3030770093369528,
+      "statis_steps_mean": 10,
+      "adaptif_dwell_s_mean": 14.752219538525798,
+      "adaptif_dwell_s_sd": 1.5697698253002912,
+      "adaptif_steps_mean": 12,
+      "ci_95_adaptif": 0.56173491769317,
+      "paired_mean_diff_s": 2.3921313085880507,
+      "persentase_peningkatan": 19.353675023079493,
       "n": 30
     },
-    "adaptif": {
-      "dwell_sim_s_rata2": 27.504548729319644,
-      "langkah_rata2": 22,
-      "teknik_unik_rata2": 6,
+    "AggressiveAttacker": {
+      "statis_dwell_s_mean": 3.53758187514531,
+      "statis_dwell_s_sd": 0.41816738127174413,
+      "statis_steps_mean": 7,
+      "adaptif_dwell_s_mean": 5.014844096546076,
+      "adaptif_dwell_s_sd": 0.4432877787359826,
+      "adaptif_steps_mean": 10,
+      "ci_95_adaptif": 0.15862849437497029,
+      "paired_mean_diff_s": 1.4772622214007665,
+      "persentase_peningkatan": 41.75909628494708,
       "n": 30
     }
   },
   "res": {
     "n_bayangan": 10,
     "requests": 3000,
-    "wall_s": 4.196590199950151,
-    "cpu_s": 3.59375,
-    "cpu_persen_satu_core": 85.6349995775782,
-    "rss_mb_tambahan": 10.493952,
-    "rss_mb_total": 81.207296
+    "wall_s": 26.245298300000286,
+    "cpu_s": 19.71875,
+    "cpu_persen_satu_core": 75.13250478086502,
+    "rss_mb_tambahan": 10.960896,
+    "rss_mb_total": 84.365312,
+    "estimasi_container_single_node_mb": 38.5
   },
   "resil": {
     "outage_s_nyata": 10.0,
     "sesi": 40,
     "terkirim_saat_putus": 0,
-    "antrean_saat_putus": 40,
-    "diterima_pusat": 40,
+    "antrean_sebelum_crash": 40,
+    "diterima_pusat_setelah_reboot": 40,
     "ringkasan_hilang": 0,
-    "bytes_ringkasan_terkirim": 14601,
-    "bytes_log_mentah_setara": 51657,
-    "rasio_hemat": 0.7173471165572913
+    "bytes_ringkasan_terkirim_sesi_pendek": 14689,
+    "bytes_log_mentah_setara_sesi_pendek": 51495,
+    "rasio_hemat_sesi_pendek": 0.7147490047577434,
+    "bytes_ringkasan_terkirim_sesi_panjang": 19095,
+    "bytes_log_mentah_setara_sesi_panjang": 164784,
+    "rasio_hemat_sesi_panjang": 0.8841167831828333,
+    "resilience_crash_tested": true
   }
 }

@@ -128,21 +128,39 @@ Pada skenario pengujian **"Operator Terkompromi"** (`tests/test_kelir.py::test_c
 
 ### Hasil pada skenario berskrip (simulator internal)
 
+> **Batas klaim.** Angka berikut diukur pada mesin pengembang dengan penyerang simulasi buatan tim (skrip internal, hanya ke bayangan milik sendiri). Ini bukan uji pada mini-PC satuan, bukan penyerang nyata, dan bukan uji buta manusia. Baris "Penyamaran" sengaja dibiarkan kosong `[isi]` sampai relawan manusia menguji.
+
 Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attacker/evaluate.py` dan perbandingan target formal pada Dokumen Proposal Teknis:
 
 | Metrik | Definisi dan cara ukur | Hasil | n | Batasan |
 |---|---|---|---|---|
-| **TTFA Deteksi (dalam proses)** | Waktu dari frame Modbus pertama diterima proxy hingga keputusan pengalihan diambil dalam memori loopback. Target proposal: < 2.000 ms (< 2 dtk). | **1.50 ms** (median) / **2.26 ms** (p95) | n = 105 transaksi | Diukur dalam proses internal di loopback; belum mencakup latensi propagasi jaringan WAN. |
-| **TTFA Ujung ke Ujung (Alert Telegram/HUD)** | Waktu dari deteksi serangan pertama hingga notifikasi tiba di layar operator dan Bot Telegram. (Target internal direvisi: < 500 ms). | **45 – 120 ms** (median ~65 ms) | n = 30 uji kirim alert | Bergantung pada kecepatan transmisi internet seluler/WAN pangkalan. |
-| **Dwell Time Penyerang (Adaptif vs Statis)** | Durasi interaksi penyerang otomatis sebelum berhenti pada umpan bayangan adaptif dibanding honeypot statis. | **+48.7%** (27.5s ± 3.4s vs 18.5s ± 2.1s, 95% CI [25.1s, 29.9s]) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi (`CuriousAttacker`) dengan parameter kesabaran acak, bukan manusia nyata. |
-| **Dampak Fisik ke PLC Riil** | Perintah tulis manipulasi berbahaya yang lolos dan dieksekusi pada register PLC riil saat terjadi serangan. Target proposal: 0 perintah. | **0 penulisan (0.0%)** | n = 105 skenario serangan | Diuji pada harness simulator PLC; mengasumsikan perimeter fisik jaringan OT tidak di-bypass di tingkat switch. |
+| **TTFA Deteksi (dalam proses)** | Waktu dari frame Modbus pertama diterima proxy hingga keputusan pengalihan diambil dalam memori loopback. Target proposal: < 2.000 ms (< 2 dtk). | **4.92 ms** (median) / **10.17 ms** (p95) | n = 105 transaksi | Diukur dalam proses internal di loopback; belum mencakup latensi propagasi jaringan WAN. |
+| **TTFA Ujung ke Ujung (Alert Telegram/HUD)** | Waktu dari deteksi serangan pertama hingga notifikasi tiba di layar operator dan Bot Telegram. (Target internal direvisi: < 500 ms). | **232.7 – 469.6 ms** (median ~233 ms) | n = 105 uji kirim alert | Bergantung pada kecepatan transmisi internet seluler/WAN pangkalan. |
+| **Dwell Time Penyerang (Adaptif vs Statis)** | Durasi interaksi penyerang otomatis sebelum berhenti pada umpan bayangan adaptif dibanding honeypot statis (CuriousAttacker). | **+19.4%** (14.8s ± 1.6s vs 12.4s ± 1.3s, 95% CI ±0.6s) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi (`CuriousAttacker` & `AggressiveAttacker`) dengan kesabaran acak, bukan manusia nyata. |
+| **Dampak Fisik ke PLC Riil** | Perintah tulis manipulasi berbahaya yang lolos dan dieksekusi pada register PLC riil saat terjadi serangan (verifikasi nilai sentinel: operator `0x1111`, penyerang `0xDEAD`). Target proposal: 0 perintah. | **0 penulisan tembus (0.0%)** | n = 105 skenario serangan | Diuji pada harness simulator PLC; mengasumsikan perimeter fisik jaringan OT tidak di-bypass di tingkat switch. |
 | **False Positive Rate (FPR)** | Persentase permintaan sah dari operator terdaftar yang keliru dialihkan ke bayangan. Target proposal: mendekati 0. | **0.0%** (0 / 105 dialihkan) | n = 105 transaksi operator sah | Menggunakan profil polling operasional standar dari sumber terdaftar yang patuh kebijakan. |
-| **Presisi & Recall Deteksi** | Keberhasilan sistem membedakan trafik anomali/eksploitasi dari trafik normal. | **1.0 (100%) / 1.0 (100%)** | n = 12 variasi serangan berskrip | Terukur pada variasi skenario berskrip internal (T1 recon, T2 targeted, credential brute-force). |
-| **Penghematan Bandwidth Taktis** | Rasio perbandingan volume data ringkasan sesi terkompresi WAYANG dibandingkan log mentah (*raw packet dump*) sesi yang sama. | **71.7% reduksi** (14.6 KB ringkasan vs 51.6 KB baseline raw log) | n = 20 sesi | Baseline pembanding adalah dump log mentah transaksi biner Modbus tanpa kompresi pada durasi yang sama. |
-| **Latensi Respons (Overhead p95)** | Tambahan waktu tunda proxy per transaksi Modbus dibandingkan koneksi langsung ke aset asli. Target proposal: < 50 ms. | **16.30 ms** (jalur riil) / **46.54 ms** (emulasi tangga PLC) | n = 3.000 transaksi | Meniru fase siklus ladder logic PLC riil (15–25 ms); masih berada jauh di bawah ambang batas timeout SCADA (1.000 ms). |
-| **Ketahanan Putus Link (Store & Forward)** | Uji isolasi komunikasi WAN terputus selama 30 menit; integritas data diuji saat tautan pulih kembali. Target proposal: 0 data hilang. | **0 data hilang (100% tersinkron)** | n = 1 simulasi blackout 30 menit (3.600 event) | Tersimpan aman pada antrean SQLite lokal terenkripsi di edge node hingga koneksi WAN pulih kembali. |
+| **Presisi & Recall Deteksi** | Keberhasilan sistem membedakan trafik anomali/eksploitasi dari trafik normal. | **1.00 (100%) / 1.00 (100%)** | n = 105 variasi serangan berskrip | Terukur pada variasi skenario berskrip internal (T1 recon, T2 targeted, credential brute-force). |
+| **Penghematan Bandwidth Taktis** | Rasio perbandingan volume data ringkasan sesi terkompresi WAYANG dibandingkan event JSON mentah setara sesi yang sama. | **71.5% reduksi** (14689 B vs 51495 B mentah; 88.4% pada sesi panjang) | n = 40 sesi | Baseline pembanding adalah log mentah event JSON transaksi biner Modbus tanpa kompresi pada durasi yang sama. |
+| **Latensi Respons (Overhead p95)** | Tambahan waktu tunda proxy per transaksi Modbus dibandingkan koneksi langsung ke aset asli. Target proposal: < 50 ms. | **21.64 ms** (jalur riil) / **62.20 ms** (emulasi tangga PLC) | n = 3.000 transaksi | Meniru fase siklus ladder logic PLC riil (15–25 ms); masih berada jauh di bawah ambang batas timeout SCADA (1.000 ms). |
+| **Ketahanan Putus Link (Store & Forward)** | Uji isolasi komunikasi WAN terputus selama link blackout + simulasi crash reboot proses; integritas data diuji saat tautan pulih. Target proposal: 0 data hilang. | **0 data hilang (100% tersinkron)** | n = 40 sesi di-buffer di SQLite | Tersimpan aman pada antrean SQLite lokal terenkripsi di edge node; 100% data tersinkronisasi kembali saat link aktif. |
 | **Uji Independen Pemindai Pihak Ketiga** | Pengujian fungsionalitas menggunakan tool scanner Modbus standar industri pihak ketiga yang tidak diskrip sendiri. | **100% dialihkan ke bayangan** | n = 3 tool (`nmap`, `mbpoll`, `pymodbus`) | `nmap --script modbus-discover`, `mbpoll`, dan klien `pymodbus` dialihkan transparan tanpa kegagalan sistem. |
-| **Uji Buta Penyamaran Protokol** | Kemampuan subjek manusia membedakan respons PLC riil vs emulasi bayangan WAYANG. Target Bab 13: rasio tebakan ~50% (setara tebakan acak). | *Protokol Siap Diuji* | n = 5–10 relawan manusia | Membutuhkan relawan operator/peneliti ICS independen sesuai metodologi `docs/uji_buta_protokol.md`. |
+| **Uji Buta Penyamaran Protokol** | Kemampuan subjek manusia membedakan respons PLC riil vs emulasi bayangan WAYANG. Target Bab 13: rasio tebakan ~50% (setara tebakan acak). | **[isi]** | n = 5–10 relawan manusia | Membutuhkan relawan operator/peneliti ICS independen sesuai metodologi `docs/uji_buta_protokol.md`. |
+
+#### Evaluasi Kelas Sumber Sah Tak Terdaftar & Mode Perawatan
+
+| Skenario Uji | Skor | Tindakan Sistem | Analisis Klasifikasi & Mitigasi |
+|---|---|---|---|
+| **Teknisi baru menulis register** | 0.55 | dialihkan ke bayangan | **False Positive Operasional**: Perintah tulis tertahan di bayangan (tidak sampai ke PLC fisik). Mitigasi: Aktifkan Mode Perawatan saat maintenance. |
+| **Alat monitoring baca-saja 5 Hz** | 0.2 | dipantau | **True Negative**: Trafik baca pasif tidak memicu alert atau gangguan operasional. |
+| **Pemindai inventaris IT (20 reg)** | 0.5 | dialihkan ke bayangan | **False Positive IT Scanner**: Pola pemindaian cepat menyerupai pengintaian. Mitigasi: Daftarkan IP pemindai ke kebijakan per-sumber. |
+| **Penyerang pelan baca-saja** | 0.2 | dipantau | **False Negative Deteksi Dini**: Pada fase baca pasif lambat, belum dialihkan hingga percobaan manipulasi tulis pertama. |
+| **Teknisi pada Mode Perawatan** | 0.00 | diteruskan ke PLC asli | **Tercapai (Teknisi sah dapat bekerja tanpa tertipu panggung bayangan)**: Mode perawatan mengizinkan teknisi sah melakukan setting pada aset fisik riil tanpa teralihkan diam-diam. |
+
+> **Catatan Kejujuran & Batas Desain**:
+> - Perilaku `CuriousAttacker` dan `AggressiveAttacker` adalah asumsi model matematis berskrip; keunggulan dwell time pada A/B testing mengasumsikan penyerang berhenti ketika tidak lagi menemukan informasi baru. Uji sebenarnya di lapangan membutuhkan penyerang manusia nyata.
+> - Aset asli simulasi (`real_sim.py`) berlatensi tetap; tidak mewakili seluruh variabilitas hardware PLC fisik industri.
+> - Latensi diukur di lingkungan loopback; propagasi jaringan fisik WAN/Ethernet riil akan menambah latensi transmisi pada kedua jalur.
+> - Permintaan baca dari sumber tak terdaftar yang belum melebihi ambang diteruskan ke aset asli (945 bacaan tercatat); pembatasan zero-trust ketat dapat diaktifkan melalui kebijakan per-sumber.
 
 ---
 
