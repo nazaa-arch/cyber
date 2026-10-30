@@ -104,17 +104,43 @@ class Session:
 
 
 class SessionRegistry:
-    def __init__(self, idle_s: float = 300.0, prefix: str = "ses"):
+    def __init__(self, idle_s: float = 300.0, prefix: str = "ses", max_sessions: int = 2000):
         self.idle = idle_s
         self.prefix = prefix
+        self.max_sessions = max_sessions
         self.by_src: dict[str, Session] = {}
         self.by_id: dict[str, Session] = {}
         self._n = 0
+
+    def prune(self, target_size: int | None = None) -> int:
+        """Membersihkan sesi tertua (LRU) saat kapasitas penuh untuk mencegah kehabisan RAM (OOM)."""
+        target = target_size if target_size is not None else self.max_sessions
+        if len(self.by_id) <= target:
+            return 0
+
+        # Prioritaskan pembersihan sesi unpinned yang paling lama idle
+        candidates = sorted(
+            self.by_id.values(),
+            key=lambda s: (s.pinned, s.last)
+        )
+
+        removed = 0
+        to_remove = len(self.by_id) - target
+        for s in candidates:
+            if removed >= to_remove:
+                break
+            self.by_id.pop(s.id, None)
+            if self.by_src.get(s.src) == s:
+                self.by_src.pop(s.src, None)
+            removed += 1
+        return removed
 
     def get(self, src: str, now: float | None = None) -> Session:
         now = time.monotonic() if now is None else now
         s = self.by_src.get(src)
         if s is None or now - s.last > self.idle:
+            if len(self.by_id) >= self.max_sessions:
+                self.prune(self.max_sessions - 100)
             self._n += 1
             s = Session(f"{self.prefix}-{self._n:05d}", src, now)
             self.by_src[src] = s

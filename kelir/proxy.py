@@ -38,8 +38,14 @@ class Kelir:
         self.clock = clock
         self.zero_trust = zero_trust
         self.divert_counts: dict[str, int] = {}
+        self.active_conns = 0
+        self.active_per_ip: dict[str, int] = {}
+        self.max_global_conns = 300
+        self.max_per_ip_conns = 20
+        self.reserved_operator_slots = 25
         self.stats = {"forwarded": 0, "diverted_frames": 0, "fail_closed": 0, "blocked": 0,
-                      "forwarded_operator": 0, "forwarded_unlisted_reads": 0}
+                      "forwarded_operator": 0, "forwarded_unlisted_reads": 0,
+                      "conns_rejected_pool": 0, "conns_rejected_rate": 0}
 
     @property
     def maintenance_mode(self) -> bool:
@@ -78,6 +84,23 @@ class Kelir:
     async def handle_client(self, reader, writer) -> None:
         src = writer.get_extra_info("peername")[0]
         up = None
+        is_operator = src in self.scorer.whitelist
+
+        # TCP Connection Governor: Cegah serangan Slowloris socket exhaustion & DoS pool
+        cur_ip_conns = self.active_per_ip.get(src, 0)
+        if not is_operator:
+            if cur_ip_conns >= self.max_per_ip_conns:
+                self.stats["conns_rejected_rate"] = self.stats.get("conns_rejected_rate", 0) + 1
+                writer.close()
+                return
+            unlisted_cap = self.max_global_conns - self.reserved_operator_slots
+            if self.active_conns >= unlisted_cap:
+                self.stats["conns_rejected_pool"] = self.stats.get("conns_rejected_pool", 0) + 1
+                writer.close()
+                return
+
+        self.active_conns += 1
+        self.active_per_ip[src] = cur_ip_conns + 1
         try:
             if self.blocklist.is_blocked(src):
                 self.stats["blocked"] += 1
@@ -97,6 +120,11 @@ class Kelir:
                 writer.write(mp.build_mbap(tid, unit, bytes(resp)))
                 await writer.drain()
         finally:
+            self.active_conns = max(0, self.active_conns - 1)
+            if src in self.active_per_ip:
+                self.active_per_ip[src] = max(0, self.active_per_ip[src] - 1)
+                if self.active_per_ip[src] == 0:
+                    del self.active_per_ip[src]
             writer.close()
             if up:
                 up[1].close()

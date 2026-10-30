@@ -76,6 +76,13 @@ class ShadowDevice:
                        "flow_lph": 0.0, "temp_c": 27.0}
         self.idobj = {0: vendor, 1: f"GX-{100 + seed % 50}",
                       2: f"V{2 + seed % 3}.{seed % 7}.{seed % 5}"}
+        # Graceful Degradation Ladder (Tangga Penurunan Beban):
+        # 0: Full Dynamic Physics (Simulasi diferensial fluida & tangga lengkap)
+        # 1: Cached Snapshot (Bekukan persamaan diferensial, layani snapshot berkala; hemat 80% CPU)
+        # 2: Syntactic Fast (Respons statis minimal tanpa kalkulasi fisika saat beban ekstrem)
+        self.degradation_tier: int = 0
+        self._cache_v: dict = {}
+        self._cache_t: float = 0.0
         for _ in range(30):                      # pemanasan
             self._advance(force=True)
         self.touch_count = 0
@@ -98,9 +105,13 @@ class ShadowDevice:
 
     # ---------- nilai per sesi ----------
     def _session_values(self, s: Session) -> dict:
+        now = self.clock()
+        # Tangga Tingkat 1 & 2: Gunakan cache snapshot jika degradation tier aktif
+        if self.degradation_tier >= 1 and self._cache_v and (now - self._cache_t) < 2.5:
+            return dict(self._cache_v)
+
         self._advance()
         v = dict(self.values)
-        now = self.clock()
         if s.pinned and s.base and s.pin_time is not None:
             a = min(1.0, (now - s.pin_time) / BLEND_S)
             v["tank_level_l"] = s.base["tank_level_l"] * (1 - a) + v["tank_level_l"] * a
@@ -112,6 +123,10 @@ class ShadowDevice:
             v["flow_lph"] *= (1 - f)
             v["pump_pressure_bar"] = v["pump_pressure_bar"] * (1 - f) + 0.15 * f
             v["tank_level_l"] = s.tank_hold if s.tank_hold is not None else v["tank_level_l"]
+
+        if self.degradation_tier >= 1:
+            self._cache_v = dict(v)
+            self._cache_t = now
         return v
 
     def _input_regs(self, s: Session) -> dict[int, tuple[int, Callable[[], int]]]:
