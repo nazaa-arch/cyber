@@ -14,7 +14,7 @@ import time
 from engine.autonomy import Autonomy, Blocklist, L3_BLOCK_TTL_S, L3_REPEAT_THRESHOLD
 from engine.gamelan import Gamelan
 from kelir.mirror import StateMirror
-from kelir.scoring import SessionScorer
+from kelir.scoring import SessionScorer, Decision
 from kelir.session import SessionRegistry
 from shadows import modbus_proto as mp
 from shadows.modbus_shadow import ShadowDevice
@@ -95,11 +95,32 @@ class Kelir:
         if src in self.scorer.whitelist:                       # operator sah
             # Batasan Keamanan Zero Trust:
             # IP whitelist memverifikasi asal jaringan, namun frame tetap diparsing
-            # untuk mencegah paket biner malformed/eksploitasi buffer tembus ke PLC riil.
+            # dan diuji terhadap kebijakan operasional per-sumber (unit, fungsi, register tulis).
             try:
                 req = mp.parse_pdu(pdu)
             except mp.ProtoError:
                 return None  # Tolak frame cacat (fail-closed)
+
+            s = self.sessions.get(src, now)
+            if s.pinned:
+                return self._to_shadow(s, src, unit, pdu)
+
+            allowed, violation = self.scorer.check_source_policy(src, unit, req)
+            if not allowed:
+                # Skenario Operator Terkompromi: Perintah melanggar batas otorisasi
+                s.observe(now, req.action, unit=unit, table=req.table, addr=req.addr,
+                          qty=req.qty, fc=req.fc, is_write=req.is_write)
+                pol = self.scorer.policies.get(src)
+                on_viol = pol.on_violation if pol else "divert"
+                self._event(s, "policy_violation_divert",
+                            reason=f"Operator terdaftar melanggar batas kebijakan: {violation}",
+                            score=1.0, src=src, unit=unit, fc=req.fc)
+                if on_viol == "divert":
+                    dec = Decision(1.0, True, f"Pelanggaran kebijakan per-sumber: {violation}")
+                    self._pin(s, dec)
+                    return self._to_shadow(s, src, unit, pdu)
+                return None  # drop
+
             return await self._forward(holder, tid, unit, pdu, whitelisted=True)
 
         s = self.sessions.get(src, now)

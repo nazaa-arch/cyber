@@ -13,6 +13,7 @@ import asyncio
 import json
 import pathlib
 import time
+import uuid
 from typing import Set
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -143,7 +144,12 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     async def index():
-        return (STATIC / "index.html").read_text(encoding="utf-8")
+        content = (STATIC / "index.html").read_text(encoding="utf-8")
+        return HTMLResponse(content=content, headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        })
 
     @app.get("/static/{name}")
     async def static_file(name: str):
@@ -374,10 +380,19 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
             for s in n.store.sessions():
                 b = rulegen.ioc_bundle(s)
                 objects.extend(b.get("objects", []))
+        if not objects:
+            now = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+            objects.append({
+                "type": "indicator", "spec_version": "2.1",
+                "id": f"indicator--{uuid.uuid5(rulegen._NS, 'wayang-grid-active')}",
+                "created": now, "modified": now, "valid_from": now,
+                "name": "WAYANG C4ISR Deception Grid Monitoring Active",
+                "pattern": "[network-traffic:dst_port = 502]", "pattern_type": "stix",
+                "labels": ["wayang-grid-active"]
+            })
         return {
             "type": "bundle",
-            "id": "bundle--wayang-tniad-tactical-ioc",
-            "spec_version": "2.1",
+            "id": f"bundle--{uuid.uuid4()}",
             "objects": objects
         }
 

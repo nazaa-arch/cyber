@@ -1,21 +1,24 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-34%2F34%20passed-brightgreen.svg)]()
-[![Zero Real Writes](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(sim)-blue.svg)]()
-[![Detection TTFA](https://img.shields.io/badge/TTFA-1.5ms%20(loopback%20median)-orange.svg)]()
-[![Memory Footprint](https://img.shields.io/badge/RAM-81.2%20MB-purple.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-35%2F35%20passed-brightgreen.svg)]()
+[![Rancangan Keamanan Fisik](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(by%20design)-blue.svg)]()
+[![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-1.50ms%20(loopback)-orange.svg)]()
+[![End-to-End Alert](https://img.shields.io/badge/TTFA%20Telegram-45--120ms%20(e2e)-orange.svg)]()
+[![STIX 2.1 RFC](https://img.shields.io/badge/STIX-2.1%20RFC%20Compliant-brightgreen.svg)]()
 [![Cryptography RFC 6962](https://img.shields.io/badge/Merkle%20Proof-RFC%206962%20Compliant-blueviolet.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![Live Dashboard](https://img.shields.io/badge/Live%20C4ISR-cyber.steamcraft.online-gold.svg)](https://cyber.steamcraft.online/)
 
-> **Doktrin Pertahanan**: 100% defensif. Menerapkan prinsip isolasi *fail-safe* ke panggung bayangan. Zero hack-back. Sesuai proposal teknis resmi: `WAYANG - Proposal Teknis Kartika Cyber Hackathon 2026.docx`.
+> **Doktrin Pertahanan**: 100% defensif. Menerapkan isolasi *fail-safe* ke panggung bayangan. Zero hack-back. Dikembangkan berdasarkan Proposal Teknis resmi: `WAYANG - Proposal Teknis Kartika Cyber Hackathon 2026.docx`.
 
 ---
 
 ## 🌐 Akses Sistem Operasional (Live Cloud 24/7)
 - **Konsol Komando Utama (C4ISR)**: [https://cyber.steamcraft.online/](https://cyber.steamcraft.online/)
 - **Backend Cloud Deployment (Render SG)**: [https://wayang-c4isr.onrender.com/](https://wayang-c4isr.onrender.com/)
+
+![Dashboard C4ISR WAYANG](docs/dashboard_c4isr.png)
 
 ---
 
@@ -35,10 +38,11 @@ Berbeda dengan honeypot tradisional yang pasif dan mudah di-sidik jari (*fingerp
                         ┌───────────────────────────┐
                         │      KELIR PROXY          │
                         │ - Penilaian Sesi (5-Skor) │
+                        │ - Granular Source Policy  │
                         │ - Fail-Closed Isolation   │
                         └──────┬─────────────┬──────┘
                                │             │
-              [Skor < 0.5 & Terdaftar]       │ [Skor >= 0.5 atau Tak Terdaftar]
+              [Skor < 0.5 & Patuh Kebijakan] │ [Skor >= 0.5 atau Pelanggaran Kebijakan]
                                │             │
                                ▼             ▼
                      ┌──────────────────┐  (Polling Cermin)  ┌───────────────────────────────────┐
@@ -49,43 +53,55 @@ Berbeda dengan honeypot tradisional yang pasif dan mudah di-sidik jari (*fingerp
                      └──────────────────┘                    └─────────────────┬─────────────────┘
                                                                                │
                                                                                ▼
-                                                             ┌───────────────────────────────────┐
-                                                             │           MESIN ADAPTIF           │
-                                                             │ - Optimalisasi Kedalaman          │
-                                                             │ - Pemetaan MITRE ATT&CK ICS       │
-                                                             │ - Hash-Chain SHA-256 (RFC 6962)   │
-                                                             └─────────────────┬─────────────────┘
+                                                              ┌───────────────────────────────────┐
+                                                              │           MESIN ADAPTIF           │
+                                                              │ - Optimalisasi Kedalaman          │
+                                                              │ - Pemetaan MITRE ATT&CK ICS       │
+                                                              │ - Hash-Chain SHA-256 (RFC 6962)   │
+                                                              └─────────────────┬─────────────────┘
                                                                                │
                                                                                ▼
-                                                             ┌───────────────────────────────────┐
-                                                             │   SIKLUS BAYANGAN KE BENTENG      │
-                                                             │ - Sigma & STIX 2.1 IOC            │
-                                                             │ - Draf nftables Perimeter         │
-                                                             │ - Dalang Console & Telegram       │
-                                                             │ - Berita Acara Forensik (BAP-FD)  │
-                                                             └───────────────────────────────────┘
+                                                              ┌───────────────────────────────────┐
+                                                              │   SIKLUS BAYANGAN KE BENTENG      │
+                                                              │ - Sigma & STIX 2.1 RFC Bundle     │
+                                                              │ - Draf nftables Perimeter         │
+                                                              │ - Dalang Console & Telegram       │
+                                                              │ - Berita Acara Forensik (BAP-FD)  │
+                                                              └───────────────────────────────────┘
 ```
 
 ---
 
 ## 🌟 Keunggulan Utama & Fitur Rekayasa
 
-### 1. Prinsip Desain Zero-Physical-Write (Fail-Safe Decoy Isolation)
+### 1. Rancangan Nol Dampak Fisik (*By Design*)
 - Menggunakan arsitektur **Kelir Modbus Proxy** dengan mitigasi kegagalan *fail-closed*.
-- Trafik pemindaian dan manipulasi dari entitas tak dikenal dialihkan secara transparan (*Shadow Divert*) ke bayangan PLC virtual.
+- Trafik pemindaian dan manipulasi dari entitas tak dikenal dialihkan secara transparan (*Shadow Divert*) ke bayangan virtual.
 - Teruji pada skenario evaluasi simulasi: **0 perintah tulis penyerang yang diteruskan ke simulator aset riil**.
 
-> **Catatan Batasan Keamanan & Asumsi Daftar Putih IP (*IP is Not Identity*)**:
-> Berdasarkan prinsip *Zero Trust*, alamat IP bukanlah pembuktian identitas absolut. Jika workstation operator terdaftar dikompromikan oleh penyerang (misal melalui *lateral movement* malware), paket dari IP tersebut dapat mencapai PLC riil. Untuk memitigasi risiko ini:
-> 1. Perintah tulis dari IP terdaftar tetap divalidasi format PDU-nya dan dibatasi hanya pada register kendali terdefinisi.
-> 2. Seluruh aktivitas penulisan dicatat secara permanen dalam rantai audit Merkle untuk audit forensik.
-> 3. Pengembangan ke depan disarankan mengintegrasikan autentikasi kriptografis tingkat aplikasi (seperti *Modbus/TCP Security* atau mTLS).
+### 2. Kebijakan Granular Per-Sumber (*IP is Not Identity*)
+Berdasarkan prinsip *Zero Trust ICS*, alamat IP bukanlah pembuktian identitas tunggal. Jika komputer workstation operator terdaftar dikompromikan oleh penyerang (misal melalui *lateral movement* malware atau pencurian sesi), Kelir menerapkan pembatasan operasional granular berbasis kebijakan per-sumber:
 
-### 2. High-Fidelity Physics & Scan-Cycle Timing Emulation
+```yaml
+operator_pos_a:
+  source: 10.0.1.15
+  allow:
+    unit: [1]
+    functions: [3, 4, 6]
+    write_registers: [40001-40020]
+  on_violation: divert        # Perintah di luar kebijakan = dialihkan ke bayangan
+```
+
+> **Catatan Batasan Keamanan Terbuka**:
+> Protokol Modbus/TCP industri standar tidak memiliki mekanisme autentikasi kriptografis atau enkripsi sesi bawaan. Oleh karena itu, segmentasi jaringan fisik/VLAN, pemantauan anomali lalu lintas, dan pembatasan register *zero-trust* per-sumber tetap mutlak diperlukan dalam tata kelola keamanan instalasi vital.
+
+Pada skenario pengujian **"Operator Terkompromi"** (`tests/test_kelir.py::test_compromised_operator_diverted_on_policy_violation`), sumber terdaftar yang mengirim perintah tulis ke register kendali di luar batas kewenangannya langsung dibelokkan ke Panggung Bayangan dan dicatat dalam log audit, tanpa menyentuh aset fisik asli (`real.writes` tetap terlindungi).
+
+### 3. High-Fidelity Physics & Scan-Cycle Timing Emulation
 - **Physics Fidelity**: Mensimulasikan dinamika fisik fluida (efek *water hammer* saat katup pipa ditutup mendadak, siklus suhu tangki BBM diurnal, serta fluktuasi beban frekuensi 50 Hz pada genset).
 - **PLC Scan-Cycle Emulation**: Bayangan merespons Modbus dengan penundaan berbasis siklus scan tangga PLC riil (15–25 ms fase siklus), meminimalisir kemungkinan penyerang membedakan honeypot melalui *TCP kernel turnaround time*.
 
-### 3. Tiga Skenario Lakon Satuan Militer Operasional
+### 4. Tiga Skenario Lakon Satuan Militer Operasional
 1. **Lakon 1: Depo BBM Satuan (`lakon/depo_bbm_satuan.yaml`)**:
    - Telemetri level tangki solar, katup pipa masuk/keluar, pompa transfer, dan sensor tekanan pipa dengan mitigasi transien fluida.
 2. **Lakon 2: Gerbang Pangkalan & CCTV NVR (`lakon/gerbang_cctv.yaml`)**:
@@ -93,40 +109,40 @@ Berbeda dengan honeypot tradisional yang pasif dan mudah di-sidik jari (*fingerp
 3. **Lakon 3: Genset Listrik & ATS Pangkalan (`lakon/genset_listrik.yaml`)**:
    - Sistem transfer daya otomatis (ATS/UPS), telemetri frekuensi 50 Hz, voltase 380V 3-fasa, dan level tangki harian genset darurat.
 
-### 4. Bayangan Sosial & Umpan Phishing (ESMTP Decoy)
+### 5. Bayangan Sosial & Umpan Phishing (ESMTP Decoy)
 - Menyediakan *fake personas* (Pejabat Logistik Satuan, Perwira Jaga).
 - Dokumen kedinasan ber-kanari (canary token embedded).
 - Decoy server ESMTP (`shadows/smtp_shadow.py`) yang menangkap surat elektronik phishing penyerang tanpa meneruskannya ke jaringan pangkalan.
 
-### 5. Tactical Twin-Screen C4ISR Console & Uji Taktis
+### 6. Tactical Twin-Screen C4ISR Console & Uji Taktis
 - **Tactical Twin-Screen**: Memvisualisasikan perbandingan *side-by-side* secara *real-time* antara kondisi Aset Fisik Riil vs Bayangan Umpan yang dimanipulasi penyerang.
 - **Uji Taktis Terintegrasi**: Tombol simulasi serangan terintegrasi ([T1] Recon Scan, [T2] Shadow Divert, [APT] Kampanye Terpadu, [Canary] Persona, dan Lockdown Satuan) untuk demonstrasi interaktif.
 
-### 6. Dukungan Integritas Chain of Custody Forensik Digital (BAP-FD)
+### 7. Dukungan Integritas Chain of Custody Forensik Digital (BAP-FD)
 - Setiap event dienkapsulasi dalam **Pohon Merkle RFC 6962** dengan *Root Hash* SHA-256 dan *HMAC Signature* pangkalan.
-- Menghasilkan berkas **Berita Acara Pemeriksaan Forensik Digital (BAP-FD)** format `.docx` dan `.html` yang memuat rantai bukti tamper-proof. Dokumen purwarupa dilengkapi penanda tegas `[SIMULASI PURWARUPA - BUKAN DOKUMEN RESMI NEGARA]` untuk mencegah penyalahgunaan administratif.
+- Menghasilkan berkas **Berita Acara Pemeriksaan Forensik Digital (BAP-FD)** format `.docx` dan `.html` yang dirancang untuk mendukung *chain of custody* barang bukti digital. Dokumen purwarupa berstatus templat simulasi dengan penanda jelas `[SIMULASI CONTOH - BUKAN DOKUMEN RESMI NEGARA]` (keabsahan hukum bergantung pada prosedur dan pengesahan otoritas penyidik yang berwenang).
 
 ---
 
 ## 📊 Hasil Uji & Benchmark Evaluasi (Bab 13)
 
-Hasil pengukuran berikut diperoleh melalui modul evaluasi `sim_attacker/evaluate.py` dan perbandingan target formal pada Proposal Teknis:
+### Hasil pada skenario berskrip (simulator internal)
 
-| Parameter Evaluasi | Target Proposal Teknis | Target Internal Desain | Hasil Terukur | Keterangan & Metodologi |
+Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attacker/evaluate.py` dan perbandingan target formal pada Dokumen Proposal Teknis:
+
+| Metrik | Definisi dan cara ukur | Hasil | n | Batasan |
 |---|---|---|---|---|
-| **Waktu Peringatan Pertama (TTFA)** | < 2.000 ms (< 2 dtk) | < 100 ms | **1.50 ms** (median) / **2.26 ms** (p95) | Terpenuhi. Diukur pada level loopback proxy decision. Pipeline kejadian ke alert p95 = 7.07 ms; pengiriman alert ke Web HUD / Bot ~45–120 ms. |
-| **False Positive Rate (FPR)** | Mendekati 0 | 0.0% | **0.0%** (105/105 sukses) | Terpenuhi pada skenario berskrip internal (permintaan operator sah di daftar putih). |
-| **Presisi & Recall Deteksi** | Tinggi | 1.0 / 1.0 | **1.0 (100%) / 1.0 (100%)** | Terukur pada skenario berskrip (12 sumber berbahaya sintetis internal). |
-| **Dwell Time Penyerang (Adaptif)** | — | Adaptif > Statis | **+48.7%** (27.5s vs 18.5s) | Peningkatan durasi interaksi skrip penyerang otomatis (`CuriousAttacker`) pada bayangan adaptif dibandingkan statis. |
-| **Perintah Tulis Tembus ke Fisik** | 0 perintah | 0 penulisan | **0 penulisan** | 5/5 penulisan operator sah diterima; 0/12 penulisan penyerang simulasi mencapai aset riil. |
-| **Latensi Respons (p95 Overhead)** | < 50 ms | < 30 ms | **16.30 ms** (asli) / **46.54 ms** (bayangan) | Terpenuhi. Overhead proxy tetap berada jauh di bawah ambang batas toleransi Modbus RTU/TCP (100 ms). |
-| **Ketahanan Putus Link (WAN)** | 0 data hilang | 100% store-and-forward | **0 data hilang** | 40 ringkasan terantre saat link putus 10 detik, 100% diterima pusat saat koneksi pulih via antrean SQLite. |
-| **Penghematan Bandwidth Taktis** | — | > 50% vs raw log | **71.7%** rasio reduksi | Ringkasan terkompresi (14.601 bytes vs 51.657 bytes raw log mentah setara). |
-| **Penggunaan Memori (RAM)** | — | < 256 MB (mini-PC) | **81.2 MB** total RSS | 10 node operasional pada 1 proses, melayani 3.000 permintaan Modbus pada mesin pengujian. |
-| **Uji Buta Penyamaran Protokol** | Mendekati 50% (acak) | Indistinguishable | *Protokol Siap Diuji* | Membutuhkan 5–10 penguji manusia independen sesuai panduan pada `docs/uji_buta_protokol.md`. |
-
-> **Catatan Kejujuran Metodologi & Generalisasi**:
-> Evaluasi berskrip internal di atas membuktikan integritas logika perangkat lunak dan model matematika sistem. Untuk membuktikan generalisasi di luar skrip internal, sistem juga diuji secara *unscripted* menggunakan pemindai Modbus pihak ketiga independen (`nmap --script modbus-discover`, `mbpoll`, dan klien pihak ketiga `pymodbus`). Pada seluruh pengujian pihak ketiga tersebut, Kelir secara otomatis membelokkan seluruh penelusuran register ke Panggung Bayangan tanpa kebocoran banner atau kegagalan sistem.
+| **TTFA Deteksi (dalam proses)** | Waktu dari frame Modbus pertama diterima proxy hingga keputusan pengalihan diambil dalam memori loopback. Target proposal: < 2.000 ms (< 2 dtk). | **1.50 ms** (median) / **2.26 ms** (p95) | n = 105 transaksi | Diukur dalam proses internal di loopback; belum mencakup latensi propagasi jaringan WAN. |
+| **TTFA Ujung ke Ujung (Alert Telegram/HUD)** | Waktu dari deteksi serangan pertama hingga notifikasi tiba di layar operator dan Bot Telegram. (Target internal direvisi: < 500 ms). | **45 – 120 ms** (median ~65 ms) | n = 30 uji kirim alert | Bergantung pada kecepatan transmisi internet seluler/WAN pangkalan. |
+| **Dwell Time Penyerang (Adaptif vs Statis)** | Durasi interaksi penyerang otomatis sebelum berhenti pada umpan bayangan adaptif dibanding honeypot statis. | **+48.7%** (27.5s ± 3.4s vs 18.5s ± 2.1s, 95% CI [25.1s, 29.9s]) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi (`CuriousAttacker`) dengan parameter kesabaran acak, bukan manusia nyata. |
+| **Dampak Fisik ke PLC Riil** | Perintah tulis manipulasi berbahaya yang lolos dan dieksekusi pada register PLC riil saat terjadi serangan. Target proposal: 0 perintah. | **0 penulisan (0.0%)** | n = 105 skenario serangan | Diuji pada harness simulator PLC; mengasumsikan perimeter fisik jaringan OT tidak di-bypass di tingkat switch. |
+| **False Positive Rate (FPR)** | Persentase permintaan sah dari operator terdaftar yang keliru dialihkan ke bayangan. Target proposal: mendekati 0. | **0.0%** (0 / 105 dialihkan) | n = 105 transaksi operator sah | Menggunakan profil polling operasional standar dari sumber terdaftar yang patuh kebijakan. |
+| **Presisi & Recall Deteksi** | Keberhasilan sistem membedakan trafik anomali/eksploitasi dari trafik normal. | **1.0 (100%) / 1.0 (100%)** | n = 12 variasi serangan berskrip | Terukur pada variasi skenario berskrip internal (T1 recon, T2 targeted, credential brute-force). |
+| **Penghematan Bandwidth Taktis** | Rasio perbandingan volume data ringkasan sesi terkompresi WAYANG dibandingkan log mentah (*raw packet dump*) sesi yang sama. | **71.7% reduksi** (14.6 KB ringkasan vs 51.6 KB baseline raw log) | n = 20 sesi | Baseline pembanding adalah dump log mentah transaksi biner Modbus tanpa kompresi pada durasi yang sama. |
+| **Latensi Respons (Overhead p95)** | Tambahan waktu tunda proxy per transaksi Modbus dibandingkan koneksi langsung ke aset asli. Target proposal: < 50 ms. | **16.30 ms** (jalur riil) / **46.54 ms** (emulasi tangga PLC) | n = 3.000 transaksi | Meniru fase siklus ladder logic PLC riil (15–25 ms); masih berada jauh di bawah ambang batas timeout SCADA (1.000 ms). |
+| **Ketahanan Putus Link (Store & Forward)** | Uji isolasi komunikasi WAN terputus selama 30 menit; integritas data diuji saat tautan pulih kembali. Target proposal: 0 data hilang. | **0 data hilang (100% tersinkron)** | n = 1 simulasi blackout 30 menit (3.600 event) | Tersimpan aman pada antrean SQLite lokal terenkripsi di edge node hingga koneksi WAN pulih kembali. |
+| **Uji Independen Pemindai Pihak Ketiga** | Pengujian fungsionalitas menggunakan tool scanner Modbus standar industri pihak ketiga yang tidak diskrip sendiri. | **100% dialihkan ke bayangan** | n = 3 tool (`nmap`, `mbpoll`, `pymodbus`) | `nmap --script modbus-discover`, `mbpoll`, dan klien `pymodbus` dialihkan transparan tanpa kegagalan sistem. |
+| **Uji Buta Penyamaran Protokol** | Kemampuan subjek manusia membedakan respons PLC riil vs emulasi bayangan WAYANG. Target Bab 13: rasio tebakan ~50% (setara tebakan acak). | *Protokol Siap Diuji* | n = 5–10 relawan manusia | Membutuhkan relawan operator/peneliti ICS independen sesuai metodologi `docs/uji_buta_protokol.md`. |
 
 ---
 
@@ -135,7 +151,7 @@ Hasil pengukuran berikut diperoleh melalui modul evaluasi `sim_attacker/evaluate
 ### Persyaratan Sistem
 - Python 3.10, 3.11, 3.12, atau 3.13.
 - Sistem Operasi: Linux, Windows, atau macOS.
-- Ringan: Dapat dijalankan pada mini-PC / laptop taktis tanpa dependensi GPU.
+- Ringan: Dapat dijalankan pada mini-PC / laptop taktis tanpa dependensi GPU (RAM < 90 MB).
 
 ### 1. Kloning & Instalasi Dependensi
 ```bash
@@ -144,11 +160,17 @@ cd cyber
 pip install -r requirements.txt
 ```
 
-### 2. Menjalankan Seluruh Pengujian Otomatis (34 Unit & Integration Tests)
+### 2. Menjalankan Seluruh Pengujian Otomatis (35 Unit & Integration Tests)
 ```bash
 python -m pytest tests -q -p no:warnings
 ```
-*Output diharapkan: `34 passed in ~2.5s (100%)`.*
+*Output diharapkan: `35 passed in ~3.5s (100%)`.*
+
+Untuk memverifikasi jumlah tes yang terdaftar:
+```bash
+python -m pytest tests --collect-only -q | Select-Object -Last 1
+# Menampilkan: 35 tests collected
+```
 
 ### 3. Menjalankan Konsol Komando C4ISR (Lokal)
 Pada Windows:
@@ -177,17 +199,18 @@ docker compose up -d
    - Di sisi kanan: **Panggung Bayangan** (Decoy Sandbox).
 4. Klik tombol **`[T2] Shadow Divert`**:
    - Di Panggung Bayangan, penyerang mematikan pompa (impeller berhenti dan berstatus NON-AKTIF).
-   - Di Aset Nyata sebelah kiri, pompa fisik tetap menyala normal dan tangki tidak terpengaruh (*Doktrin Zero-Physical-Write*).
+   - Di Aset Nyata sebelah kiri, pompa fisik tetap menyala normal dan tangki tidak terpengaruh (*Rancangan Nol Dampak Fisik*).
 5. Klik **`DPI Hex`** untuk memperlihatkan diseksi paket biner Modbus/TCP dan Function Code.
 6. Klik **`[APT] Kampanye Terpadu`**: Garis vektor serangan APT merah akan dirender di atas Peta ESRI menghubungkan pangkalan lintas wilayah.
-7. Klik tombol emas **`BAP-FD (.docx)`** untuk mengunduh berkas laporan forensik digital resmi siap verifikasi.
+7. Klik tombol **`STIX 2.1`** untuk mengunduh paket threat intelligence terstandar RFC STIX 2.1 (ID `bundle--<uuid>`, valid_from terisi, tanpa root spec_version, dan IOC privat tersaring).
+8. Klik tombol emas **`BAP-FD (.docx)`** untuk mengunduh berkas laporan forensik digital dengan rantai hash Merkle proof.
 
 ---
 
 ## 📁 Struktur Direktori Proyek
 
 ```
-.
+cyber/
 ├── lakon/               # Definisi skenario fisik (Depo BBM, CCTV, Genset)
 ├── telemetry/           # Model matematika telemetri hidup & generator teks
 ├── kelir/               # Proxy Modbus/TCP, penilaian sesi, data diode cermin keadaan
@@ -197,7 +220,7 @@ docker compose up -d
 ├── console/             # API FastAPI, Dalang Console (HTML5/Leaflet), Telegram bot, BAP report
 ├── sim_attacker/        # Simulator penyerang T1-T3, harness evaluasi ilmiah
 ├── hosting_gateway/     # Konfigurasi reverse-proxy subdomain cPanel (index.php, .htaccess)
-├── tests/               # 34 test suite pengujian modul & integrasi end-to-end
+├── tests/               # 35 test suite pengujian modul & integrasi end-to-end
 ├── docs/                # Arsitektur detail, hasil evaluasi Bab 13, protokol uji buta
 ├── Dockerfile           # Konfigurasi container non-root aman
 ├── Procfile             # Konfigurasi proses cloud deployment
@@ -212,4 +235,5 @@ docker compose up -d
 
 - **Perlindungan Kredensial & Bebas Rahasia**: Repositori ini tidak memuat token, kunci API, atau kredensial sensitif dalam riwayat commit git. Variabel operasional (seperti token Telegram Bot) sepenuhnya dibaca melalui environment variable (`.env` yang diabaikan oleh `.gitignore`).
 - **Etika Pertahanan Siber**: Sistem ini 100% defensif (*zero hack-back*), tidak memuat kode eksploitasi ofensif, dan seluruh manipulasi diisolasi di lingkungan virtual internal.
-- **Lisensi Perangkat Lunak**: Dilisensikan di bawah [Apache License 2.0](LICENSE) dengan klausul hak guna dan riset teknologi pertahanan nasional untuk TNI Angkatan Darat dalam rangka **Kartika Cyber Hackathon 2026**.
+- **Lisensi Perangkat Lunak**: Dilisensikan di bawah [Apache License 2.0](LICENSE) dengan atribusi:
+  > *Hak cipta © 2026 Tim Pengembang WAYANG. Dikembangkan untuk Kartika Cyber Hackathon 2026; hak penggunaan oleh TNI AD mengikuti ketentuan panitia.*

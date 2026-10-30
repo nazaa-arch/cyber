@@ -29,6 +29,12 @@ def test_rulegen_outputs():
     assert b["ratio_benteng"] == 1.0
     assert any("ACL" in h for h in b["hardening"])
 
+    # Verifikasi validasi kepatuhan STIX 2.1 RFC schema menggunakan pustaka resmi stix2
+    import stix2
+    parsed_bundle = stix2.parse(json.dumps(b["ioc"]), allow_custom=True)
+    assert parsed_bundle.type == "bundle"
+    assert parsed_bundle.id.startswith("bundle--")
+
 
 def test_rulegen_rejects_unsafe_targets():
     with pytest.raises(ValueError):

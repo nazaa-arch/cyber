@@ -86,26 +86,46 @@ def sigma_rules(summary: dict) -> list[dict]:
     return out
 
 
+def _is_test_net(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    if ip.version == 4:
+        return any(ip in ipaddress.ip_network(n) for n in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"))
+    return False
+
+
 def ioc_bundle(summary: dict) -> dict:
     now = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+    first_wall = summary.get("first_wall")
+    if first_wall:
+        valid_from = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(first_wall))
+    else:
+        valid_from = now
+
     objs = []
-    ip = ipaddress.ip_address(summary["src"])
-    kind = "ipv4-addr" if ip.version == 4 else "ipv6-addr"
-    objs.append({
-        "type": "indicator", "spec_version": "2.1",
-        "id": "indicator--" + str(uuid.uuid5(_NS, summary["src"] + summary["session"])),
-        "created": now, "modified": now, "valid_from": now,
-        "name": f"Sumber menyentuh bayangan ({summary['satuan']})",
-        "pattern": f"[{kind}:value = '{summary['src']}']", "pattern_type": "stix",
-        "labels": ["wayang-decoy-touch"],
-        "x_wayang_techniques": summary.get("techniques", []),
-        "x_wayang_fingerprint": summary.get("fingerprint", {}).get("ngrams", [])[:20],
-    })
+    src = summary.get("src", "")
+    try:
+        ip = ipaddress.ip_address(src)
+    except ValueError:
+        ip = None
+
+    # Saring IOC: saring bila loopback atau alamat privat RFC 1918 internal, tetapi izinkan Test-Net / ancaman publik
+    if ip and not (ip.is_loopback or (ip.is_private and not _is_test_net(ip))):
+        kind = "ipv4-addr" if ip.version == 4 else "ipv6-addr"
+        objs.append({
+            "type": "indicator", "spec_version": "2.1",
+            "id": "indicator--" + str(uuid.uuid5(_NS, summary["src"] + summary["session"])),
+            "created": now, "modified": now, "valid_from": valid_from,
+            "name": f"Sumber menyentuh bayangan ({summary.get('satuan', 'TNI-AD')})",
+            "pattern": f"[{kind}:value = '{summary['src']}']", "pattern_type": "stix",
+            "labels": ["wayang-decoy-touch"],
+            "x_wayang_techniques": summary.get("techniques", []),
+            "x_wayang_fingerprint": summary.get("fingerprint", {}).get("ngrams", [])[:20],
+        })
+
     for tok in sorted(summary.get("honeytokens_planted", [])):
         objs.append({
             "type": "indicator", "spec_version": "2.1",
             "id": "indicator--" + str(uuid.uuid5(_NS, tok)),
-            "created": now, "modified": now, "valid_from": now,
+            "created": now, "modified": now, "valid_from": valid_from,
             "name": "Honeytoken terbawa penyerang",
             "pattern": f"[x-wayang-token:value = '{tok}']", "pattern_type": "stix",
             "labels": ["wayang-honeytoken"]})

@@ -38,7 +38,7 @@ class Client:
         return await self.call(struct.pack(">BHH", 6, addr, val), unit)
 
 
-async def make_stack(whitelist=("127.0.0.2",), level=2):
+async def make_stack(whitelist=("127.0.0.2",), level=2, policies=None):
     from engine.autonomy import Autonomy
     real = RealDeviceSim()
     rs = await real.serve("127.0.0.1", 0)
@@ -49,8 +49,9 @@ async def make_stack(whitelist=("127.0.0.2",), level=2):
     shadow = ShadowDevice("depo_bbm_01", "Kodim-DEMO-03", 3, reg, bus, time_scale=60)
     mirror = StateMirror(("127.0.0.1", rport))
     await mirror.poll_once()
+    scorer = SessionScorer(set(whitelist), policies=policies)
     k = Kelir("Kodim-DEMO-03", ("127.0.0.1", rport), shadow, reg,
-              SessionScorer(set(whitelist)), bus, Autonomy(level), mirror=mirror)
+              scorer, bus, Autonomy(level), mirror=mirror)
     ks = await k.serve("127.0.0.1", 0)
     kport = ks.sockets[0].getsockname()[1]
     return real, k, shadow, events, kport, (rs, ks)
@@ -170,6 +171,47 @@ def test_blocklist_and_l3():
                 for sess in list(s.by_src.values()):
                     sess.last -= 10_000
             assert k.blocklist.is_blocked("127.0.0.1")
+        finally:
+            for s in servers:
+                s.close()
+    asyncio.run(go())
+
+
+def test_compromised_operator_diverted_on_policy_violation():
+    async def go():
+        # Kebijakan granular per-sumber sesuai rekomendasi audit:
+        # Operator pos A diizinkan membaca/menulis register 40001-40010 (offset 0-9),
+        # namun bila workstation dikompromikan dan mencoba menulis register terlarang (offset 99),
+        # perintah tulis dialihkan ke bayangan (zero physical impact ke PLC riil).
+        policy = {
+            "operator_pos_a": {
+                "source": "127.0.0.1",
+                "allow": {
+                    "unit": [1],
+                    "functions": [3, 4, 6],
+                    "write_registers": "40001-40010",
+                },
+                "on_violation": "divert",
+            }
+        }
+        real, k, shadow, events, kport, servers = await make_stack(
+            whitelist=("127.0.0.1",), level=2, policies=policy
+        )
+        try:
+            async with Client("127.0.0.1", kport) as c:
+                # 1. Perintah sah dalam kebijakan: Tulis register offset 2 (40003) -> lolos ke PLC riil
+                w1 = await c.write_reg(2, 500)
+                assert w1[0] == 6
+                assert len(real.writes) == 1
+
+                # 2. Operator terkompromi: Tulis di luar kebijakan (register offset 11 / 40012: kendali pompa)
+                # Hasil: Dialihkan ke bayangan (shadow divert), PLC riil terlindungi
+                w2 = await c.write_reg(11, 0)
+                assert w2[0] == 6  # Respons Modbus valid dari bayangan
+                assert len(real.writes) == 1  # PLC riil TIDAK menerima perintah tulis terlarang ini!
+
+                # 3. Verifikasi pencatatan event pelanggaran kebijakan
+                assert any(e["action"] == "policy_violation_divert" for e in events)
         finally:
             for s in servers:
                 s.close()
