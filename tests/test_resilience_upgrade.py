@@ -142,3 +142,149 @@ def test_watchdog_fail_to_wire_relay():
     watchdog.record_heartbeat(True)
     assert not watchdog.is_bypass_active
     assert relay_events[-1] is False  # Relai terbuka kembali ke proxy
+
+
+def test_sweep_1000_registers():
+    """Uji Sapuan 1.000 Register: Memastikan peta peralatan realistis dan celah alamat mengembalikan Exception 02."""
+    from shadows import modbus_proto as mp
+    reg = SessionRegistry()
+    sh = ShadowDevice("d", "K", 1, reg)
+    s = reg.get("192.168.1.100")
+    s.engine.depth = 2
+
+    valid_input_addrs = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10,
+                         100, 101, 102, 103, 104, 110, 111, 112, 113, 120, 121,
+                         200, 201, 202, 203, 210,
+                         300, 301, 302, 303, 304, 305, 310}
+
+    valid_holding_addrs = {0, 1, 2, 10, 11, 20, 21,
+                           100, 105, 110, 115,
+                           200, 202, 210,
+                           300, 301, 305}
+
+    # Sapuan 1.000 register (0 hingga 999)
+    for addr in range(1000):
+        # 1. Input Registers
+        if addr in valid_input_addrs:
+            res = sh._read(s, "input", addr, 1)
+            assert len(res) == 1
+            assert isinstance(res[0], int)
+        else:
+            with pytest.raises(mp.ProtoError) as exc:
+                sh._read(s, "input", addr, 1)
+            assert exc.value.code == mp.ILLEGAL_ADDRESS
+
+        # 2. Holding Registers
+        if addr in valid_holding_addrs:
+            res = sh._read(s, "holding", addr, 1)
+            assert len(res) == 1
+            assert isinstance(res[0], int)
+        else:
+            with pytest.raises(mp.ProtoError) as exc:
+                sh._read(s, "holding", addr, 1)
+            assert exc.value.code == mp.ILLEGAL_ADDRESS
+
+
+def test_diverted_write_operational_alert():
+    """Uji Peringatan Operasional Penulisan yang Dialihkan: Memastikan operator jaga mendapat peringatan langsung."""
+    async def go():
+        from sim_attacker.modbus_client import ModbusClient
+        from engine.pipeline import Pipeline
+        from evidence.hashchain import HashChain
+        from evidence.session_store import SessionStore
+        from engine.attck_map import AttckMapper
+        from engine.autonomy import Autonomy
+        from engine.approval import ApprovalQueue
+        from console.bot import BotDalang, ConsoleChannel
+
+        bus = Gamelan()
+        reg = SessionRegistry()
+        scorer = SessionScorer()
+        sh = ShadowDevice("d", "K", 1, reg, bus)
+        real = RealDeviceSim()
+        r = await real.serve("127.0.0.1", 0)
+        real_port = r.sockets[0].getsockname()[1]
+
+        import tempfile
+        tmp_dir = tempfile.mkdtemp()
+        store = SessionStore()
+        chain = HashChain()
+        channel = ConsoleChannel()
+        autonomy = Autonomy()
+        from engine.autonomy import Blocklist
+        blocklist = Blocklist()
+        approvals = ApprovalQueue(tmp_dir, blocklist)
+        bot = BotDalang(channel, approvals, autonomy)
+        pipeline = Pipeline("KODAM", reg, store, chain, AttckMapper(), autonomy, approvals, bot=bot)
+        bus.subscribe(pipeline.on_event)
+
+        k = Kelir("KODAM", ("127.0.0.1", real_port), sh, reg, scorer, bus)
+        server = await k.serve("127.0.0.1", 0)
+        kport = server.sockets[0].getsockname()[1]
+
+        # Penyerang atau teknisi belum terdaftar mengirim perintah tulis
+        async with ModbusClient("127.0.0.1", kport, local_addr="192.168.1.88") as c:
+            await c.write_reg(11, 0)
+
+        # 1. Pastikan nilai tulis TIDAK sampai ke PLC riil
+        assert len(real.writes) == 0
+
+        # 2. Pastikan alert penulisan dialihkan diterbitkan
+        write_alerts = [a for a in pipeline.alerts if a["kind"] == "diverted_write"]
+        assert len(write_alerts) >= 1
+        assert "dialihkan ke bayangan" in write_alerts[0]["text"]
+
+        # 3. Pastikan Bot Dalang mengirim pesan peringatan darurat ke kanal operator
+        bot_msgs = [m for m in channel.messages if "PERINGATAN OPERASIONAL" in m["text"]]
+        assert len(bot_msgs) >= 1
+        assert "PERINTAH TULIS DIBUANG DARI PLC RIIL" in bot_msgs[0]["text"]
+
+        server.close()
+        r.close()
+
+    asyncio.run(go())
+
+
+def test_watchdog_failover_latency_measured():
+    """Uji Pengukuran Waktu Pulih Failover Watchdog: Mengukur latensi aktivasi fail-to-wire bypass."""
+    async def go():
+        failover_times = []
+        bypass_trigger_time = 0.0
+
+        def relay_action(state: bool):
+            nonlocal bypass_trigger_time
+            if state:
+                bypass_trigger_time = asyncio.get_event_loop().time()
+
+        # Interval 25 ms, ambang batas 3 missed beats
+        watchdog = WatchdogFailToWire("KODAM", heartbeat_interval_s=0.025, miss_threshold=3,
+                                      relay_actuator=relay_action)
+
+        proxy_healthy = True
+        def probe():
+            return proxy_healthy
+
+        watchdog.start(probe)
+
+        # Berjalan normal 2 detak jantung
+        await asyncio.sleep(0.06)
+        assert not watchdog.is_bypass_active
+
+        # Simulasi crash / freeze mendadak pada proxy Kelir
+        freeze_time = asyncio.get_event_loop().time()
+        proxy_healthy = False
+
+        # Tunggu sampai bypass aktif
+        for _ in range(20):
+            if watchdog.is_bypass_active:
+                break
+            await asyncio.sleep(0.01)
+
+        watchdog.stop()
+        assert watchdog.is_bypass_active
+
+        failover_ms = (bypass_trigger_time - freeze_time) * 1000
+        # 3 interval x 25 ms = ~75 ms
+        assert 50 <= failover_ms <= 150, f"Failover time {failover_ms} ms di luar toleransi yang diharapkan"
+
+    asyncio.run(go())

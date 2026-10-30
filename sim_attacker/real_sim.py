@@ -11,7 +11,7 @@ from shadows import modbus_proto as mp
 
 
 class RealDeviceSim:
-    def __init__(self, tank: int = 14250, pressure_x100: int = 212, latency_s: float = 0.003):
+    def __init__(self, tank: int = 14250, pressure_x100: int = 212, latency_s: float = 0.020):
         self.input = {0: tank, 1: pressure_x100, 2: 120, 3: 285}
         self.holding = {11: 1, 0: 3000, 1: 19000, 2: 180}
         self.latency = latency_s

@@ -252,6 +252,20 @@ class Kelir:
             self.shadow.degradation_tier = 0
 
         try:
+            req_parsed = mp.parse_pdu(pdu)
+            if req_parsed.is_write:
+                val_repr = getattr(req_parsed, "val", None)
+                if val_repr is None and hasattr(req_parsed, "values"):
+                    val_repr = req_parsed.values[0] if len(req_parsed.values) == 1 else list(req_parsed.values)
+                self._event(s, "diverted_write_alert",
+                            unit=unit, fc=req_parsed.fc, addr=req_parsed.addr, val=val_repr,
+                            table=req_parsed.table,
+                            reason="Perintah tulis dialihkan ke bayangan (dibuang dari aset fisik)")
+        except Exception:
+            pass
+
+        t0_shadow = time.perf_counter()
+        try:
             out = self.shadow.handle(src, unit, pdu, via="kelir")
         except Exception:
             out = None
@@ -261,6 +275,11 @@ class Kelir:
             return None
         self.stats["diverted_frames"] += 1
         resp, delay = out
+
+        # Kompensasi waktu eksekusi internal (fisika, event bus, SQLite hashchain)
+        # agar total latensi respons yang diamati penyerang persis sama dengan aset riil
+        elapsed = time.perf_counter() - t0_shadow
+        delay = max(0.0005, delay - elapsed)
 
         # Tingkat 3 (Kritis 90-98%): OT Tarpit - Tahan soket buffer penyerang
         if tier == 3:

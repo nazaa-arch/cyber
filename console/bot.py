@@ -165,6 +165,15 @@ class BotDalang:
         else:
             self.channel.send(text)
 
+    def notify_diverted_write(self, src: str, unit: int, fc: int, addr: int | None,
+                              val: int | list[int] | None, reason: str = "") -> None:
+        text = (f"🚨 PERINGATAN OPERASIONAL: PENULISAN DIALIHKAN KE BAYANGAN!\n"
+                f"Sumber: {src} · Unit: {unit} · FC: {fc}\n"
+                f"Alamat: {addr} · Nilai: {val}\n"
+                f"Status: PERINTAH TULIS DIBUANG DARI PLC RIIL (Aset fisik aman).\n"
+                f"Catatan: Bila ini tindakan teknisi sah, aktifkan 'Mode Perawatan' di konsol.")
+        self.channel.send(text)
+
     def notify_campaign(self, campaign: dict) -> None:
         self.channel.send(
             f"🚨 KAMPANYE TERDETEKSI\nSatuan: {', '.join(campaign['satuan'])}\n"

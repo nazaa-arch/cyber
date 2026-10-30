@@ -78,6 +78,8 @@ class Pipeline:
         elif action == "would_divert":
             self._alert("rekomendasi", ev, f"Rekomendasi (L{self.autonomy.level}): "
                         f"sesi {s.src} layak dialihkan. {ev.get('reason', '')}")
+        elif action == "diverted_write_alert":
+            self._on_diverted_write(ev, s, summ)
         elif action not in ("auto_block",) and not s.pinned and s.events <= 1:
             self._info(ev, s)
         if self.edge is not None and (s.diverted or s.honeytokens_planted
@@ -98,6 +100,19 @@ class Pipeline:
             self.bot.notify_divert(summ, prop, ev.get("reason", ""))
         if self.edge is not None:
             self.edge.enqueue(summ)
+
+    def _on_diverted_write(self, ev: dict, s, summ: dict) -> None:
+        msg = (f"PERINGATAN OPERATOR: Perintah tulis dari {s.src} "
+               f"(Unit:{ev.get('unit')}, FC:{ev.get('fc')}, Addr:{ev.get('addr')}, Val:{ev.get('val')}) "
+               f"dialihkan ke bayangan (PLC fisik aman).")
+        self._alert("diverted_write", ev, msg, warn=True)
+        if self.bot:
+            if hasattr(self.bot, "notify_diverted_write"):
+                self.bot.notify_diverted_write(
+                    s.src, ev.get("unit", 1), ev.get("fc", 0), ev.get("addr"), ev.get("val"), ev.get("reason", "")
+                )
+            else:
+                self.bot.info(msg)
 
     def _alert(self, kind: str, ev: dict, text: str, warn: bool = False) -> None:
         self.alerts.append({"kind": kind, "session": ev.get("session"), "text": text,

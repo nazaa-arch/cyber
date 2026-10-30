@@ -9,6 +9,7 @@ import asyncio
 import math
 import time
 import zlib
+from collections import deque
 from typing import Callable
 
 import numpy as np
@@ -25,30 +26,39 @@ CONSISTENCY_PROBE_READS = 8
 
 
 class LatencyProfile:
-    """Latensi berekor panjang dengan emulasi PLC Scan Cycle (Bab 8, Lapisan Waktu).
+    """Profil latensi bayangan adaptif yang mempelajari distribusi aset riil.
 
-    PLC industri nyata (Siemens S7, Schneider Modicon) memproses input-output
-    mengikuti siklus scan ladder logic (umumnya 20ms-50ms). Paket yang tiba di tengah
-    siklus dijadwalkan pada siklus scan berikutnya, menghasilkan pola sebaran waktu khas OT.
+    Meniru sebaran latensi aset asli secara dinamis (exponential moving average),
+    sehingga selisih waktu respons (delta latency) sebelum vs sesudah pengalihan
+    mendekati 0 untuk mencegah deteksi oleh penyerang cerdas.
     """
 
-    def __init__(self, seed: int, base_ms: float = 4.0, sigma: float = 0.5,
+    def __init__(self, seed: int, base_ms: float = 20.0, sigma: float = 0.2,
                  plc_scan_ms: float = 20.0):
         self.rng = np.random.default_rng(seed + 11)
         self.base_ms = base_ms
         self.sigma = sigma
         self.plc_scan_ms = plc_scan_ms
+        self.history: deque[float] = deque(maxlen=100)
+        self.history.append(base_ms)
+        self.learned_mean: float = base_ms
+        self.learned_std: float = 2.0
 
     def match(self, real_ms: float) -> None:
-        """Samakan profil dengan aset asli (selisih latensi, Bab 9.4)."""
-        self.base_ms = 0.8 * self.base_ms + 0.2 * max(1.0, min(real_ms, 40.0))
+        """Mempelajari distribusi latensi aset asli saat beroperasi (Bab 9.4)."""
+        clamped = max(1.0, min(real_ms, 200.0))
+        self.history.append(clamped)
+        self.learned_mean = 0.85 * self.learned_mean + 0.15 * clamped
+        if len(self.history) >= 5:
+            self.learned_std = max(0.5, float(np.std(list(self.history))))
+        self.base_ms = self.learned_mean
 
     def sample_s(self) -> float:
-        # Komponen ekor panjang + emulasi quantized cycle time PLC
-        ms = self.base_ms * float(self.rng.lognormal(0, self.sigma))
-        cycle_phase = float(self.rng.uniform(0.3, 1.0)) * self.plc_scan_ms
-        total_ms = max(ms, cycle_phase * 0.4) + float(abs(self.rng.normal(0, 0.3)))
-        return min(total_ms, 400.0) / 1000.0
+        """Menghasilkan tunda respons yang persis mengikuti profil aset asli."""
+        std = max(0.5, min(self.learned_std, 4.0))
+        sampled_ms = float(self.rng.normal(self.learned_mean, std))
+        sampled_ms = max(1.0, min(sampled_ms, 250.0))
+        return sampled_ms / 1000.0
 
 
 class ShadowDevice:
@@ -74,8 +84,11 @@ class ShadowDevice:
         self._last_sim_h = 0.0
         self.values = {"tank_level_l": 0.0, "pump_pressure_bar": 1.8,
                        "flow_lph": 0.0, "temp_c": 27.0}
-        self.idobj = {0: vendor, 1: f"GX-{100 + seed % 50}",
-                      2: f"V{2 + seed % 3}.{seed % 7}.{seed % 5}"}
+        self.idobj = {
+            0: vendor if vendor != "Generik" else "Schneider Electric",
+            1: f"TM221CE24T-{100 + seed % 50}",
+            2: "V2.1.4",
+        }
         # Graceful Degradation Ladder (Tangga Penurunan Beban):
         # 0: Full Dynamic Physics (Simulasi diferensial fluida & tangga lengkap)
         # 1: Cached Snapshot (Bekukan persamaan diferensial, layani snapshot berkala; hemat 80% CPU)
@@ -133,17 +146,82 @@ class ShadowDevice:
         v = self._session_values(s)
         j = lambda: int(self._rng.integers(0, 2))  # derau baca kecil
         return {
+            # Blok 1: Sistem & Tangki Utama (Alamat 0 - 49)
             0: (1, lambda: int(v["tank_level_l"]) + j() - 1),
             1: (1, lambda: int(v["pump_pressure_bar"] * 100) + j()),
             2: (2, lambda: int(v["flow_lph"])),
             3: (2, lambda: int(v["temp_c"] * 10) + j()),
             4: (2, lambda: 1200 + int((self.clock() - self.t0) / 3600)),
+            5: (2, lambda: 285 + j()),                              # Temp ruang pompa 28.5 C
+            6: (2, lambda: 1013 + j()),                             # Tekanan uap tangki 101.3 kPa
+            7: (2, lambda: 15),                                     # Kadar air dasar tangki 15 mm
+            8: (2, lambda: 8400 + j()),                             # Densitas solar 840.0 kg/m3
+            10: (2, lambda: 0x0007 if s.pump_on else 0x0001),       # Status kata sistem (bitfield)
+            # GAP 1 (Alamat 50 - 99): Celah tak teralokasi -> Exception 02
+
+            # Blok 2: Pompa Transfer & Distribusi (Alamat 100 - 125)
+            100: (2, lambda: 1 if s.pump_on else 0),                 # Status Operasi Pompa 1 (Run/Stop)
+            101: (2, lambda: 1450 if s.pump_on else 0),              # RPM Pompa 1
+            102: (2, lambda: 245 if s.pump_on else 0),               # Arus Pompa 1 (24.5 A)
+            103: (2, lambda: 520 if s.pump_on else 280),             # Temp Motor Pompa 1 (52.0 C)
+            104: (2, lambda: 18 if s.pump_on else 0),                # Getaran Pompa 1 (1.8 mm/s)
+            110: (2, lambda: 0),                                     # Status Pompa 2 (Standby)
+            111: (2, lambda: 0),                                     # RPM Pompa 2
+            112: (2, lambda: 0),                                     # Arus Pompa 2
+            113: (2, lambda: 280),                                   # Temp Pompa 2
+            120: (2, lambda: 12),                                    # Totalizer High Word
+            121: (2, lambda: 34500),                                 # Totalizer Low Word
+            # GAP 2 (Alamat 126 - 199): Celah tak teralokasi -> Exception 02
+
+            # Blok 3: Tangki Cadangan / Buffer Reserve (Alamat 200 - 225)
+            200: (2, lambda: 8500),                                  # Level Tangki Cadangan (8.500 L)
+            201: (2, lambda: 140),                                   # Tekanan Tangki Cadangan (1.40 bar)
+            202: (2, lambda: 1),                                     # Katup Buffer (1=Open)
+            203: (2, lambda: 8),                                     # Kadar air cadangan 8 mm
+            210: (2, lambda: 1),                                     # Status ESD Valve (1=Normal)
+            # GAP 3 (Alamat 226 - 299): Celah tak teralokasi -> Exception 02
+
+            # Blok 4: Genset & ATS Power Backup (Alamat 300 - 330)
+            300: (2, lambda: 1),                                     # Status Grid PLN (1=Normal)
+            301: (2, lambda: 0),                                     # Status Genset (0=Standby)
+            302: (2, lambda: 398),                                   # Tegangan Bus (398 V)
+            303: (2, lambda: 500),                                   # Frekuensi Grid (50.0 Hz)
+            304: (2, lambda: 268),                                   # Tegangan Aki Starter (26.8 V)
+            305: (2, lambda: 92),                                    # Level Tangki Solar Genset (92%)
+            310: (2, lambda: 45),                                    # Daya Aktif Beban (45 kW)
+            # GAP 4 (Alamat 331 - 999+): Celah tak teralokasi -> Exception 02
         }
 
     def _holding(self, s: Session) -> dict[int, tuple[int, Callable[[], int]]]:
         return {
-            11: (1, lambda: 1 if s.pump_on else 0),
-            0: (2, lambda: 3000), 1: (2, lambda: 19000), 2: (2, lambda: 180),
+            # Blok 1: Parameter Kendali & Setpoint (0 - 49)
+            0: (2, lambda: 3000),                                    # Setpoint Min Tangki (3000 L)
+            1: (2, lambda: 19000),                                   # Setpoint Max Tangki (19000 L)
+            2: (2, lambda: 180),                                     # Setpoint Overpressure (1.80 bar)
+            10: (2, lambda: 3),                                      # Mode Operasi (3=Auto)
+            11: (1, lambda: 1 if s.pump_on else 0),                  # Kendali Pompa Utama (1=ON, 0=OFF)
+            20: (2, lambda: 5000),                                   # Setpoint Alir Target (5000 lph)
+            21: (2, lambda: 60),                                     # Watchdog Timeout SCADA (60 dtk)
+            # GAP 1 (50 - 99): Exception 02
+
+            # Blok 2: Pengaturan Pompa Transfer (100 - 125)
+            100: (2, lambda: 1 if s.pump_on else 0),                 # Kendali Pompa 1 (1/0)
+            105: (2, lambda: 350),                                   # Batas Arus Max Pompa 1 (35.0 A)
+            110: (2, lambda: 0),                                     # Kendali Pompa 2 (1/0)
+            115: (2, lambda: 350),                                   # Batas Arus Max Pompa 2
+            # GAP 2 (126 - 199): Exception 02
+
+            # Blok 3: Pengaturan Tangki Cadangan (200 - 225)
+            200: (2, lambda: 2000),                                  # Setpoint Min Cadangan (2000 L)
+            202: (2, lambda: 1),                                     # Kendali Katup Buffer (1=Open)
+            210: (2, lambda: 1),                                     # Reset Interlock ESD
+            # GAP 3 (226 - 299): Exception 02
+
+            # Blok 4: Pengaturan ATS & Genset (300 - 330)
+            300: (2, lambda: 1),                                     # Mode ATS (1=Auto Transfer)
+            301: (2, lambda: 0),                                     # Remote Start Genset
+            305: (2, lambda: 340),                                   # Ambang Undervoltage PLN (340 V)
+            # GAP 4 (331 - 999+): Exception 02
         }
 
     def _read(self, s: Session, table: str, addr: int, qty: int) -> list[int]:
@@ -153,10 +231,22 @@ class ShadowDevice:
         elif table == "holding":
             reg = self._holding(s)
         elif table == "coil":
-            reg = {0: (2, lambda: 1 if s.pump_on else 0)}
+            reg = {
+                0: (1, lambda: 1 if s.pump_on else 0),
+                100: (2, lambda: 1 if s.pump_on else 0),
+                110: (2, lambda: 0),
+                202: (2, lambda: 1),
+                210: (2, lambda: 1),
+                301: (2, lambda: 0),
+            }
         elif table == "discrete":
             lvl = self._session_values(s)["tank_level_l"]
-            reg = {0: (2, lambda: 1 if lvl < 3000 else 0)}
+            reg = {
+                0: (1, lambda: 1 if lvl < 3000 else 0),
+                1: (2, lambda: 1 if lvl > 19000 else 0),
+                10: (2, lambda: 1 if s.pump_on else 0),
+                202: (2, lambda: 1),
+            }
         else:
             raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
         out = []
@@ -171,17 +261,31 @@ class ShadowDevice:
         depth = s.engine.depth
         now = self.clock()
         if req.table == "coil":
-            if req.addr != 0 or depth < 2:
-                raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
-            self._set_pump(s, bool(req.values[0]), now)
+            valid_coils = {0, 100, 110, 202, 210, 301}
+            for off, val in enumerate(req.values):
+                addr = req.addr + off
+                if addr not in valid_coils or (addr != 0 and depth < 2):
+                    raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
+                if addr in (0, 100):
+                    self._set_pump(s, bool(val), now)
         else:
+            valid_holding = {
+                0, 1, 2, 10, 11, 20, 21,
+                100, 105, 110, 115,
+                200, 202, 210,
+                300, 301, 305
+            }
             for off, val in enumerate(req.values):
                 a = req.addr + off
-                if a == 11:
+                if a not in valid_holding:
+                    raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
+                if a in (11, 100):
                     if val not in (0, 1):
                         raise mp.ProtoError(mp.ILLEGAL_VALUE)
                     self._set_pump(s, bool(val), now)
-                elif a in (0, 1, 2) and depth >= 2:
+                elif a in valid_holding and depth >= 2:
+                    pass
+                elif a in (0, 1, 2, 11):
                     pass
                 else:
                     raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
