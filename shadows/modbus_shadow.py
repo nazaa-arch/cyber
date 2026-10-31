@@ -17,6 +17,7 @@ import numpy as np
 from engine.gamelan import Gamelan
 from kelir.session import Session, SessionRegistry
 from shadows import modbus_proto as mp
+from shadows import profiles
 from telemetry.models import DepoBBMTelemetry
 
 BLEND_S = 60.0            # lama "berpisah" dari nilai cermin ke jalur fiktif
@@ -67,7 +68,9 @@ class ShadowDevice:
                  clock: Callable[[], float] = time.monotonic,
                  time_scale: float = 1.0, start_hour: float | None = None,
                  capacity_l: float = 20000.0, vendor: str = "Generik",
-                 adaptive: bool = True):
+                 adaptive: bool = True, kind: str = "bbm"):
+        self.kind = kind              # bbm | genset | cctv | gateway
+        self.spec = profiles.SPECS.get(kind)
         self.adaptive = adaptive      # False: bayangan statis (pembanding A/B, Bab 13)
         self.id = shadow_id
         self.satuan = satuan
@@ -94,6 +97,11 @@ class ShadowDevice:
         # 1: Cached Snapshot (Bekukan persamaan diferensial, layani snapshot berkala; hemat 80% CPU)
         # 2: Syntactic Fast (Respons statis minimal tanpa kalkulasi fisika saat beban ekstrem)
         self.degradation_tier: int = 0
+        if self.spec:
+            self.telemetry = self.spec.telemetry_cls(seed)
+            self.values = dict(self.spec.initial)
+            self.idobj = {0: self.spec.vendor, 1: f"{self.spec.model}-{100 + seed % 50}",
+                          2: self.spec.firmware}
         self._cache_v: dict = {}
         self._cache_t: float = 0.0
         for _ in range(30):                      # pemanasan
@@ -125,6 +133,12 @@ class ShadowDevice:
 
         self._advance()
         v = dict(self.values)
+        if self.spec:
+            v = self.spec.session_values(v, s, now, BLEND_S)
+            if self.degradation_tier >= 1:
+                self._cache_v = dict(v)
+                self._cache_t = now
+            return v
         if s.pinned and s.base and s.pin_time is not None:
             a = min(1.0, (now - s.pin_time) / BLEND_S)
             v["tank_level_l"] = s.base["tank_level_l"] * (1 - a) + v["tank_level_l"] * a
@@ -145,6 +159,8 @@ class ShadowDevice:
     def _input_regs(self, s: Session) -> dict[int, tuple[int, Callable[[], int]]]:
         v = self._session_values(s)
         j = lambda: int(self._rng.integers(0, 2))  # derau baca kecil
+        if self.spec:
+            return self.spec.input_regs(v, s, j, self.clock(), self.t0)
         return {
             # Blok 1: Sistem & Tangki Utama (Alamat 0 - 49)
             0: (1, lambda: int(v["tank_level_l"]) + j() - 1),
@@ -193,6 +209,8 @@ class ShadowDevice:
         }
 
     def _holding(self, s: Session) -> dict[int, tuple[int, Callable[[], int]]]:
+        if self.spec:
+            return self.spec.holding(s)
         return {
             # Blok 1: Parameter Kendali & Setpoint (0 - 49)
             0: (2, lambda: 3000),                                    # Setpoint Min Tangki (3000 L)
@@ -230,6 +248,10 @@ class ShadowDevice:
             reg = self._input_regs(s)
         elif table == "holding":
             reg = self._holding(s)
+        elif table == "coil" and self.spec:
+            reg = self.spec.coils(s)
+        elif table == "discrete" and self.spec:
+            reg = self.spec.discrete(self._session_values(s), s)
         elif table == "coil":
             reg = {
                 0: (1, lambda: 1 if s.pump_on else 0),
@@ -260,6 +282,26 @@ class ShadowDevice:
     def _write(self, s: Session, req: mp.Request) -> None:
         depth = s.engine.depth
         now = self.clock()
+        if self.spec:
+            act = self.spec.actuator_addr
+            if req.table == "coil":
+                for off, val in enumerate(req.values):
+                    addr = req.addr + off
+                    if addr not in self.spec.valid_coils or (addr != act and depth < 2):
+                        raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
+                    if addr == act:
+                        self._set_pump(s, bool(val), now)
+            else:
+                for off, val in enumerate(req.values):
+                    a = req.addr + off
+                    if a not in self.spec.valid_holding:
+                        raise mp.ProtoError(mp.ILLEGAL_ADDRESS)
+                    if a == act:
+                        if val not in (0, 1):
+                            raise mp.ProtoError(mp.ILLEGAL_VALUE)
+                        self._set_pump(s, bool(val), now)
+            s.writes.append((now, req.table, req.addr, list(req.values)))
+            return
         if req.table == "coil":
             valid_coils = {0, 100, 110, 202, 210, 301}
             for off, val in enumerate(req.values):
@@ -296,6 +338,9 @@ class ShadowDevice:
             return
         s.pump_on = on
         s.pump_change = now
+        if self.spec:
+            s.tank_hold = None
+            return
         s.tank_hold = None if on else self._session_values(s)["tank_level_l"]
 
     # ---------- penanganan permintaan ----------

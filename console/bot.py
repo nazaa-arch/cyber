@@ -62,8 +62,19 @@ class TelegramChannel:
             payload["reply_markup"] = {"inline_keyboard": [[
                 {"text": label, "callback_data": f"{act}:{pid}"} for label, act, pid in buttons]]}
         # Kirim di background thread agar tidak memblokir event loop dan latensi Modbus/OT
-        threading.Thread(target=self._send_sync, args=(payload,), daemon=True).start()
+        threading.Thread(target=self._send_retry, args=(payload,), daemon=True).start()
         return 1
+
+    def _send_retry(self, payload: dict, attempts: int = 4) -> int:
+        """Kirim dengan percobaan ulang (backoff 2,4,8 dtk) agar alert tidak hilang saat jaringan goyah."""
+        for i in range(attempts):
+            mid = self._send_sync(payload)
+            if mid:
+                return mid
+            if i < attempts - 1:
+                time.sleep(min(2 ** (i + 1), 15))
+        log.error("Alert Telegram GAGAL terkirim setelah %d percobaan", attempts)
+        return 0
 
     async def poll_once(self) -> None:
         loop = asyncio.get_event_loop()

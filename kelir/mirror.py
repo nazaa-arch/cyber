@@ -15,7 +15,11 @@ _ALLOWED = (3, 4)   # data diode logis: hanya baca
 
 
 class StateMirror:
-    def __init__(self, real_addr: tuple[str, int], interval_s: float = 1.0, unit: int = 1):
+    def __init__(self, real_addr: tuple[str, int], interval_s: float = 1.0, unit: int = 1,
+                 mapping: tuple | None = None):
+        # mapping: ((kunci, skala), ...) untuk register input 0..n-1. Dua pertama wajib dibaca;
+        # sisanya dibaca best-effort (aset yang tidak punya register tsb tetap valid).
+        self.mapping = mapping or (("tank_level_l", 1.0), ("pump_pressure_bar", 0.01))
         self.real_addr = real_addr
         self.interval = max(MIN_INTERVAL_S, interval_s)
         self.unit = unit
@@ -36,14 +40,24 @@ class StateMirror:
 
     async def poll_once(self) -> dict | None:
         reader, writer = await asyncio.wait_for(asyncio.open_connection(*self.real_addr), 2.0)
+        extra = None
         try:
             vals = await self._read(reader, writer, 4, 0, 2)
+            if vals and len(vals) >= 2 and len(self.mapping) > 2:
+                try:
+                    extra = await self._read(reader, writer, 4, 2, len(self.mapping) - 2)
+                except (OSError, asyncio.TimeoutError, AssertionError, ValueError):
+                    extra = None
         finally:
             writer.close()
         if not vals or len(vals) < 2:
             return None
-        self._snap = {"tank_level_l": float(vals[0]),
-                      "pump_pressure_bar": vals[1] / 100.0, "ts": time.monotonic()}
+        allv = list(vals) + (list(extra) if extra and len(extra) == len(self.mapping) - 2 else [])
+        snap = {k: float(v) * sc for (k, sc), v in zip(self.mapping, allv)}
+        if len(self.mapping) >= 2 and self.mapping[0][1] == 1.0:
+            snap[self.mapping[0][0]] = float(vals[0])
+        snap["ts"] = time.monotonic()
+        self._snap = snap
         return self.snapshot()
 
     async def _run(self):

@@ -11,9 +11,15 @@ from shadows import modbus_proto as mp
 
 
 class RealDeviceSim:
-    def __init__(self, tank: int = 14250, pressure_x100: int = 212, latency_s: float = 0.020):
-        self.input = {0: tank, 1: pressure_x100, 2: 120, 3: 285}
-        self.holding = {11: 1, 0: 3000, 1: 19000, 2: 180}
+    def __init__(self, tank: int = 14250, pressure_x100: int = 212, latency_s: float = 0.020,
+                 kind: str = "bbm"):
+        from shadows.profiles import REAL_INPUT
+        self.kind = kind
+        inp, hold = REAL_INPUT.get(kind, REAL_INPUT["bbm"])
+        self.input = dict(inp)
+        self.holding = dict(hold)
+        if kind == "bbm":
+            self.input[0], self.input[1] = tank, pressure_x100
         self.latency = latency_s
         self.frames: list[tuple[str, int, bytes]] = []   # (src, unit, pdu)
         self.connections = 0

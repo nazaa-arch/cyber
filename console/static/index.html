@@ -1496,6 +1496,8 @@ main#ops-theater {
         <svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#020710"><polyline points="20 6 9 17 4 12"></polyline></svg>
         Netralisir Insiden
       </button>
+      <button class="btn btn--ghost btn--sm" onclick="resetIncidents()" title="Bersihkan tampilan insiden (bukti forensik tetap tersimpan)">Reset Tampilan</button>
+      <button class="btn btn--ghost btn--sm" onclick="doLogout()" title="Keluar dari sesi komando">Keluar</button>
     </div>
   </div>
 
@@ -1507,6 +1509,17 @@ main#ops-theater {
 </div>
 
 <div id="toast"></div>
+
+<div id="login-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(2,7,16,.96);align-items:center;justify-content:center">
+  <div class="hud-panel" style="padding:26px 30px;min-width:320px;text-align:center">
+    <div style="font-weight:800;letter-spacing:.12em;color:var(--gold);font-size:.8rem;margin-bottom:6px">AKSES KOMANDO TERBATAS</div>
+    <div style="color:var(--on-dark-muted);font-size:.65rem;margin-bottom:14px">Masukkan Token Komando untuk membuka konsol WAYANG</div>
+    <input id="login-token" type="password" autocomplete="off" placeholder="Token Komando" onkeydown="if(event.key==='Enter')doLogin()"
+      style="width:100%;padding:9px 10px;background:#020710;border:1px solid var(--line-gold);color:#fff;border-radius:3px;font-family:var(--font-mono)">
+    <button class="btn btn--sm" style="margin-top:12px;width:100%;background:var(--gold);color:#020710;font-weight:800;border:none;cursor:pointer;padding:8px" onclick="doLogin()">MASUK</button>
+    <div id="login-err" style="color:var(--crimson);font-size:.65rem;margin-top:8px;min-height:1em"></div>
+  </div>
+</div>
 
 <!-- ==========================================================================
      ZONE 3: PRIMARY C4ISR OPERATIONAL THEATER
@@ -1750,7 +1763,27 @@ main#ops-theater {
 <script src="/static/leaflet.js"></script>
 <script src="/static/echarts.min.js"></script>
 <script>
-const $ = id => document.getElementById(id), J = (u, o) => fetch(u, o).then(r => r.json());
+const $ = id => document.getElementById(id);
+function showLogin() {
+  const o = document.getElementById('login-overlay');
+  if (o) o.style.display = 'flex';
+}
+const J = (u, o) => fetch(u, o).then(r => {
+  if (r.status === 401) { showLogin(); throw new Error('401'); }
+  return r.json();
+});
+async function doLogin() {
+  const t = $('login-token').value.trim();
+  const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: t }) });
+  if (r.ok) { location.reload(); return; }
+  const j = await r.json().catch(() => ({}));
+  $('login-err').innerText = j.detail || 'Gagal masuk';
+}
+async function doLogout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  location.reload();
+}
+fetch('/api/auth/status').then(r => r.json()).then(s => { if (s.required && !s.authed) showLogin(); }).catch(() => {});
 let curSat = 'KODAM-IV-Diponegoro';
 let audioEnabled = false;
 let audioCtx = null;
@@ -1855,6 +1888,7 @@ async function post(u, b) {
     headers: { 'Content-Type': 'application/json' },
     body: b ? JSON.stringify(b) : undefined
   });
+  if (res.status === 401) { showLogin(); return {}; }
   try { const j = await res.json(); refresh(); return j; } catch (e) { refresh(); return {}; }
 }
 
@@ -1885,6 +1919,13 @@ async function resolveCampaign(id) {
   playTacticalBeep(880, 'sine', 0.2);
   const r = await post('/api/tactical/campaign/resolve', { id });
   alert(r.msg || 'Kampanye ancaman berhasil dinetralisir!');
+  refresh();
+}
+
+async function resetIncidents() {
+  if (!confirm('Reset Tampilan: bersihkan status insiden di dasbor? (Bukti forensik TIDAK dihapus)')) return;
+  const r = await post('/api/tactical/incidents/reset');
+  alert(r.msg || 'Tampilan insiden direset.');
   refresh();
 }
 
@@ -1927,7 +1968,7 @@ async function refreshTwin() {
         </div>
       `;
 
-      const isTrip = p.power_load_kw === 0;
+      const isTrip = !!p.trip;
       shadowGraphic = `
         <div class="scada-power-wrap">
           <span class="scada-power-bolt ${isTrip ? 'trip' : ''}">⚡</span>
@@ -2102,7 +2143,7 @@ async function refreshTwin() {
     $('twin-view').innerHTML = `
       <div class="scada-panel real">
         <div class="scada-head">
-          <span class="scada-title" style="color:var(--cyan)">${a.nama || 'Aset Fisik Nyata (OT Terlindungi)'}</span>
+          <span class="scada-title" style="color:var(--cyan)" title="Sumber data: ${a.sumber || '-'}">${a.nama || 'Aset Fisik Nyata (OT Terlindungi)'}</span>
           <span class="unit-status-pill status-aman">${a.status}</span>
         </div>
         <div class="scada-content">

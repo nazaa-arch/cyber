@@ -10,14 +10,18 @@ Menyediakan:
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
+import os
 import pathlib
 import time
 import uuid
 from typing import Set
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi import Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from console import report
@@ -31,8 +35,78 @@ class LevelBody(BaseModel):
     satuan: str | None = None
 
 
-def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
+LOGIN_MAX_FAILS = 5
+LOGIN_WINDOW_S = 60.0
+COOKIE_NAME = "wayang_token"
+
+
+def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) -> FastAPI:
+    """admin_token: None -> baca env WAYANG_ADMIN_TOKEN (kosong = tanpa autentikasi, mode uji);
+    string kosong -> autentikasi dimatikan eksplisit; string lain -> wajib untuk seluruh /api/*."""
     app = FastAPI(title="WAYANG Dalang C4ISR Console", docs_url=None, redoc_url=None)
+    token = admin_token if admin_token is not None else os.environ.get("WAYANG_ADMIN_TOKEN", "")
+    session_sig = (hmac.new(token.encode(), b"wayang-console-session", hashlib.sha256).hexdigest()
+                   if token else "")
+    fails: dict[str, list[float]] = {}
+
+    def _client_ip(request) -> str:
+        h = request.headers
+        return (h.get("cf-connecting-ip") or (h.get("x-forwarded-for") or "").split(",")[0].strip()
+                or (request.client.host if request.client else "?"))
+
+    def _authed(headers, cookies) -> bool:
+        if not token:
+            return True
+        given = headers.get("x-wayang-token") or ""
+        bearer = headers.get("authorization") or ""
+        if bearer.lower().startswith("bearer "):
+            given = given or bearer[7:].strip()
+        if given and hmac.compare_digest(given.encode(), token.encode()):
+            return True
+        ck = cookies.get(COOKIE_NAME) or ""
+        return bool(ck) and hmac.compare_digest(ck.encode(), session_sig.encode())
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        path = request.url.path
+        if (not token or path == "/" or path.startswith("/static/")
+                or path.startswith("/api/auth/")):
+            return await call_next(request)
+        if _authed(request.headers, request.cookies):
+            return await call_next(request)
+        return JSONResponse({"detail": "Autentikasi diperlukan"}, status_code=401)
+
+    @app.get("/api/auth/status")
+    async def auth_status(request: Request):
+        return {"required": bool(token), "authed": _authed(request.headers, request.cookies)}
+
+    @app.post("/api/auth/login")
+    async def auth_login(request: Request, body: dict):
+        ip = _client_ip(request)
+        now = time.time()
+        recent = [t for t in fails.get(ip, []) if now - t < LOGIN_WINDOW_S]
+        if len(recent) >= LOGIN_MAX_FAILS:
+            fails[ip] = recent
+            return JSONResponse({"detail": "Terlalu banyak percobaan. Coba lagi sebentar."},
+                                status_code=429)
+        given = str((body or {}).get("token", ""))
+        if not token or hmac.compare_digest(given.encode(), token.encode()):
+            resp = JSONResponse({"ok": True})
+            if token:
+                secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+                resp.set_cookie(COOKIE_NAME, session_sig, httponly=True, samesite="strict",
+                                secure=secure, max_age=12 * 3600)
+            fails.pop(ip, None)
+            return resp
+        recent.append(now)
+        fails[ip] = recent
+        return JSONResponse({"detail": "Token salah"}, status_code=401)
+
+    @app.post("/api/auth/logout")
+    async def auth_logout():
+        resp = JSONResponse({"ok": True})
+        resp.delete_cookie(COOKIE_NAME)
+        return resp
     active_websockets: Set[WebSocket] = set()
 
     def node(satuan: str):
@@ -91,15 +165,13 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
                     sh = getattr(n, "shadow", None)
                     if not sh:
                         continue
-                    # Baca nilai hidup dari model
+                    # Baca nilai hidup dari model (generik per jenis aset)
                     val = sh.values
                     has_pump_off = any(not s.pump_on for s in sh.sessions.by_id.values())
                     total_diverted = sum(1 for s in sh.sessions.by_id.values() if s.diverted)
                     units_telemetry[name] = {
-                        "tank_level_l": round(val.get("tank_level_l", 14250.0), 1),
-                        "pump_pressure_bar": round(val.get("pump_pressure_bar", 2.12), 2),
-                        "flow_lph": round(val.get("flow_lph", 450.0), 1),
-                        "temp_c": round(val.get("temp_c", 27.5), 1),
+                        **{k: round(float(x), 2) for k, x in val.items()},
+                        "kind": getattr(n, "kind", "bbm"),
                         "pump_on": not has_pump_off,
                         "diverted": total_diverted > 0,
                         "depth": max([s.engine.depth for s in sh.sessions.by_id.values()] or [1])
@@ -125,6 +197,9 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
 
     @app.websocket("/ws/live")
     async def websocket_live(websocket: WebSocket):
+        if not _authed(websocket.headers, websocket.cookies):
+            await websocket.close(code=1008)
+            return
         await websocket.accept()
         active_websockets.add(websocket)
         try:
@@ -179,9 +254,7 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
     @app.post("/api/tactical/incidents/reset")
     async def api_reset_incidents():
         pusat.reset_incidents()
-        for n in set(nodes.values()):
-            n.autonomy.kill_switch("console")
-        return {"ok": True, "msg": "Seluruh insiden siber pangkalan berhasil direset ke status Aman."}
+        return {"ok": True, "msg": "Tampilan insiden direset ke status Aman. Bukti forensik tetap tersimpan."}
 
     @app.get("/api/events/recent")
     async def api_events_recent():
@@ -356,151 +429,109 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
         except KeyError:
             raise HTTPException(404)
 
+    def _attacker_view(sh):
+        """Sesi penyerang terbaru yang pernah menulis; menentukan apa yang 'dilihat' penyerang."""
+        best, bt = None, -1.0
+        for sess in sh.sessions.by_id.values():
+            if sess.writes and sess.writes[-1][0] > bt:
+                best, bt = sess, sess.writes[-1][0]
+        return best
+
     @app.get("/api/twinscreen/{satuan}")
     async def api_twinscreen(satuan: str):
         n = node(satuan)
         sh = n.shadow
-        has_pump_off = any(not s.pump_on for s in sh.sessions.by_id.values())
-        total_diverted = sum(1 for s in sh.sessions.by_id.values() if s.diverted)
-        writes_caught = sum(len(s.writes) for s in sh.sessions.by_id.values())
-        depth = max([s.engine.depth for s in sh.sessions.by_id.values()] or [1])
+        kind = getattr(n, "kind", "bbm")
+        snap = n.mirror.snapshot() or {}
+        src_tag = "StateMirror (PLC riil, baca-saja)" if snap else "nilai awal (mirror belum tersambung)"
+        view = _attacker_view(sh)
+        v = sh._session_values(view) if view else dict(sh.values)
+        compromised = bool(view and not view.pump_on)
+        total_diverted = sum(1 for x in sh.sessions.by_id.values() if x.diverted)
+        writes_caught = sum(len(x.writes) for x in sh.sessions.by_id.values())
+        depth = max([x.engine.depth for x in sh.sessions.by_id.values()] or [1])
+        status_sh = "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA"
+        base = {"satuan": satuan, "nama_satuan": n.satuan, "asset_type": kind,
+                "data_source": src_tag}
+        common_real = {"status": "OPERASIONAL NORMAL", "perintah_bahaya_diterima": 0,
+                       "integritas": "100% AMAN TERLINDUNGI", "sumber": src_tag}
+        common_sh = {"status": status_sh, "perintah_bahaya_ditangkap": writes_caught,
+                     "kedalaman_terbuka": depth, "dwell_time_aktif": True}
 
-        sat_lower = n.satuan.lower()
-        if "brawijaya" in sat_lower or "listrik" in sat_lower or "genset" in sat_lower:
-            asset_type = "genset"
-            kw_base = 46.8
-            shadow_kw = 0.0 if has_pump_off else round(sh.values.get("power_load_kw", kw_base), 1)
-            shadow_hz = 0.0 if has_pump_off else round(sh.values.get("frequency_hz", 50.02), 2)
-            shadow_volt = 0.0 if has_pump_off else 380.0
-            return {
-                "satuan": satuan,
-                "nama_satuan": n.satuan,
-                "asset_type": "genset",
-                "role": "Sistem Daya Listrik Darurat (ATS/UPS & Genset Pangkalan)",
-                "aset_asli": {
-                    "nama": "Schneider Electric ATS Controller (380V 50Hz)",
-                    "status": "OPERASIONAL NORMAL",
-                    "power_source": "PLN UTAMA (MAINS ON LOAD)",
-                    "power_load_kw": kw_base,
-                    "power_max_kw": 80.0,
-                    "power_load_pct": 58.5,
-                    "frequency_hz": 50.02,
-                    "voltage_v": 382.4,
-                    "engine_temp_c": 78.5,
-                    "ats_status": "NORMAL (GRID ACTIVE)",
-                    "solar_cadangan_l": 850,
-                    "perintah_bahaya_diterima": 0,
-                    "integritas": "100% AMAN TERLINDUNGI"
-                },
-                "panggung_bayangan": {
-                    "nama": f"Bayangan DSE7320 Genset Controller ({sh.id})",
-                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
-                    "power_source": "GENSET TRIP / MATI (EFEK PALSU)" if has_pump_off else "PLN UTAMA (SIMULASI)",
-                    "power_load_kw": shadow_kw,
-                    "power_max_kw": 80.0,
-                    "power_load_pct": 0.0 if has_pump_off else 56.2,
-                    "frequency_hz": shadow_hz,
-                    "voltage_v": shadow_volt,
-                    "engine_temp_c": round(sh.values.get("engine_temp_c", 78.5), 1),
-                    "ats_status": "TRIP TERPUTUS (EFEK PALSU)" if has_pump_off else "NORMAL (EFEK PALSU)",
-                    "solar_cadangan_l": 850,
-                    "perintah_bahaya_ditangkap": writes_caught,
-                    "kedalaman_terbuka": depth,
-                    "dwell_time_aktif": True
-                }
-            }
-        elif "siliwangi" in sat_lower or "cctv" in sat_lower or "gerbang" in sat_lower or "perimeter" in sat_lower:
-            asset_type = "cctv"
-            return {
-                "satuan": satuan,
-                "nama_satuan": n.satuan,
-                "asset_type": "cctv",
-                "role": "Komando Perimeter & Gerbang CCTV Pangkalan",
-                "aset_asli": {
-                    "nama": "Perimeter Barrier Gate & Video Surveillance Gateway",
-                    "status": "OPERASIONAL NORMAL",
-                    "gate_status": "TERTUTUP / TERKUNCI (0°)",
-                    "gate_is_open": False,
-                    "cctv_feed_status": "4 FEED AKTIF (1080p 30fps H.265)",
-                    "perimeter_beam": "INFRARED BEAM AKTIF (AMAN)",
-                    "anpr_verified": "14 KENDARAAN TERVERIFIKASI",
-                    "perintah_bahaya_diterima": 0,
-                    "integritas": "100% AMAN TERLINDUNGI"
-                },
-                "panggung_bayangan": {
-                    "nama": f"Bayangan HikVision NVR & Gate Decoy ({sh.id})",
-                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
-                    "gate_status": "TERBUKA LEBAR (EFEK PALSU 90°)" if has_pump_off else "TERTUTUP (SIMULASI 0°)",
-                    "gate_is_open": has_pump_off,
-                    "cctv_feed_status": "LOOPED STATIC DECOY FEED (PALSU)",
-                    "perimeter_beam": "BYPASS TERDETEKSI (SIMULASI)" if has_pump_off else "NORMAL (SIMULASI)",
-                    "anpr_verified": "LOGIN ADMIN DECOY CAPTURED",
-                    "perintah_bahaya_ditangkap": writes_caught,
-                    "kedalaman_terbuka": depth,
-                    "dwell_time_aktif": True
-                }
-            }
-        elif "mabes" in sat_lower or "pusat" in sat_lower or "siber" in sat_lower or "c4isr" in sat_lower:
-            asset_type = "c4isr"
-            return {
-                "satuan": satuan,
-                "nama_satuan": n.satuan,
-                "asset_type": "c4isr",
-                "role": "Pusat Komando & Pengendali Siber Operasi Terpadu (C4ISR)",
-                "aset_asli": {
-                    "nama": "Gateway Dalang AI & Validator Kriptografis Hash-Chain",
-                    "status": "OPERASIONAL NORMAL",
-                    "throughput_gbps": 1.25,
-                    "hashchain_status": "100% INTEGRITAS TERTUTUP (SHA-256)",
-                    "ledger_blocks": 1482,
-                    "consensus_nodes": "5/5 SATUAN TERHUBUNG (100%)",
-                    "ai_autonomy_level": "LEVEL 2 (DYNAMIC REACTION)",
-                    "perintah_bahaya_diterima": 0,
-                    "integritas": "100% AMAN TERLINDUNGI"
-                },
-                "panggung_bayangan": {
-                    "nama": f"Bayangan C4ISR HoneyGrid & Deception Gateway ({sh.id})",
-                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
-                    "throughput_gbps": 0.08,
-                    "hashchain_status": "TRAP TOKEN INJEKSI SELESAI" if total_diverted else "STANDBY",
-                    "ledger_blocks": 1482,
-                    "consensus_nodes": "DECOY PEER GRID AKTIF",
-                    "ai_autonomy_level": "DECEPTION TRAP",
-                    "perintah_bahaya_ditangkap": writes_caught,
-                    "kedalaman_terbuka": depth,
-                    "dwell_time_aktif": True
-                }
-            }
-        else:
-            return {
-                "satuan": satuan,
-                "nama_satuan": n.satuan,
-                "asset_type": "bbm",
-                "role": "Depo Bahan Bakar Minyak (BBM) Taktis Satuan",
-                "aset_asli": {
-                    "nama": f"PLC Depo BBM Satuan {n.satuan} (Aset Fisik Asli)",
-                    "status": "OPERASIONAL NORMAL",
-                    "tangki_level_l": 14250,
-                    "tangki_kapasitas_l": 20000,
-                    "pompa_status": "AKTIF (BERJALAN)",
-                    "tekanan_bar": 2.12,
-                    "suhu_c": 27.2,
-                    "perintah_bahaya_diterima": 0,
-                    "integritas": "100% AMAN TERLINDUNGI"
-                },
-                "panggung_bayangan": {
+        if kind == "genset":
+            pk = snap.get("power_load_kw", 46.8)
+            return {**base, "role": "Sistem Daya Listrik Darurat (ATS/UPS & Genset Pangkalan)",
+                    "aset_asli": {**common_real, "nama": "Schneider Electric ATS Controller (380V 50Hz)",
+                                  "power_source": "PLN UTAMA (MAINS ON LOAD)",
+                                  "power_load_kw": round(pk, 1), "power_max_kw": 80.0,
+                                  "power_load_pct": round(pk / 80.0 * 100, 1),
+                                  "frequency_hz": round(snap.get("frequency_hz", 50.02), 2),
+                                  "voltage_v": round(snap.get("voltage_v", 382.4), 1),
+                                  "engine_temp_c": round(snap.get("engine_temp_c", 78.5), 1),
+                                  "ats_status": "NORMAL (GRID ACTIVE)"},
+                    "panggung_bayangan": {**common_sh,
+                        "nama": f"Bayangan DSE7320 Genset Controller ({sh.id})",
+                        "trip": compromised,
+                        "power_source": "GENSET TRIP / MATI (EFEK PALSU)" if compromised else "PLN UTAMA (SIMULASI)",
+                        "power_load_kw": round(v["power_load_kw"], 1), "power_max_kw": 80.0,
+                        "power_load_pct": round(v["power_load_kw"] / 80.0 * 100, 1),
+                        "frequency_hz": round(v["frequency_hz"], 2),
+                        "voltage_v": round(v["voltage_v"], 1),
+                        "engine_temp_c": round(v["engine_temp_c"], 1),
+                        "ats_status": "TRIP TERPUTUS (EFEK PALSU)" if compromised else "NORMAL (SIMULASI)"}}
+
+        if kind == "cctv":
+            ang = snap.get("gate_angle_deg", 0.0)
+            cams = int(snap.get("cams_online", 4))
+            sh_open = v["gate_angle_deg"] > 5
+            return {**base, "role": "Komando Perimeter & Gerbang CCTV Pangkalan",
+                    "aset_asli": {**common_real, "nama": "Perimeter Barrier Gate & Video Surveillance Gateway",
+                                  "gate_status": "TERBUKA" if ang > 5 else f"TERTUTUP / TERKUNCI ({ang:.0f}°)",
+                                  "gate_is_open": ang > 5,
+                                  "cctv_feed_status": f"{cams} FEED AKTIF (1080p 30fps H.265)",
+                                  "perimeter_beam": "INFRARED BEAM AKTIF (AMAN)" if snap.get("beam_ok", 1) >= 1 else "BEAM TERPUTUS",
+                                  "anpr_verified": f"{int(snap.get('vehicles_today', 14))} KENDARAAN TERVERIFIKASI"},
+                    "panggung_bayangan": {**common_sh,
+                        "nama": f"Bayangan HikVision NVR & Gate Decoy ({sh.id})",
+                        "gate_status": f"TERBUKA (EFEK PALSU {v['gate_angle_deg']:.0f}°)" if sh_open else "TERTUTUP (SIMULASI 0°)",
+                        "gate_is_open": sh_open,
+                        "cctv_feed_status": "LOOPED STATIC DECOY FEED (PALSU)",
+                        "perimeter_beam": "BYPASS TERDETEKSI (SIMULASI)" if v["beam_ok"] < 1 else "NORMAL (SIMULASI)",
+                        "anpr_verified": "LOGIN ADMIN DECOY CAPTURED"}}
+
+        if kind == "gateway":
+            all_nodes = set(nodes.values())
+            blocks = sum(len(x.chain.events) for x in all_nodes)
+            chain_ok = all(x.chain.verify() for x in all_nodes)
+            total_units = len(pusat.units)
+            return {**base, "role": "Pusat Komando & Pengendali Siber Operasi Terpadu (C4ISR)",
+                    "aset_asli": {**common_real, "nama": "Gateway Dalang AI & Validator Kriptografis Hash-Chain",
+                                  "throughput_gbps": round(snap.get("throughput_mbps", 1250.0) / 1000.0, 2),
+                                  "hashchain_status": "INTEGRITAS RANTAI TERVERIFIKASI (SHA-256)" if chain_ok else "RANTAI TIDAK VALID!",
+                                  "ledger_blocks": blocks,
+                                  "consensus_nodes": f"{total_units}/{total_units} SATUAN TERDAFTAR",
+                                  "ai_autonomy_level": f"L{n.autonomy.level} ({n.autonomy.name})"},
+                    "panggung_bayangan": {**common_sh,
+                        "nama": f"Bayangan C4ISR HoneyGrid & Deception Gateway ({sh.id})",
+                        "throughput_gbps": round(v["throughput_mbps"] / 1000.0, 2),
+                        "hashchain_status": "TRAP TOKEN INJEKSI AKTIF" if total_diverted else "STANDBY",
+                        "ledger_blocks": blocks,
+                        "consensus_nodes": "UPLINK DIPUTUS (EFEK PALSU)" if compromised else "DECOY PEER GRID AKTIF",
+                        "ai_autonomy_level": "DECEPTION TRAP"}}
+
+        return {**base, "role": "Depo Bahan Bakar Minyak (BBM) Taktis Satuan",
+                "aset_asli": {**common_real, "nama": f"PLC Depo BBM Satuan {n.satuan} (Aset Fisik Asli)",
+                              "tangki_level_l": round(snap.get("tank_level_l", 14250.0)),
+                              "tangki_kapasitas_l": 20000,
+                              "pompa_status": "AKTIF (BERJALAN)",
+                              "tekanan_bar": round(snap.get("pump_pressure_bar", 2.12), 2),
+                              "suhu_c": round(snap.get("temp_c", 27.2), 1)},
+                "panggung_bayangan": {**common_sh,
                     "nama": f"Bayangan Kembar Digital ({sh.id})",
-                    "status": "DIALIHKAN (SHADOW DIVERT)" if total_diverted else "STANDBY SIAGA",
-                    "tangki_level_l": round(sh.values.get("tank_level_l", 12382.6), 1),
-                    "tangki_kapasitas_l": 20000,
-                    "pompa_status": "MATI (EFEK PALSU)" if has_pump_off else "AKTIF (BERJALAN)",
-                    "tekanan_bar": round(sh.values.get("pump_pressure_bar", 2.04), 2),
-                    "suhu_c": round(sh.values.get("temp_c", 27.8), 1),
-                    "perintah_bahaya_ditangkap": writes_caught,
-                    "kedalaman_terbuka": depth,
-                    "dwell_time_aktif": True
-                }
-            }
+                    "tangki_level_l": round(v["tank_level_l"], 1), "tangki_kapasitas_l": 20000,
+                    "pompa_status": "MATI (EFEK PALSU)" if compromised else "AKTIF (BERJALAN)",
+                    "tekanan_bar": round(v["pump_pressure_bar"], 2),
+                    "suhu_c": round(v["temp_c"], 1)}}
 
     # Tactical Export Endpoints
     @app.get("/api/tactical/rules/stix.json")

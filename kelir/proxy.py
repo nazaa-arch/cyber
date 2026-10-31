@@ -44,6 +44,7 @@ class Kelir:
         self.max_global_conns = 300
         self.max_per_ip_conns = 20
         self.reserved_operator_slots = 30  # Komponen C: Alokasi eksklusif operator sah (QoS Anti-Starvation)
+        self._sleep_overhead_s = 0.004     # Kompensasi adaptif jitter scheduler OS
         self.stats = {"forwarded": 0, "diverted_frames": 0, "fail_closed": 0, "blocked": 0,
                       "forwarded_operator": 0, "forwarded_unlisted_reads": 0,
                       "conns_rejected_pool": 0, "conns_rejected_rate": 0}
@@ -144,7 +145,11 @@ class Kelir:
                 if resp is None:           # gagal aman: putus bersih
                     break
                 if isinstance(resp, _Delayed):
-                    await asyncio.sleep(resp.delay)
+                    adj_delay = max(0.0005, resp.delay - self._sleep_overhead_s)
+                    t_sl = time.perf_counter()
+                    await asyncio.sleep(adj_delay)
+                    over = max(0.0, min(0.015, (time.perf_counter() - t_sl) - adj_delay))
+                    self._sleep_overhead_s = 0.8 * self._sleep_overhead_s + 0.2 * over
                 writer.write(mp.build_mbap(tid, unit, bytes(resp)))
                 await writer.drain()
         finally:

@@ -29,6 +29,7 @@ from kelir.scoring import SessionScorer
 from kelir.session import SessionRegistry
 from shadows.hmi_web import make_hmi_app
 from shadows.modbus_shadow import ShadowDevice
+from shadows.profiles import MIRROR_MAP
 from shadows.smtp_shadow import SMTPShadow
 
 
@@ -38,7 +39,8 @@ class SatuanNode:
                  time_scale: float = 1.0, level: int = 2, transport=None,
                  mirror_interval: float = 1.0, host: str = "127.0.0.1",
                  ports: tuple[int, int, int] = (0, 0, 0), start_hour: float | None = None,
-                 db_path: str = ":memory:", lab_mode: bool = False):
+                 db_path: str = ":memory:", lab_mode: bool = False, kind: str = "bbm"):
+        self.kind = kind              # bbm | genset | cctv | gateway
         self.satuan = satuan
         self.host = host
         self.req_ports = ports
@@ -48,7 +50,8 @@ class SatuanNode:
         self.secret = f"rahasia-{satuan}-{seed}".encode()
         self.whitelist = set(whitelist or set())
         self.bus = Gamelan()
-        self.sessions = SessionRegistry(prefix=f"{satuan.split('-')[-1]}")
+        stamp = "" if db_path == ":memory:" else "-" + time.strftime("%d%H%M")   # ID unik per proses (DB persisten)
+        self.sessions = SessionRegistry(prefix=f"{satuan.split('-')[-1]}{stamp}")
         self.autonomy = Autonomy(level)
         self.blocklist = Blocklist()
         self.chain = HashChain()
@@ -78,8 +81,8 @@ class SatuanNode:
                                  self.bot, self.edge)
         self.bus.subscribe(self.pipeline.on_event)
         self.shadow = ShadowDevice("depo_bbm_01", satuan, seed, self.sessions, self.bus,
-                                   time_scale=time_scale, start_hour=start_hour)
-        self.mirror = StateMirror(real_addr, mirror_interval)
+                                   time_scale=time_scale, start_hour=start_hour, kind=kind)
+        self.mirror = StateMirror(real_addr, mirror_interval, mapping=MIRROR_MAP.get(kind))
         self.watchdog = WatchdogFailToWire(satuan, bus=self.bus)
         self.kelir = Kelir(satuan, real_addr, self.shadow, self.sessions,
                            SessionScorer(self.whitelist), self.bus, self.autonomy,

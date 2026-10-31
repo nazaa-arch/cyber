@@ -9,6 +9,7 @@ import argparse
 import asyncio
 import os
 import pathlib
+import secrets
 import sys
 import tempfile
 import time
@@ -35,6 +36,7 @@ from sim_attacker.real_sim import RealDeviceSim
 OPERATIONAL_UNITS = [
     {
         "satuan": "MABESAD-Siber",
+        "kind": "gateway",
         "alias": ["MABESAD", "Pusinfolahta"],
         "seed": 1,
         "lat": -6.1754,
@@ -48,6 +50,7 @@ OPERATIONAL_UNITS = [
     },
     {
         "satuan": "KODAM-IV-Diponegoro",
+        "kind": "bbm",
         "alias": ["Kodim-DEMO-03", "Kodim-03", "Korem-072", "Kodim-0734"],
         "seed": 3,
         "lat": -7.8014,
@@ -61,6 +64,7 @@ OPERATIONAL_UNITS = [
     },
     {
         "satuan": "KODAM-III-Siliwangi",
+        "kind": "cctv",
         "alias": ["Kodim-DEMO-05", "Kodim-05", "Yonif-315"],
         "seed": 5,
         "lat": -6.5971,
@@ -74,6 +78,7 @@ OPERATIONAL_UNITS = [
     },
     {
         "satuan": "KODAM-V-Brawijaya",
+        "kind": "genset",
         "alias": ["Kodim-DEMO-07", "Kodim-07", "Satrad-222"],
         "seed": 7,
         "lat": -7.2575,
@@ -87,6 +92,7 @@ OPERATIONAL_UNITS = [
     },
     {
         "satuan": "DIVIF-1-Kostrad",
+        "kind": "bbm",
         "alias": ["Kostrad-Cilodong", "Bekang-Kostrad"],
         "seed": 9,
         "lat": -6.4428,
@@ -117,7 +123,7 @@ def _detect_public_url() -> str | None:
     return None
 
 
-async def build_operational_system(host: str, base_port: int, out_dir: str):
+async def build_operational_system(host: str, base_port: int, out_dir: str, fresh: bool = False):
     """Membangun infrastruktur pertahanan terdistribusi TNI AD."""
     pusat = Pusat(Correlator(k_satuan=2, window_s=3600))
     link = Link(pusat)
@@ -126,7 +132,7 @@ async def build_operational_system(host: str, base_port: int, out_dir: str):
     for i, u in enumerate(OPERATIONAL_UNITS):
         name = u["satuan"]
         seed = u["seed"]
-        real = RealDeviceSim()
+        real = RealDeviceSim(kind=u.get("kind", "bbm"))
         rs = await real.serve(host, 0)
         reals.append(rs)
 
@@ -134,7 +140,8 @@ async def build_operational_system(host: str, base_port: int, out_dir: str):
         n = SatuanNode(
             name, seed, (host, rs.sockets[0].getsockname()[1]),
             str(pathlib.Path(out_dir) / name), {"10.0.0.5", "192.168.1.100"},
-            time_scale=60.0, transport=link, host=host, lab_mode=True,
+            db_path=(":memory:" if fresh else str(pathlib.Path(out_dir) / name / "sessions.db")),
+            time_scale=60.0, transport=link, host=host, lab_mode=True, kind=u.get("kind", "bbm"),
             ports=(base_port + i * 10, base_port + i * 10 + 1, base_port + i * 10 + 2)
         )
 
@@ -201,19 +208,49 @@ async def start_realtime_background_engine(nodes: dict, pusat: Pusat):
             await asyncio.sleep(1.0)
 
 
+def _resolve_out_dir(args) -> str:
+    """Direktori audit persisten (bukti forensik bertahan antar-restart).
+
+    --fresh: mode demo bersih (folder sementara, tanpa riwayat lama).
+    Bila folder data tidak bisa ditulis (mis. container read-only) -> jatuh ke folder sementara.
+    """
+    if args.out:
+        return args.out
+    if not args.fresh:
+        base = os.environ.get("WAYANG_DATA_DIR") or str(pathlib.Path(__file__).resolve().parent / "data" / "audit")
+        try:
+            pathlib.Path(base).mkdir(parents=True, exist_ok=True)
+            probe = pathlib.Path(base) / ".w"
+            probe.write_text("1")
+            probe.unlink()
+            return base
+        except OSError:
+            print(f"[PERINGATAN] {base} tidak dapat ditulis; memakai folder sementara (bukti tidak persisten).")
+    return tempfile.mkdtemp(prefix="wayang_live_")
+
+
 async def amain(args):
-    out_dir = args.out or tempfile.mkdtemp(prefix="wayang_live_")
+    out_dir = _resolve_out_dir(args)
     pub = _detect_public_url()
     if pub:
         os.environ["CONSOLE_URL"] = pub
         print(f"[PUBLIC URL] Dalang C4ISR Command Center (ngrok): {pub}")
 
-    pusat, nodes, reals = await build_operational_system(args.host, args.base_port, out_dir)
+    pusat, nodes, reals = await build_operational_system(args.host, args.base_port, out_dir, fresh=args.fresh)
 
     # Jalankan background engine realtime
     bg_task = asyncio.create_task(start_realtime_background_engine(nodes, pusat))
 
-    app = make_console_app(nodes, pusat)
+    if os.environ.get("WAYANG_AUTH", "on").lower() == "off":
+        admin_token = ""
+        print("[PERINGATAN] Autentikasi konsol DIMATIKAN (WAYANG_AUTH=off). Jangan dipakai di jaringan publik.")
+    else:
+        admin_token = os.environ.get("WAYANG_ADMIN_TOKEN") or secrets.token_urlsafe(18)
+        if not os.environ.get("WAYANG_ADMIN_TOKEN"):
+            print(f"[AUTH] Token Komando acak (set WAYANG_ADMIN_TOKEN agar tetap): {admin_token}")
+        else:
+            print("[AUTH] Konsol dilindungi token dari WAYANG_ADMIN_TOKEN.")
+    app = make_console_app(nodes, pusat, admin_token=admin_token)
     print("=" * 70)
     print("       WAYANG: C4ISR CYBER DEFENSE REALTIME PLATFORM (TNI AD)")
     print(f"       Konsol Komando : http://{args.host}:{args.port}")
@@ -239,7 +276,8 @@ def main():
     parser.add_argument("--host", default=default_host, help="Host interface")
     parser.add_argument("--port", type=int, default=default_port, help="Port Web Dalang Console")
     parser.add_argument("--base-port", type=int, default=15020, help="Base port Modbus/HMI")
-    parser.add_argument("--out", default=None, help="Direktori keluaran log/audit")
+    parser.add_argument("--out", default=None, help="Direktori keluaran log/audit (default: data/audit, persisten)")
+    parser.add_argument("--fresh", action="store_true", help="Mode demo bersih: folder sementara, tanpa riwayat sesi lama")
     parser.add_argument("--mode", default="realtime", choices=["realtime", "full", "console"], help="Mode operasi")
     args = parser.parse_args()
 

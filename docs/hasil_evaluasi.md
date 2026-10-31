@@ -1,6 +1,6 @@
 # Hasil Evaluasi WAYANG (Bab 13)
 
-Dihasilkan otomatis oleh `sim_attacker/evaluate.py` pada 2026-10-31 03:45.
+Dihasilkan otomatis oleh `sim_attacker/evaluate.py` pada 2026-11-01 02:10.
 Mesin: Windows 11, 16 CPU logis, Python 3.13.7.
 
 > **Batas klaim.** Angka berikut diukur pada mesin pengembang dengan penyerang
@@ -13,23 +13,23 @@ Mesin: Windows 11, 16 CPU logis, Python 3.13.7.
 | Penyamaran | Tingkat tebakan benar (uji buta 5–10 relawan) | Mendekati 50% | [isi] | belum diuji (butuh manusia, lihat `docs/uji_buta_protokol.md`) |
 | Kualitas alert | FPR pada lalu lintas daftar putih | mendekati 0 | 0.0000 (0 alert dari 105 permintaan sah) | tercapai |
 | Kualitas alert | Presisi / recall alert pada skenario skrip | tinggi | 1.00 / 1.00 (105 sumber berbahaya) | diukur (n=105; terhadap penyerang tak terdaftar berskrip, lihat tabel kelas sah tak terdaftar) |
-| Kecepatan | TTFA deteksi loopback, median / p95 | < 2.000 ms (< 2 dtk) | 13.84 ms / 18.65 ms | tercapai |
-| Kecepatan | TTFA ujung ke ujung (Web HUD WebSocket), median / p95 | < 500 ms (target internal) | 560.5 ms / 763.9 ms | tercapai |
+| Kecepatan | TTFA deteksi loopback, median / p95 | < 2.000 ms (< 2 dtk) | 5.91 ms / 10.61 ms | tercapai |
+| Kecepatan | TTFA ujung ke ujung (Web HUD WebSocket), median / p95 | < 500 ms (target internal) | 288.7 ms / 422.9 ms | tercapai |
 | Nilai adaptif | Dwell time simulasi (CuriousAttacker), statis vs adaptif | adaptif lebih tinggi | 12.4s ± 1.3s vs 27.5s ± 2.0s (+122.5%, 95% CI ±0.7s) | adaptif lebih tinggi |
 | Nilai adaptif | Dwell time simulasi (AggressiveAttacker), statis vs adaptif | adaptif lebih tinggi | 3.5s ± 0.4s vs 5.0s ± 0.4s (+41.8%, 95% CI ±0.2s) | adaptif lebih tinggi |
 | Keselamatan Fisik | Perintah tulis tembus ke aset riil (sentinel 0xDEAD) | 0 perintah | 0 penulisan tembus (0/105 penyerang tembus, 5/5 operator 0x1111 sukses) | tercapai |
 | Keamanan Operator | Operator Terkompromi (Kebijakan Granular) | dialihkan | 100% dialihkan ke bayangan (0xDEAD tertahan di bayangan, 0 ke PLC riil) | tercapai |
-| Latensi Jalur Asli | p95 respons jalur operator sah ke PLC riil | < 50 ms (target proposal) | 32.82 ms | tercapai |
-| Latensi Bayangan | p95 respons jalur bayangan penyerang | Profil PLC (tangga 15–25 ms) | 47.42 ms | sesuai profil PLC (penundaan tangga 15–25 ms disengaja) |
-| Selisih Latensi (Delta) | Selisih latensi sebelum vs sesudah pengalihan (sesi yang sama) | < 5 ms (tidak terdeteksi) | 8.75 ms (sebelum: 33.05 ms vs sesudah: 47.42 ms) | tercapai (Δ < 2 ms) |
-| Ketahanan Fail-to-Wire | Waktu pulih watchdog bypass saat proxy crash / freeze | < 200 ms | 93.5 ms | tercapai (3 miss x 25 ms) |
+| Latensi Jalur Asli | p95 respons jalur operator sah ke PLC riil | < 50 ms (target proposal) | 22.46 ms | tercapai |
+| Latensi Bayangan | p95 respons jalur bayangan penyerang | Profil PLC (tangga 15–25 ms) | 22.52 ms | sesuai profil PLC (penundaan tangga 15–25 ms disengaja) |
+| Selisih Latensi (Delta) | Selisih latensi sebelum vs sesudah pengalihan (sesi yang sama) | < 5 ms (tidak terdeteksi) | 0.10 ms (rata-rata sebelum: 21.42 ms vs sesudah: 21.31 ms) | tercapai (< 5 ms) |
+| Ketahanan Fail-to-Wire | Waktu pulih watchdog bypass saat proxy crash / freeze | < 200 ms | 68.5 ms | tercapai (3 miss x 25 ms) |
 | Peta Register Depo BBM | Sapuan 1.000 register (4 blok peralatan + celah alamat) | Exception 02 pada celah alamat | 1.000 register diuji (blok 0..49, 100..125, 200..225, 300..330 valid; celah 100% Exception 02) | tercapai (identik Schneider M221) |
 | Ketahanan Analisis | Teknik ATT&CK per sesi rata-rata (Bab 13.1) | >= 2 teknik | 3.99 teknik/sesi | tercapai |
 | Ketahanan Analisis | Rasio Benteng Pertahanan (Bab 13.1) | 1.00 (100% terkonsolidasi) | 1.00 | tercapai |
 | Integritas Bukti | Rantai Hash SHA-256 & RFC 6962 Merkle (Bab 13.1) | valid (chain_ok) | 100% valid (chain_ok=True) | tercapai |
-| Sumber daya | 10 node (Kelir + bayangan + Cermin) pada 1 proses, 3000 permintaan | muat di 4 core / 8 GB | CPU 89.2% dari satu core, RSS tambahan 10.7 MB (total 85.9 MB; est single-node container ~38.5 MB [estimasi]) | diukur di mesin pengembang |
+| Sumber daya | 10 node (Kelir + bayangan + Cermin) pada 1 proses, 3000 permintaan | muat di 4 core / 8 GB | CPU 51.6% dari satu core, RSS tambahan 11.0 MB (total 86.3 MB; est single-node container ~38.5 MB [estimasi]) | diukur di mesin pengembang |
 | Ketahanan | Kehilangan ringkasan saat link putus 10s nyata + simulasi reboot/crash | 0 hilang | 0 hilang; antrean tersimpan aman di SQLite lokal dan disinkronkan 100% setelah reboot | tercapai |
-| Bandwidth | Hemat vs event JSON mentah setara (sesi pendek / sesi panjang) | hanya ringkasan | 80.9% (14650 B vs 76754 B) / 92.2% panjang | diukur |
+| Bandwidth | Hemat vs event JSON mentah setara (sesi pendek / sesi panjang) | hanya ringkasan | 80.9% (14816 B vs 77600 B) / 92.2% panjang | diukur |
 
 ## Evaluasi Kelas Sumber Sah Tak Terdaftar, Operator Terkompromi, & Mode Perawatan
 

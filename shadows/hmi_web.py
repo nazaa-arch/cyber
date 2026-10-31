@@ -25,10 +25,9 @@ LOGIN = _env.from_string(
     "<small>GX-HTTPD 1.0</small></body></html>")
 PANEL = _env.from_string(
     "<html><head><title>{{ asset }}</title></head><body><h2>{{ asset }}</h2>"
-    "<table border=1><tr><td>Level tangki</td><td>{{ v.tank }} L</td></tr>"
-    "<tr><td>Tekanan pompa</td><td>{{ v.p }} bar</td></tr>"
-    "{% if depth >= 2 %}<tr><td>Aliran</td><td>{{ v.flow }} L/jam</td></tr>"
-    "<tr><td>Suhu</td><td>{{ v.t }} C</td></tr>{% endif %}</table>"
+    "<table border=1>"
+    "{% for r in rows %}{% if depth >= r[2] %}<tr><td>{{ r[0] }}</td><td>{{ r[1] }}</td></tr>{% endif %}{% endfor %}"
+    "</table>"
     "{% if depth >= 2 %}<p><a href='/api/tags'>Daftar tag</a> | "
     "<a href='/config/backup.cfg'>Cadangan konfigurasi</a></p>{% endif %}"
     "<pre>{{ log }}</pre></body></html>")
@@ -60,8 +59,32 @@ def make_hmi_app(shadow: ShadowDevice, secret: bytes, asset: str = "Depo BBM Sat
 
     def _vals(s):
         v = shadow._session_values(s)
+        if "tank_level_l" not in v:
+            return {"tank": 0, "p": 0.0, "flow": 0, "t": 0.0}
         return {"tank": int(v["tank_level_l"]), "p": round(v["pump_pressure_bar"], 2),
                 "flow": int(v["flow_lph"]), "t": round(v["temp_c"], 1)}
+
+    def _rows(s):
+        """Baris panel per jenis aset: (label, nilai, kedalaman minimum)."""
+        v = shadow._session_values(s)
+        k = shadow.kind
+        if k == "genset":
+            return [("Beban daya", f"{v['power_load_kw']:.1f} kW", 1),
+                    ("Frekuensi", f"{v['frequency_hz']:.2f} Hz", 1),
+                    ("Tegangan", f"{v['voltage_v']:.0f} V", 2),
+                    ("Suhu mesin", f"{v['engine_temp_c']:.1f} C", 2)]
+        if k == "cctv":
+            return [("Status palang", "TERBUKA" if v["gate_angle_deg"] > 5 else "TERKUNCI", 1),
+                    ("Sudut palang", f"{v['gate_angle_deg']:.0f} derajat", 1),
+                    ("Kamera online", f"{int(v['cams_online'])} / 4", 2),
+                    ("Sensor beam", "OK" if v["beam_ok"] >= 1 else "TERPUTUS", 2)]
+        if k == "gateway":
+            return [("Throughput", f"{v['throughput_mbps']:.0f} Mbps", 1),
+                    ("Tautan aktif", f"{int(v['active_links'])}", 1),
+                    ("CPU", f"{v['cpu_pct']:.1f} %", 2)]
+        t = _vals(s)
+        return [("Level tangki", f"{t['tank']} L", 1), ("Tekanan pompa", f"{t['p']} bar", 1),
+                ("Aliran", f"{t['flow']} L/jam", 2), ("Suhu", f"{t['t']} C", 2)]
 
     @app.middleware("http")
     async def _banner(request: Request, call_next):
@@ -105,7 +128,7 @@ def make_hmi_app(shadow: ShadowDevice, secret: bytes, asset: str = "Depo BBM Sat
         _emit(s, "http_panel", depth=depth)
         log = generate("operator_log", seed=int(shadow.start_hour * 100) + shadow.touch_count // 50,
                        hour=shadow.hour(), n=5)
-        return PANEL.render(asset=asset, v=_vals(s), depth=depth, log=log)
+        return PANEL.render(asset=asset, rows=_rows(s), depth=depth, log=log)
 
     @app.get("/api/tags")
     async def tags(request: Request):
@@ -113,8 +136,11 @@ def make_hmi_app(shadow: ShadowDevice, secret: bytes, asset: str = "Depo BBM Sat
         if src not in authed or s.engine.depth < 2:
             return JSONResponse({"error": "not found"}, 404)
         depth = _observe(s, "http_tags")
-        v = _vals(s)
         _emit(s, "http_tags", depth=depth)
+        if shadow.kind != "bbm":
+            return {"tags": [{"nama": r[0].upper().replace(" ", "_"), "nilai": r[1]}
+                             for r in _rows(s)]}
+        v = _vals(s)
         return {"tags": [{"nama": "TANK_LEVEL", "nilai": v["tank"], "satuan": "L"},
                          {"nama": "PUMP_PRESSURE", "nilai": v["p"], "satuan": "bar"},
                          {"nama": "FLOW", "nilai": v["flow"], "satuan": "L/jam"},

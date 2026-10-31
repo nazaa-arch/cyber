@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import os
 import urllib.request
 import urllib.error
 
@@ -26,9 +27,14 @@ if hasattr(sys.stdout, "reconfigure"):
 API_BASE = "http://127.0.0.1:8080"
 
 
+def _auth_headers() -> dict:
+    t = os.environ.get("WAYANG_ADMIN_TOKEN", "")
+    return {"X-Wayang-Token": t} if t else {}
+
+
 def _get(path: str):
     try:
-        req = urllib.request.Request(f"{API_BASE}{path}")
+        req = urllib.request.Request(f"{API_BASE}{path}", headers=_auth_headers())
         with urllib.request.urlopen(req, timeout=5) as res:
             return json.loads(res.read().decode("utf-8"))
     except Exception as e:
@@ -38,7 +44,7 @@ def _get(path: str):
 def _post(path: str, data=None):
     try:
         body = json.dumps(data).encode("utf-8") if data else b"{}"
-        req = urllib.request.Request(f"{API_BASE}{path}", data=body, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(f"{API_BASE}{path}", data=body, headers={"Content-Type": "application/json", **_auth_headers()})
         with urllib.request.urlopen(req, timeout=8) as res:
             return json.loads(res.read().decode("utf-8"))
     except Exception as e:
