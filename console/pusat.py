@@ -16,6 +16,7 @@ class Pusat:
         self.received_bytes = 0
         self._known: set[str] = set()
         self.campaign_list: list[dict] = []
+        self.resolved_campaigns: set[str] = set()
         self.events_log: deque = deque(maxlen=200)
 
     def register_unit(self, satuan: str, lat: float, lon: float, level: str = "KODIM",
@@ -58,11 +59,35 @@ class Pusat:
                 if self.bot:
                     self.bot.notify_campaign(c)
 
+    def resolve_campaigns(self, campaign_id: str | None = None) -> list[str]:
+        """Menandai kampanye aktif sebagai telah dinetralisir oleh komando/operator."""
+        res = []
+        if campaign_id:
+            self.resolved_campaigns.add(campaign_id)
+            res.append(campaign_id)
+        else:
+            for c in self.campaign_list:
+                self.resolved_campaigns.add(c["id"])
+                res.append(c["id"])
+        return res
+
+    def reset_incidents(self) -> None:
+        """Mengosongkan riwayat ancaman aktif dan memulihkan status seluruh pangkalan ke Aman."""
+        self.resolved_campaigns.clear()
+        self.corr.sessions.clear()
+        self.corr.planted.clear()
+        self.campaign_list.clear()
+        self._known.clear()
+
     def status(self, satuan: str) -> str:
         for c in self.campaign_list:
-            if satuan in c["satuan"]:
+            if c["id"] not in self.resolved_campaigns and satuan in c["satuan"]:
                 return "Kampanye Terdeteksi"
         if any(k[0] == satuan for k in self.corr.sessions):
+            # Jika semua kampanye yang melibatkan satuan ini telah dinetralisir
+            active_camps = [c for c in self.campaign_list if satuan in c["satuan"] and c["id"] not in self.resolved_campaigns]
+            if self.campaign_list and not active_camps:
+                return "Aman"
             return "Tipuan Disentuh"
         return "Aman"
 
@@ -70,7 +95,7 @@ class Pusat:
         out = []
         for u in self.units.values():
             st = self.status(u["satuan"])
-            # Hitung total sentuhan/sesi
+            # Hitung total sentuhan/sesi aktif
             touches = sum(1 for k in self.corr.sessions if k[0] == u["satuan"])
             out.append({
                 **u,
@@ -83,6 +108,8 @@ class Pusat:
         """Menghasilkan koordinat garis vektor serangan antar satuan untuk visualisasi peta."""
         vectors = []
         for c in self.campaign_list:
+            if c["id"] in self.resolved_campaigns:
+                continue
             order = c.get("urutan_sentuh", [])
             for i in range(len(order) - 1):
                 s1_name = order[i]["satuan"]

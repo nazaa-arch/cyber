@@ -168,7 +168,20 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
 
     @app.get("/api/campaigns")
     async def api_campaigns():
-        return pusat.campaign_list
+        return [c for c in pusat.campaign_list if c["id"] not in pusat.resolved_campaigns]
+
+    @app.post("/api/tactical/campaign/resolve")
+    async def api_resolve_campaign(body: dict | None = None):
+        cid = body.get("id") if body else None
+        resolved = pusat.resolve_campaigns(cid)
+        return {"ok": True, "resolved": resolved, "msg": "Seluruh kampanye ancaman berhasil dinetralisir dan status pangkalan dipulihkan."}
+
+    @app.post("/api/tactical/incidents/reset")
+    async def api_reset_incidents():
+        pusat.reset_incidents()
+        for n in set(nodes.values()):
+            n.autonomy.kill_switch("console")
+        return {"ok": True, "msg": "Seluruh insiden siber pangkalan berhasil direset ke status Aman."}
 
     @app.get("/api/events/recent")
     async def api_events_recent():
@@ -213,6 +226,11 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
         try:
             p = {"approve": n.approvals.approve, "ignore": n.approvals.ignore,
                  "revoke": n.approvals.revoke}[action](pid)
+            if action == "approve":
+                # Otomatis netralisir status kampanye bila draf blokir disetujui komando
+                for c in pusat.campaign_list:
+                    if satuan in c["satuan"]:
+                        pusat.resolve_campaigns(c["id"])
         except KeyError:
             raise HTTPException(404)
         except ValueError as e:
@@ -237,6 +255,7 @@ def make_console_app(nodes: dict, pusat: Pusat) -> FastAPI:
     async def api_kill():
         for n in set(nodes.values()):
             n.autonomy.kill_switch("console")
+        pusat.resolve_campaigns()
         return await api_autonomy()
 
     @app.get("/api/blocklist")
