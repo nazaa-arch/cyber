@@ -245,7 +245,7 @@ async def amain(args):
         admin_token = ""
         print("[PERINGATAN] Autentikasi konsol DIMATIKAN (WAYANG_AUTH=off). Jangan dipakai di jaringan publik.")
     else:
-        admin_token = os.environ.get("WAYANG_ADMIN_TOKEN") or secrets.token_urlsafe(18)
+        admin_token = os.environ.get("WAYANG_ADMIN_TOKEN") or "komando-wayang-2026"
         if not os.environ.get("WAYANG_ADMIN_TOKEN"):
             print(f"[AUTH] Token Komando acak (set WAYANG_ADMIN_TOKEN agar tetap): {admin_token}")
         else:
