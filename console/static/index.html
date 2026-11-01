@@ -171,7 +171,9 @@ h1, h2, h3, h4, .brand-title, .brand-tag, .tactical-label, .hud-title, .metric-v
   gap: 6px;
   min-height: 30px;
   padding: 0 11px;
-  border: 1px solid transparent;
+  background: var(--navy-850);
+  color: var(--on-dark);
+  border: 1px solid rgba(233, 238, 246, 0.16);
   border-radius: var(--radius);
   font-family: var(--font-head);
   font-size: .7188rem;
@@ -235,10 +237,103 @@ h1, h2, h3, h4, .brand-title, .brand-tag, .tactical-label, .hud-title, .metric-v
   border-color: #991B1B;
   color: #FFF;
 }
+.btn--emerald {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #34D399;
+}
+.btn--emerald:hover {
+  background: var(--emerald);
+  border-color: var(--emerald);
+  color: #020710;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
 .btn--sm {
   min-height: 27px;
   padding: 0 9px;
   font-size: .6875rem;
+}
+.btn--xs {
+  min-height: 24px;
+  padding: 0 9px;
+  font-size: .625rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.dec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dec-card {
+  background: rgba(5, 16, 30, 0.72);
+  border: 1px solid var(--line-dark);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color .15s, background-color .15s;
+}
+.dec-card:hover {
+  background: rgba(10, 25, 46, 0.85);
+  border-color: rgba(201, 162, 39, 0.35);
+}
+.dec-card.is-approved {
+  border-left-color: var(--emerald);
+}
+.dec-card.is-ignored {
+  border-left-color: var(--on-dark-muted);
+  opacity: 0.75;
+}
+.dec-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dec-id-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.dec-id {
+  font-family: var(--font-mono);
+  font-size: .6875rem;
+  font-weight: 700;
+  color: var(--ivory);
+  white-space: nowrap;
+}
+.dec-sat {
+  font-size: .625rem;
+  color: var(--on-dark-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dec-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(233, 238, 246, 0.06);
+}
+.dec-ip {
+  font-size: .625rem;
+  color: var(--on-dark-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.dec-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
 }
 
 /* ==========================================================================
@@ -453,9 +548,10 @@ header#main-header::after {
   background: var(--navy-900);
   border-bottom: 1px solid var(--line-dark);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 0 20px;
-  gap: 16px;
+  padding: 6px 20px;
+  gap: 10px 14px;
   font-size: .6875rem;
 }
 .deck-group {
@@ -526,6 +622,7 @@ header#main-header::after {
 
 .drill-cluster {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
@@ -2399,18 +2496,34 @@ async function refresh() {
   `).join('') : '<span style="color:var(--on-dark-muted)">Belum terdeteksi kampanye lintas satuan aktif. Seluruh pangkalan aman terkendali.</span>';
 
   // 4. Dalang Approvals Queue
-  $('dec').innerHTML = (d && d.length) ? '<table class="c4-table"><tr><th>ID</th><th>Sumber IP</th><th>Status</th><th>Aksi</th></tr>' + d.map(p => `
-    <tr>
-      <td><b>${esc(p.id)}</b><br><small style="color:var(--on-dark-muted)">${esc(p.satuan)}</small></td>
-      <td><span class="mono" style="color:var(--cyan)">${esc(p.src)}</span></td>
-      <td><span class="unit-status-pill ${p.status === 'approved' ? 'status-aman' : 'status-tipuan'}">${p.status}</span></td>
-      <td>${p.status === 'pending' ? `
-        <button class="btn btn--sm" style="color:var(--emerald);border-color:rgba(16,185,129,0.3)" onclick="post('/api/decisions/${p.satuan}/${p.id}/approve')">Setujui</button>
-        <button class="btn btn--ghost btn--sm" onclick="post('/api/decisions/${p.satuan}/${p.id}/ignore')">Abaikan</button>` :
-        p.status === 'approved' ? `<button class="btn btn--danger btn--sm" onclick="post('/api/decisions/${p.satuan}/${p.id}/revoke')">Cabut</button>` : ''}
-      </td>
-    </tr>
-  `).join('') + '</table>' : '<span style="color:var(--on-dark-muted);font-size:.6875rem">Semua usulan blokir telah ditinjau.</span>';
+  $('dec').innerHTML = (d && d.length) ? '<div class="dec-list">' + d.map(p => {
+    const stCls = p.status === 'approved' ? 'status-aman' : (p.status === 'ignored' ? 'status-aman' : 'status-tipuan');
+    const cardCls = p.status === 'approved' ? 'is-approved' : (p.status === 'ignored' ? 'is-ignored' : '');
+    const stLabel = p.status === 'approved' ? 'DISETUJUI' : (p.status === 'ignored' ? 'DIABAIKAN' : 'PENDING');
+    return `
+    <div class="dec-card ${cardCls}">
+      <div class="dec-top">
+        <div class="dec-id-group">
+          <span class="dec-id">${esc(p.id)}</span>
+          <span class="dec-sat" title="${esc(p.satuan)}">· ${esc(p.satuan)}</span>
+        </div>
+        <span class="unit-status-pill ${stCls}">${stLabel}</span>
+      </div>
+      <div class="dec-bottom">
+        <div class="dec-ip">
+          <span>Target IP:</span>
+          <span class="mono" style="color:var(--cyan);font-weight:700">${esc(p.src)}</span>
+        </div>
+        <div class="dec-actions">
+          ${p.status === 'pending' ? `
+            <button class="btn btn--emerald btn--xs" onclick="post('/api/decisions/${esc(p.satuan)}/${esc(p.id)}/approve')">✓ Setujui</button>
+            <button class="btn btn--ghost btn--xs" onclick="post('/api/decisions/${esc(p.satuan)}/${esc(p.id)}/ignore')">Abaikan</button>` :
+            p.status === 'approved' ? `<button class="btn btn--danger btn--xs" onclick="post('/api/decisions/${esc(p.satuan)}/${esc(p.id)}/revoke')">✕ Cabut Blokir</button>` :
+            '<span style="font-size:.5938rem;color:var(--on-dark-muted)">Diarsipkan</span>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('') + '</div>' : '<span style="color:var(--on-dark-muted);font-size:.6875rem">Semua usulan blokir telah ditinjau.</span>';
 
   // 5. Tracked Sessions
   $('ses').innerHTML = '<table class="c4-table"><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap</th><th>Level</th><th>Teknik</th></tr>' +
