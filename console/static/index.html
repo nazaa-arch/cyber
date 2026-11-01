@@ -1053,6 +1053,7 @@ main#ops-theater {
   display: flex;
   flex-direction: column;
   position: relative;
+  min-width: 0;
 }
 .scada-panel.real { border-left: 3px solid var(--teal); }
 .scada-panel.shadow { border-left: 3px solid var(--gold); }
@@ -1061,6 +1062,7 @@ main#ops-theater {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 .scada-title {
@@ -1304,6 +1306,7 @@ main#ops-theater {
 
 .scada-metrics {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1369,17 +1372,22 @@ main#ops-theater {
 }
 .rail-tab-btn {
   flex: 1;
-  padding: 8px 4px;
+  min-width: 0;
+  padding: 9px 3px;
   font-family: var(--font-head);
-  font-size: .625rem;
+  font-size: .575rem;
   font-weight: 700;
-  letter-spacing: .1em;
+  letter-spacing: .05em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--on-dark-muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   transition: all .15s;
 }
@@ -1397,6 +1405,7 @@ main#ops-theater {
   flex: 1;
   padding: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1411,89 +1420,257 @@ main#ops-theater {
   font-size: .6563rem;
   height: 240px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .term-line {
-  padding: 3px 5px;
-  border-bottom: 1px solid rgba(233, 238, 246, 0.04);
+  padding: 5px 6px;
+  border-bottom: 1px solid rgba(233, 238, 246, 0.05);
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 3px;
   cursor: pointer;
-  align-items: center;
   transition: background-color .15s;
 }
 .term-line:hover {
   background: rgba(31, 111, 139, 0.15);
 }
+.term-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.term-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
 .term-ts {
   color: var(--on-dark-muted);
-  min-width: 58px;
-  font-size: .5938rem;
+  font-size: .5625rem;
+  white-space: nowrap;
+  flex: none;
 }
 .term-src {
   color: var(--cyan);
   font-weight: 700;
-  min-width: 90px;
+  font-size: .625rem;
+  white-space: nowrap;
+  flex: none;
 }
-.term-act {
-  color: var(--ivory);
-  flex: 1;
+.term-sat {
+  color: var(--on-dark-muted);
+  font-size: .5625rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.term-act {
+  color: var(--ivory);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.term-act-txt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: .625rem;
+}
+.term-tags-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+}
 .term-tag {
   padding: 1px 5px;
-  border-radius: var(--radius);
-  font-size: .5313rem;
+  border-radius: 2px;
+  font-size: .5rem;
   font-weight: 800;
-  font-family: var(--font-head);
-  letter-spacing: .06em;
+  font-family: var(--font-mono);
+  letter-spacing: .04em;
+  white-space: nowrap;
 }
 
-/* MITRE ATT&CK for ICS Matrix */
+/* MITRE ATT&CK for ICS Matrix (Stacked 5x3 Tactical Grid) */
+.attck-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.attck-filter-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid var(--line-gold);
+  border-radius: var(--radius);
+  font-size: .5625rem;
+  color: var(--gold-soft);
+}
 .attck-matrix-deck {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .attck-col {
   background: var(--navy-950);
   border: 1px solid var(--line-dark);
+  border-left: 2px solid rgba(201, 162, 39, 0.4);
   border-radius: var(--radius);
-  padding: 4px;
+  padding: 6px 8px;
+  transition: border-color .15s;
+}
+.attck-col.has-active {
+  border-left-color: var(--cyan);
+}
+.attck-col.has-danger {
+  border-left-color: var(--crimson);
+}
+.attck-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line-dark);
 }
 .attck-col-title {
   font-family: var(--font-head);
-  font-size: .5rem;
+  font-size: .5625rem;
   font-weight: 800;
-  letter-spacing: .1em;
+  letter-spacing: .09em;
   color: var(--gold);
   text-transform: uppercase;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--line-dark);
-  padding-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attck-col-badge {
+  font-family: var(--font-mono);
+  font-size: .5rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(233, 238, 246, 0.05);
+  border: 1px solid var(--line-dark);
+  color: var(--on-dark-muted);
+  white-space: nowrap;
+  flex: none;
+}
+.attck-col-badge.active {
+  background: rgba(31, 111, 139, 0.25);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--cyan);
+}
+.attck-col-badge.danger {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(220, 38, 38, 0.5);
+  color: #FCA5A5;
+}
+.attck-cells-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
 }
 .attck-cell {
   background: var(--navy-900);
   border: 1px solid var(--line-dark);
   border-radius: var(--radius);
-  padding: 2px 4px;
-  margin-bottom: 2px;
-  font-size: .5313rem;
-  font-weight: 700;
+  padding: 5px 6px;
+  min-height: 36px;
   color: var(--on-dark-muted);
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  transition: all .15s ease;
+}
+.attck-cell-top {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 4px;
+}
+.attck-id {
+  font-family: var(--font-mono);
+  font-size: .625rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  line-height: 1.1;
+}
+.attck-cnt {
+  font-family: var(--font-mono);
+  font-size: .4688rem;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  line-height: 1.35;
+}
+.attck-name {
+  font-family: var(--font-body);
+  font-size: .5625rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.92;
 }
 .attck-cell.active {
-  background: rgba(31, 111, 139, 0.3);
+  background: rgba(31, 111, 139, 0.28);
   border-color: var(--teal);
   color: #FFF;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.15);
+}
+.attck-cell.active .attck-id {
+  color: var(--cyan);
 }
 .attck-cell.danger {
-  background: rgba(127, 29, 29, 0.35);
+  background: rgba(127, 29, 29, 0.36);
   border-color: var(--crimson);
   color: var(--crimson-text);
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.2);
+}
+.attck-cell.danger .attck-id {
+  color: #FCA5A5;
+}
+.attck-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  background: rgba(2, 7, 16, 0.65);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  font-size: .5313rem;
+  color: var(--on-dark-muted);
+}
+.attck-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.attck-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 /* C4ISR Table */
@@ -1883,7 +2060,12 @@ main#ops-theater {
         <span style="font-size:.5625rem;color:var(--on-dark-muted)">Klik baris untuk inspeksi DPI</span>
       </div>
       <div class="term-stream mono" id="term-feed">
-        <div class="term-line"><span class="term-ts">SYSTEM</span><span class="term-src">WAYANG KERNEL</span><span class="term-act">Mesin C4ISR siap. Menunggu aktivitas jaringan...</span></div>
+        <div class="term-line">
+          <div class="term-row-top">
+            <div class="term-meta-left"><span class="term-ts">SYSTEM</span><span class="term-src">WAYANG KERNEL</span></div>
+          </div>
+          <div class="term-act"><span class="term-act-txt">Mesin C4ISR siap. Menunggu aktivitas jaringan...</span></div>
+        </div>
       </div>
       
       <div style="margin-top:6px;border-top:1px solid var(--line-gold);padding-top:8px">
@@ -1898,10 +2080,22 @@ main#ops-theater {
 
     <!-- TAB 2: MITRE ATT&CK for ICS Matrix -->
     <div class="rail-tab-body" id="tab-pane-attck" style="display:none">
-      <span class="kicker" style="margin-bottom:4px">Pemetaan Taktis MITRE for ICS</span>
+      <div class="attck-top-row">
+        <span class="kicker">Pemetaan Taktis MITRE for ICS</span>
+        <span id="attck-summary-pill" class="unit-status-pill status-aman" style="font-size:.5rem">0 TEKNIK AKTIF</span>
+      </div>
+      <div class="attck-filter-bar" id="attck-filter-bar">
+        <span id="attck-filter-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Filter Sesi</span>
+        <button type="button" class="btn btn--ghost btn--xs" style="min-height:18px;padding:0 6px;font-size:.5rem" onclick="clearMatrixFilter()">✕ Semua</button>
+      </div>
       <div class="attck-matrix-deck" id="attck-matrix"></div>
-      <div style="font-size:.5938rem;color:var(--on-dark-muted);margin-top:10px;line-height:1.4">
-        Setiap manipulasi fungsi Modbus dianalisis secara heuristik dan dipetakan langsung ke taktik ICS (T0801, T0840, T0855).
+      <div class="attck-legend">
+        <span class="attck-legend-item"><span class="attck-dot" style="background:rgba(166,182,203,0.4)"></span>Siaga</span>
+        <span class="attck-legend-item"><span class="attck-dot" style="background:var(--cyan)"></span>Observasi / Recon</span>
+        <span class="attck-legend-item"><span class="attck-dot" style="background:#EF4444"></span>Manipulasi OT</span>
+      </div>
+      <div style="font-size:.5625rem;color:var(--on-dark-muted);line-height:1.4">
+        Setiap fungsi Modbus &amp; akses HMI dipetakan otomatis secara heuristik ke matriks taktis MITRE ATT&amp;CK for ICS.
       </div>
     </div>
 
@@ -2540,35 +2734,126 @@ async function openMerkleModal() {
   }
 }
 
-// MITRE ATT&CK for ICS Matrix
+// MITRE ATT&CK for ICS Matrix (5x3 Symmetric Tactical Grid)
 const ICS_TACTICS = [
-  { title: 'Initial Access', cells: [{ id: 'T0817', n: 'Drive-by' }, { id: 'T0819', n: 'Exploit App' }, { id: 'T0886', n: 'Remote Svcs' }] },
-  { title: 'Execution', cells: [{ id: 'T0807', n: 'Command CLI' }, { id: 'T0823', n: 'GUI Script' }] },
-  { title: 'Discovery', cells: [{ id: 'T0840', n: 'Network Scan' }, { id: 'T0846', n: 'Seq Scan' }, { id: 'T0888', n: 'Device ID' }] },
-  { title: 'Collection', cells: [{ id: 'T0801', n: 'Process Data' }, { id: 'T0802', n: 'Auto Poll' }, { id: 'T0861', n: 'Point Read' }] },
-  { title: 'Impair Control', cells: [{ id: 'T0855', n: 'Unauth Write' }, { id: 'T0836', n: 'Modify Param' }, { id: 'T0831', n: 'Manipulation' }] }
+  {
+    title: 'Initial Access & Cred',
+    cells: [
+      { id: 'T0812', n: 'Default Creds', full: 'Default Credentials (Login HMI)' },
+      { id: 'T0859', n: 'Valid Accounts', full: 'Valid Accounts / Canary Honeytoken' },
+      { id: 'T0886', n: 'Remote Services', full: 'Remote Services Access' }
+    ]
+  },
+  {
+    title: 'Execution & Program',
+    cells: [
+      { id: 'T0807', n: 'Command CLI', full: 'Command-Line Interface' },
+      { id: 'T0823', n: 'GUI Scripting', full: 'Graphical User Interface' },
+      { id: 'T0845', n: 'Program Upload', full: 'Program Upload / Config Exfil' }
+    ]
+  },
+  {
+    title: 'Discovery',
+    cells: [
+      { id: 'T0840', n: 'Network Scan', full: 'Network Connection Enumeration' },
+      { id: 'T0846', n: 'Remote System', full: 'Remote System Discovery (Seq Scan)' },
+      { id: 'T0888', n: 'Device Info ID', full: 'Remote System Information Discovery (FC 43)' }
+    ]
+  },
+  {
+    title: 'Collection',
+    cells: [
+      { id: 'T0801', n: 'Monitor Process', full: 'Monitor Process State (FC 1-4)' },
+      { id: 'T0802', n: 'Auto Collection', full: 'Automated Collection Polling' },
+      { id: 'T0861', n: 'Point & Tag ID', full: 'Point & Tag Identification' }
+    ]
+  },
+  {
+    title: 'Impair Process Control',
+    cells: [
+      { id: 'T0855', n: 'Unauth Command', full: 'Unauthorized Command Message (FC 5/6/15/16)' },
+      { id: 'T0836', n: 'Modify Param', full: 'Modify Parameter Register' },
+      { id: 'T0831', n: 'Control Manip.', full: 'Manipulation of Control Actuator' }
+    ]
+  }
 ];
 
-function renderMatrix(activeTechs = []) {
-  $('attck-matrix').innerHTML = ICS_TACTICS.map(col => `
-    <div class="attck-col">
-      <div class="attck-col-title">${esc(col.title)}</div>
-      ${col.cells.map(c => {
-        const isActive = activeTechs.includes(c.id);
-        const isDanger = ['T0855', 'T0836', 'T0831'].includes(c.id) && isActive;
-        return `<div class="attck-cell ${isDanger ? 'danger' : (isActive ? 'active' : '')}">
-          <span>${c.id}</span>
-          <span style="font-size:7.5px;font-weight:400">${c.n}</span>
-        </div>`;
-      }).join('')}
-    </div>
-  `).join('');
+let _matrixFilter = null;
+let _lastGlobalCounts = {};
+
+function clearMatrixFilter() {
+  _matrixFilter = null;
+  const fb = $('attck-filter-bar');
+  if (fb) fb.style.display = 'none';
+  renderMatrix(_lastGlobalCounts);
+}
+
+function renderMatrix(techInput = {}) {
+  const counts = {};
+  if (Array.isArray(techInput)) {
+    techInput.forEach(t => { if (t) counts[t] = (counts[t] || 0) + 1; });
+  } else if (techInput && typeof techInput === 'object') {
+    for (const [k, v] of Object.entries(techInput)) {
+      const c = (v && typeof v === 'object') ? (v.count || 0) : (+v || 0);
+      if (c > 0) counts[k] = c;
+    }
+  }
+
+  let totalActive = 0;
+  let anyDanger = false;
+
+  $('attck-matrix').innerHTML = ICS_TACTICS.map(col => {
+    let colHits = 0;
+    let colDanger = false;
+    const cellsHtml = col.cells.map(c => {
+      const hit = counts[c.id] || 0;
+      const isActive = hit > 0;
+      const isDanger = ['T0855', 'T0836', 'T0831'].includes(c.id) && isActive;
+      if (isActive) { colHits++; totalActive++; }
+      if (isDanger) { colDanger = true; anyDanger = true; }
+      const tip = `${c.id} — ${c.full || c.n}${hit > 0 ? ' (' + hit + ' kejadian)' : ' (Siaga)'}`;
+      return `<div class="attck-cell ${isDanger ? 'danger' : (isActive ? 'active' : '')}" title="${esc(tip)}">
+        <div class="attck-cell-top">
+          <span class="attck-id">${c.id}</span>
+          ${hit > 0 ? `<span class="attck-cnt">×${hit}</span>` : ''}
+        </div>
+        <div class="attck-name">${esc(c.n)}</div>
+      </div>`;
+    }).join('');
+
+    const colCls = colDanger ? 'has-danger' : (colHits > 0 ? 'has-active' : '');
+    const badgeCls = colDanger ? 'danger' : (colHits > 0 ? 'active' : '');
+    const badgeTxt = colHits > 0 ? `${colHits}/${col.cells.length} AKTIF` : 'SIAGA';
+
+    return `
+      <div class="attck-col ${colCls}">
+        <div class="attck-col-head">
+          <div class="attck-col-title">${esc(col.title)}</div>
+          <span class="attck-col-badge ${badgeCls}">${badgeTxt}</span>
+        </div>
+        <div class="attck-cells-grid">${cellsHtml}</div>
+      </div>
+    `;
+  }).join('');
+
+  const pill = $('attck-summary-pill');
+  if (pill) {
+    pill.className = 'unit-status-pill ' + (anyDanger ? 'status-kampanye' : (totalActive > 0 ? 'status-tipuan' : 'status-aman'));
+    pill.innerText = totalActive > 0 ? `${totalActive} TEKNIK TERDETEKSI` : 'SIAGA AKTIF';
+  }
 }
 
 async function openSes(sat, id) {
   curSat = sat;
   const r = await J(`/api/replay/${sat}/${id}`);
   const allTechs = r.flatMap(e => e.techniques || []);
+  _matrixFilter = { sat, id, techs: allTechs };
+  const fb = $('attck-filter-bar');
+  const fl = $('attck-filter-label');
+  if (fb && fl) {
+    fb.style.display = 'flex';
+    fl.innerText = `Sesi: ${id} (${sat})`;
+  }
   renderMatrix(allTechs);
 
   const firstTabBtn = document.querySelector('.rail-tab-btn');
@@ -2735,19 +3020,49 @@ async function refresh() {
     `;
   }).join('') + '</div>' : '<span style="color:var(--on-dark-muted);font-size:.6875rem">Belum ada sesi penyerang yang terekam.</span>';
 
+  // 5b. Live MITRE ATT&CK Heatmap Sync
+  const mergedCounts = {};
+  if (h && typeof h === 'object' && !Array.isArray(h)) {
+    for (const [k, v] of Object.entries(h)) {
+      if (v && v.count) mergedCounts[k] = v.count;
+    }
+  }
+  if (Array.isArray(s)) {
+    s.forEach(item => {
+      (item.techniques || []).forEach(tk => {
+        if (!mergedCounts[tk]) mergedCounts[tk] = 1;
+      });
+    });
+  }
+  _lastGlobalCounts = mergedCounts;
+  if (!_matrixFilter) {
+    renderMatrix(mergedCounts);
+  }
+
   // 6. Live Stream
   if (Array.isArray(evts) && evts.length) {
-    $('term-feed').innerHTML = evts.slice(0, 15).map(e => `
-      <div class="term-line" onclick="openPacketModal()">
-        <span class="term-ts">${new Date(e.ts * 1000).toLocaleTimeString()}</span>
-        <span class="term-src">${esc(e.src)}</span>
-        <span class="term-act">
-          [<b>${esc(e.satuan)}</b>] ${esc(e.action || e.stage || 'Aktivitas Modbus')}
-          ${(e.techniques || []).map(t => `<span class="term-tag" style="background:var(--crimson-wine);color:var(--crimson-text)">${t}</span>`).join(' ')}
-          ${e.diverted ? '<span class="term-tag" style="background:var(--gold-dim);color:var(--gold)">BAYANGAN</span>' : ''}
-        </span>
-      </div>
-    `).join('');
+    $('term-feed').innerHTML = evts.slice(0, 15).map(e => {
+      const tsStr = new Date(e.ts * 1000).toLocaleTimeString('id-ID', { hour12: false });
+      const actLabel = STAGE_LABELS[e.stage] || e.action || e.stage || 'Aktivitas Modbus';
+      const techTags = (e.techniques || []).slice(0, 4).map(t =>
+        `<span class="term-tag" style="background:var(--crimson-wine);color:var(--crimson-text)">${esc(t)}</span>`
+      ).join('');
+      return `
+      <div class="term-line" onclick="openPacketModal()" title="Klik untuk inspeksi frame paket Modbus">
+        <div class="term-row-top">
+          <div class="term-meta-left">
+            <span class="term-ts">${esc(tsStr)}</span>
+            <span class="term-src">${esc(e.src)}</span>
+            <span class="term-sat">· ${esc(e.satuan)}</span>
+          </div>
+          ${e.diverted ? '<span class="term-tag" style="background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,162,39,0.35)">BAYANGAN</span>' : ''}
+        </div>
+        <div class="term-act">
+          <span class="term-act-txt">${esc(actLabel)}</span>
+          <span class="term-tags-wrap">${techTags}</span>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   // 7. Autonomy Sync
@@ -2815,7 +3130,7 @@ $('kill').onclick = () => {
   }
 };
 
-renderMatrix(['T0801', 'T0840', 'T0855', 'T0888']);
+renderMatrix({});
 initWebSocket();
 refresh();
 setInterval(refresh, 2500);
