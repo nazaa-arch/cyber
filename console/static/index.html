@@ -1898,7 +1898,7 @@ async function sim(type) {
   t.innerHTML = 'Memproses injeksi simulasi penyerang siber...';
   playTacticalBeep(650, 'triangle', 0.1);
   try {
-    const r = await post('/api/simulate/' + type);
+    const r = await post('/api/simulate/' + type, { satuan: curSat });
     t.innerHTML = 'Tindakan Selesai: ' + (r.msg || 'Simulasi berhasil ditangani panggung bayangan.');
     playTacticalBeep(type === 't2' ? 1200 : 900, 'sine', 0.25);
   } catch (e) {
@@ -2040,7 +2040,7 @@ async function refreshTwin() {
         </div>
       `;
 
-    } else if (type === 'c4isr') {
+    } else if (type === 'c4isr' || type === 'gateway') {
       realGraphic = `
         <div class="scada-c4isr-wrap">
           <div class="scada-chain-node">BLK #${a.ledger_blocks - 1}</div>
@@ -2171,6 +2171,70 @@ async function refreshTwin() {
 }
 
 // Deep Packet Inspector (Wireshark-Style)
+let _cachedPkts = [];
+function formatWiresharkHex(hexStr, asciiStr) {
+  const bytes = (hexStr || '').trim().split(/\s+/).filter(Boolean);
+  const chars = (asciiStr || '');
+  const lines = [];
+  for (let i = 0; i < bytes.length; i += 16) {
+    const chunk = bytes.slice(i, i + 16);
+    const hexPart = chunk.join(' ').padEnd(47, ' ');
+    const ascPart = chars.slice(i, i + 16);
+    lines.push(i.toString(16).toUpperCase().padStart(4, '0') + '   ' + hexPart + '   ' + ascPart);
+  }
+  lines.push(bytes.length.toString(16).toUpperCase().padStart(4, '0') + '   [MBAP + PDU FRAME INTERCEPTED & LOGGED BY KELIR PROXY]');
+  return lines.join('\n');
+}
+
+function renderSelectedPacket(idx) {
+  const el = $('packet-details');
+  const p = _cachedPkts[idx] || _cachedPkts[0];
+  if (!p) return;
+  const fcNum = (p.pdu && p.pdu.function_code !== undefined) ? p.pdu.function_code : 3;
+  const fcHex = '0x' + fcNum.toString(16).toUpperCase().padStart(2, '0');
+  const rows = _cachedPkts.slice(0, 10).map((item, i) => {
+    const ic = (item.pdu && item.pdu.function_code) || 3;
+    const active = i === idx ? 'background:rgba(201,162,39,0.18);' : '';
+    return `<tr style="cursor:pointer;${active}" onclick="renderSelectedPacket(${i})">
+      <td>${esc(item.id)}</td>
+      <td>${esc(item.satuan)}</td>
+      <td><span class="mono" style="color:var(--cyan)">${esc(item.src_ip || item.src)}</span></td>
+      <td><b>FC ${ic}</b> (${esc(item.action || '')})</td>
+      <td><span class="unit-status-pill ${item.anomaly_level === 'CRITICAL' ? 'status-kampanye' : 'status-tipuan'}">${esc(item.anomaly_level || 'LOW')}</span></td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;background:var(--navy-950);padding:10px;border-radius:var(--radius);border:1px solid var(--line-gold)">
+      <div><b>ID Frame:</b> <span class="mono" style="color:var(--cyan)">${esc(p.id)}</span></div>
+      <div><b>Alamat Sumber IP:</b> <span class="mono" style="color:var(--gold)">${esc(p.src_ip || p.src)}</span></div>
+      <div><b>Satuan Target:</b> ${esc(p.satuan)} · <span class="mono">${esc(p.action || '')}</span></div>
+      <div><b>Sidik Jari Alat:</b> <span class="unit-status-pill ${p.anomaly_level === 'CRITICAL' ? 'status-kampanye' : 'status-tipuan'}">${esc(p.tool_detected)}</span></div>
+    </div>
+    <div class="kicker" style="margin:8px 0 6px">Diseksi Header MBAP &amp; PDU (Modbus Application Protocol):</div>
+    <table class="c4-table mono" style="margin-bottom:12px">
+      <tr><th>Transaction ID</th><th>Protocol ID</th><th>Length</th><th>Unit ID</th><th>Function Code</th><th>Payload PDU</th></tr>
+      <tr>
+        <td>${p.mbap.transaction_id ?? 1}</td>
+        <td>${p.mbap.protocol_id ?? 0} (Modbus/TCP)</td>
+        <td>${p.mbap.length ?? 6} bytes</td>
+        <td>${p.mbap.unit_id ?? 1}</td>
+        <td><b style="color:var(--gold)">FC ${fcNum} (${fcHex})</b></td>
+        <td>${esc((p.pdu && p.pdu.payload_hex) || '-')}</td>
+      </tr>
+    </table>
+    <div class="kicker" style="margin:8px 0 6px">Raw Packet Hex Dump &amp; ASCII Sidebar (${p.raw_len || 12} bytes):</div>
+    <div class="hex-view">${esc(formatWiresharkHex(p.hex_dump, p.ascii_dump))}</div>
+    <div class="kicker" style="margin:12px 0 6px">Daftar Paket Terintersepsi Terbaru (Klik baris untuk inspeksi):</div>
+    <div style="max-height:150px;overflow-y:auto">
+      <table class="c4-table mono">
+        <tr><th>ID</th><th>Satuan</th><th>Sumber</th><th>Fungsi</th><th>Risiko</th></tr>
+        ${rows}
+      </table>
+    </div>
+  `;
+}
+
 async function openPacketModal() {
   $('modal-dpi').style.display = 'flex';
   const el = $('packet-details');
@@ -2181,29 +2245,8 @@ async function openPacketModal() {
       el.innerHTML = '<p style="color:var(--on-dark-muted)">Belum ada frame paket Modbus yang tercatat.</p>';
       return;
     }
-    const p = pkts[0];
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;background:var(--navy-950);padding:10px;border-radius:var(--radius);border:1px solid var(--line-gold)">
-        <div><b>ID Frame:</b> <span class="mono" style="color:var(--cyan)">${esc(p.id)}</span></div>
-        <div><b>Alamat Sumber IP:</b> <span class="mono" style="color:var(--gold)">${esc(p.src_ip || p.src)}</span></div>
-        <div><b>Satuan Target:</b> ${esc(p.satuan)}</div>
-        <div><b>Sidik Jari Alat Penyerang:</b> <span class="unit-status-pill status-tipuan">${esc(p.tool_detected)}</span></div>
-      </div>
-      <div class="kicker" style="margin:8px 0 6px">Diseksi Header MBAP (Modbus Application Protocol):</div>
-      <table class="c4-table mono" style="margin-bottom:12px">
-        <tr><th>Transaction ID</th><th>Protocol ID</th><th>Length</th><th>Unit ID</th><th>Function Code</th></tr>
-        <tr>
-          <td>${p.mbap.transaction_id || 1}</td>
-          <td>${p.mbap.protocol_id || 0} (Modbus/TCP)</td>
-          <td>${p.mbap.length || 6} bytes</td>
-          <td>${p.mbap.unit_id || 1}</td>
-          <td><b style="color:var(--gold)">FC 0${p.pdu.function_code || 3}</b></td>
-        </tr>
-      </table>
-      <div class="kicker" style="margin:8px 0 6px">Raw Packet Hex Dump &amp; ASCII Sidebar:</div>
-      <div class="hex-view">0000   00 0A 00 00 00 06 01 06 75 31 27 0F   ........u1'.
-000C   [MBAP VALID - INTERCEPTED AND LOGGED BY KELIR PROXY]</div>
-    `;
+    _cachedPkts = pkts;
+    renderSelectedPacket(0);
   } catch (e) {
     el.innerHTML = '<p style="color:var(--crimson)">Gagal mengambil data paket.</p>';
   }

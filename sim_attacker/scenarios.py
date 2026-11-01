@@ -11,31 +11,35 @@ import random
 from sim_attacker.modbus_client import ModbusClient
 
 
-async def t1_opportunist(host: str, port: int, src: str | None = None) -> None:
+async def t1_opportunist(host: str, port: int, src: str | None = None,
+                         actuator_addr: int = 11) -> None:
     """T1: pemindai massal; baca berurutan lalu coba tulis dengan nilai sentinel 0xDEAD."""
     async with ModbusClient(host, port, local_addr=src) as c:
         for a in range(0, 12):
             await c.read(4, a, 1)
-        await c.write_reg(11, 0xDEAD)
+        await c.write_reg(actuator_addr, 0xDEAD)
 
 
-async def t2_targeted(host: str, port: int, src: str | None = None) -> None:
-    """T2: enumerasi manual, baca level tangki, coba tulis register pompa dengan 0xDEAD."""
+async def t2_targeted(host: str, port: int, src: str | None = None,
+                      actuator_addr: int = 11) -> None:
+    """T2: enumerasi manual, baca telemetri, matikan aktuator (0) & uji sentinel 0xDEAD."""
     async with ModbusClient(host, port, local_addr=src) as c:
         await c.device_id()
         await c.read(4, 0, 2)
-        await c.read(3, 11, 1)
-        await c.write_reg(11, 0xDEAD)
+        await c.read(3, actuator_addr, 1)
+        await c.write_reg(actuator_addr, 0)
+        await c.write_reg(actuator_addr, 0xDEAD)
         await c.read(4, 0, 2)
 
 
-async def t3_consistency_tester(host: str, port: int, src: str | None = None) -> None:
+async def t3_consistency_tester(host: str, port: int, src: str | None = None,
+                                actuator_addr: int = 11) -> None:
     """T3: menguji konsistensi dengan membaca register yang sama berulang lalu tulis 0xDEAD."""
     async with ModbusClient(host, port, local_addr=src) as c:
         for _ in range(12):
             await c.read(4, 0, 1)
             await asyncio.sleep(0.01)
-        await c.write_reg(11, 0xDEAD)
+        await c.write_reg(actuator_addr, 0xDEAD)
 
 
 async def legit_operator(host: str, port: int, src: str, n: int = 20) -> None:

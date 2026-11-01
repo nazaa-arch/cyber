@@ -26,7 +26,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run WAYANG Test Suite (54 Tests)
+    - name: Run WAYANG Test Suite (55 Tests)
       run: |
         python -m pytest tests -q -p no:warnings
 

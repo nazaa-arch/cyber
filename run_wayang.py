@@ -194,7 +194,7 @@ async def start_realtime_background_engine(nodes: dict, pusat: Pusat):
                     n.sync()
 
             # Setiap 60 detik (30 loop), lakukan pemindaian ringan otomatis untuk menjaga sistem tetap hidup
-            if loop_count % 30 == 0:
+            if loop_count % 30 == 0 and os.environ.get("WAYANG_AUTO_ATTACK") == "1":
                 target_node = nodes.get("KODAM-IV-Diponegoro")
                 if target_node:
                     src_ip = f"203.0.113.{10 + (loop_count % 50)}"

@@ -373,7 +373,13 @@ class ShadowDevice:
         if not self.adaptive:
             s.engine.depth = 1
         target = {"unit": unit, "register": req.register}
-        extra: dict = {"flags": []}
+        extra: dict = {
+            "flags": [],
+            "fc": req.fc,
+            "addr": req.addr,
+            "qty": req.qty,
+            "val": (req.values[0] if (req.is_write and getattr(req, "values", None)) else None),
+        }
         if s.seq >= 3:
             extra["flags"].append("sequential_scan")
         if s.engine.high_tier:

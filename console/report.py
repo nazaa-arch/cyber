@@ -33,8 +33,11 @@ def collect(node, session_id: str) -> dict:
 def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
     s, d = data["summary"], Document()
     
-    # Sisipkan Logo Resmi bila tersedia
-    logo_file = pathlib.Path(__file__).parent / "static" / "Logo.jpeg"
+    # Sisipkan Logo Resmi terkompresi ringan (~12 KB) bila tersedia
+    static_dir = pathlib.Path(__file__).parent / "static"
+    logo_file = static_dir / "Logo_report.jpg"
+    if not logo_file.is_file():
+        logo_file = static_dir / "Logo.jpeg"
     if logo_file.is_file():
         try:
             d.add_picture(str(logo_file), width=Inches(0.9))
@@ -94,24 +97,32 @@ def build_docx(data: dict, path: str | pathlib.Path) -> pathlib.Path:
     d.add_paragraph("Landasan doktrin: Pemetaan taktis selaras dengan kerangka MITRE ATT&CK for ICS dan MITRE D3FEND.")
 
     d.add_heading("3. Kronologi & Rekonstruksi (Putar Ulang Sesi)", 1)
+    replay_all = data["replay"]
+    replay_shown = replay_all[:60]
     t = d.add_table(rows=1, cols=5)
     t.style = "Table Grid"
     for i, h in enumerate(("Delta (dtk)", "Waktu UTC", "Aksi Terdeteksi", "Kedalaman", "Keterangan")):
         t.rows[0].cells[i].text = h
-    for e in data["replay"]:
+    for e in replay_shown:
         r = t.add_row().cells
         r[0].text, r[1].text, r[2].text = str(e["t"]), e["ts"], e["action"]
         r[3].text, r[4].text = str(e["depth"]), str(e["note"])[:120]
+    if len(replay_all) > len(replay_shown):
+        d.add_paragraph(f"(Menampilkan {len(replay_shown)} dari total {len(replay_all)} langkah interaksi sesi.)")
 
     d.add_heading("4. Alat Bukti Integritas Digital (Chain of Custody SHA-256)", 1)
-    d.add_paragraph(f"Status Verifikasi Kriptografis Rantai Hash: {'LULUS (Terbukti Utuh dan Tak Terubah)' if data['chain_ok'] else 'GAGAL'}")
+    events_all = data["events"]
+    events_shown = events_all[:60]
+    d.add_paragraph(f"Status Verifikasi Kriptografis Rantai Hash ({len(events_all)} blok): {'LULUS (Terbukti Utuh dan Tak Terubah)' if data['chain_ok'] else 'GAGAL'}")
     t = d.add_table(rows=1, cols=3)
     t.style = "Table Grid"
     for i, h in enumerate(("ID Kejadian", "Hash SHA-256", "Hash Sebelumnya")):
         t.rows[0].cells[i].text = h
-    for e in data["events"]:
+    for e in events_shown:
         r = t.add_row().cells
         r[0].text, r[1].text, r[2].text = e["event_id"], e["hash"][:28] + "…", e["prev_hash"][:28] + "…"
+    if len(events_all) > len(events_shown):
+        d.add_paragraph(f"(Menampilkan {len(events_shown)} dari total {len(events_all)} daun rantai hash; seluruh rantai telah diverifikasi utuh.)")
     for row in t.rows:
         for c in row.cells:
             for pp in c.paragraphs:

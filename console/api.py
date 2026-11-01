@@ -94,7 +94,7 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
             resp = JSONResponse({"ok": True})
             if token:
                 secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
-                resp.set_cookie(COOKIE_NAME, session_sig, httponly=True, samesite="strict",
+                resp.set_cookie(COOKIE_NAME, session_sig, httponly=True, samesite="lax",
                                 secure=secure, max_age=12 * 3600)
             fails.pop(ip, None)
             return resp
@@ -245,16 +245,31 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
     async def api_campaigns():
         return [c for c in pusat.campaign_list if c["id"] not in pusat.resolved_campaigns]
 
+    def _reset_live_sandboxes(target_satuans: set[str] | None = None):
+        """Pulihkan sesi bayangan aktif di RAM ke posisi siaga tanpa menghapus bukti SQLite/HashChain."""
+        for n in set(nodes.values()):
+            if target_satuans is None or n.satuan in target_satuans:
+                n.sessions.by_id.clear()
+                n.sessions.by_src.clear()
+
     @app.post("/api/tactical/campaign/resolve")
     async def api_resolve_campaign(body: dict | None = None):
         cid = body.get("id") if body else None
+        affected: set[str] | None = None
+        if cid:
+            affected = set()
+            for c in pusat.campaign_list:
+                if c.get("id") == cid:
+                    affected.update(c.get("satuan", []))
         resolved = pusat.resolve_campaigns(cid)
-        return {"ok": True, "resolved": resolved, "msg": "Seluruh kampanye ancaman berhasil dinetralisir dan status pangkalan dipulihkan."}
+        _reset_live_sandboxes(affected)
+        return {"ok": True, "resolved": resolved, "msg": "Seluruh kampanye ancaman berhasil dinetralisir dan panggung bayangan dipulihkan ke Siaga."}
 
     @app.post("/api/tactical/incidents/reset")
     async def api_reset_incidents():
         pusat.reset_incidents()
-        return {"ok": True, "msg": "Tampilan insiden direset ke status Aman. Bukti forensik tetap tersimpan."}
+        _reset_live_sandboxes(None)
+        return {"ok": True, "msg": "Tampilan insiden & panggung bayangan direset ke status Aman. Bukti forensik tetap tersimpan utuh."}
 
     @app.get("/api/events/recent")
     async def api_events_recent():
@@ -370,56 +385,123 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         events_dicts = list(n.chain.events)
         return proof_mgr.generate_dossier(events_dicts)
 
+    def _reconstruct_mbap_frame(ev: dict, tid: int) -> bytes:
+        import struct
+        from shadows import modbus_proto as mp
+        action = str(ev.get("action") or "")
+        target = ev.get("target") if isinstance(ev.get("target"), dict) else {}
+        unit = int(ev.get("unit") or target.get("unit") or 1) & 0xFF
+        fc = ev.get("fc")
+        if fc is None:
+            fc_map = {
+                "read_device_identification": 43,
+                "write_single_register": 6,
+                "diverted_write_alert": 6,
+                "policy_violation_divert": 6,
+                "write_single_coil": 5,
+                "write_multiple_registers": 16,
+                "read_input_registers": 4,
+                "read_holding_registers": 3,
+                "read_discrete_inputs": 2,
+                "read_coils": 1,
+            }
+            fc = fc_map.get(action, 3)
+        fc = int(fc) & 0xFF
+        addr = ev.get("addr")
+        if addr is None:
+            reg = target.get("register")
+            if isinstance(reg, int) and reg >= 1:
+                addr = (reg % 10000) - 1 if reg >= 10000 else reg
+            else:
+                addr = 0
+        addr = max(0, int(addr)) & 0xFFFF
+        qty = max(1, int(ev.get("qty") or 1)) & 0xFFFF
+        raw_val = ev.get("val")
+        if isinstance(raw_val, (list, tuple)):
+            raw_val = raw_val[0] if raw_val else 0
+        val = int(0 if raw_val is None else raw_val) & 0xFFFF
+
+        if fc == 43:
+            pdu = bytes([43, 0x0E, 0x01, 0x00])
+        elif fc == 6:
+            pdu = struct.pack(">BHH", 6, addr, val)
+        elif fc == 5:
+            pdu = struct.pack(">BHH", 5, addr, 0xFF00 if val else 0x0000)
+        elif fc == 16:
+            pdu = struct.pack(">HHB", addr, 1, 2) + struct.pack(">H", val)
+            pdu = bytes([16]) + pdu
+        elif fc in (1, 2, 3, 4):
+            pdu = struct.pack(">BHH", fc, addr, qty)
+        else:
+            pdu = struct.pack(">BHH", fc, addr, 1)
+        return mp.build_mbap(tid & 0xFFFF, unit, pdu)
+
     @app.get("/api/packets/recent")
-    async def api_packets_recent():
+    async def api_packets_recent(satuan: str | None = None):
         from kelir.dpi import OffensiveToolFingerprinter
-        out = []
-        for n in set(nodes.values()):
-            for s in n.store.sessions():
-                for a in s.get("actions", []):
-                    raw_sample = b"\x00\x01\x00\x00\x00\x06\x01\x03\x75\x31\x00\x02"
-                    inspected = OffensiveToolFingerprinter.inspect_frame(raw_sample, s["src"])
-                    out.append({
-                        "id": f"PKT-{abs(hash(s['session'])) % 90000 + 10000}",
-                        "satuan": s["satuan"],
-                        "session": s["session"],
-                        "src": s["src"],
-                        "action": a[1] if isinstance(a, (list, tuple)) else str(a),
-                        **inspected
-                    })
-        return out[:30]
+        candidates = []
+        target_nodes = [node(satuan)] if satuan else list(set(nodes.values()))
+        for n in target_nodes:
+            evs = list(n.chain.events)[-60:]
+            for idx, rec in enumerate(evs):
+                p = rec.get("payload", rec) if isinstance(rec, dict) else {}
+                act = str(p.get("action") or "")
+                if act in ("shadow_divert", "auto_block"):
+                    continue
+                src = str(p.get("src") or "0.0.0.0")
+                sess_id = str(p.get("session") or "ses-00001")
+                tid = (idx + 1) & 0xFFFF
+                raw_frame = _reconstruct_mbap_frame(p, tid)
+                inspected = OffensiveToolFingerprinter.inspect_frame(raw_frame, src)
+                prio = 2 if inspected["pdu"].get("function_code") in (5, 6, 15, 16, 43) else 1
+                candidates.append((prio, idx, {
+                    "id": f"PKT-{rec.get('event_id', idx + 1) if isinstance(rec, dict) else idx + 1}",
+                    "satuan": p.get("satuan", n.satuan),
+                    "session": sess_id,
+                    "src": src,
+                    "action": act or "modbus_frame",
+                    "ts": p.get("ts", ""),
+                    **inspected,
+                }))
+        candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        return [c[2] for c in candidates[:30]]
 
     def _find_latest_session():
         all_sess = []
-        for s_name, n in nodes.items():
+        for n in set(nodes.values()):
+            for s in n.store.sessions():
+                all_sess.append((float(s.get("first_wall", 0.0)), n.satuan, s["session"], n))
             for sid, sess in n.shadow.sessions.by_id.items():
-                ts = getattr(sess, "first_wall", getattr(sess, "first", 0.0))
-                all_sess.append((ts, s_name, sid, n))
+                ts = float(getattr(sess, "first_wall", getattr(sess, "first", 0.0)))
+                all_sess.append((ts, n.satuan, sid, n))
         if not all_sess:
             raise HTTPException(404, "Belum ada sesi rekaman")
         all_sess.sort(key=lambda x: x[0], reverse=True)
         return all_sess[0][1], all_sess[0][2], all_sess[0][3]
 
+    def _generate_docx_sync(n, session: str):
+        data = report.collect(n, session)
+        return report.build_docx(data, n.out / "laporan" / f"berita_acara_{session}.docx")
+
     @app.get("/api/report/latest.docx")
     async def api_report_latest_docx():
         satuan, session, n = _find_latest_session()
-        data = report.collect(n, session)
-        path = report.build_docx(data, n.out / "laporan" / f"berita_acara_{session}.docx")
+        path = await asyncio.to_thread(_generate_docx_sync, n, session)
         return FileResponse(path, filename=path.name)
 
     @app.get("/api/report/latest.html", response_class=HTMLResponse)
     async def api_report_latest_html():
         satuan, session, n = _find_latest_session()
-        return report.build_html(report.collect(n, session))
+        data = await asyncio.to_thread(report.collect, n, session)
+        return report.build_html(data)
 
     @app.get("/api/report/{satuan}/{session}.docx")
     async def api_report_docx(satuan: str, session: str):
         n = node(satuan)
         try:
-            data = report.collect(n, session)
+            path = await asyncio.to_thread(_generate_docx_sync, n, session)
         except KeyError:
             raise HTTPException(404)
-        path = report.build_docx(data, n.out / "laporan" / f"berita_acara_{session}.docx")
         return FileResponse(path, filename=path.name)
 
     @app.get("/api/report/{satuan}/{session}.html", response_class=HTMLResponse)
@@ -473,17 +555,18 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
                         "nama": f"Bayangan DSE7320 Genset Controller ({sh.id})",
                         "trip": compromised,
                         "power_source": "GENSET TRIP / MATI (EFEK PALSU)" if compromised else "PLN UTAMA (SIMULASI)",
-                        "power_load_kw": round(v["power_load_kw"], 1), "power_max_kw": 80.0,
-                        "power_load_pct": round(v["power_load_kw"] / 80.0 * 100, 1),
-                        "frequency_hz": round(v["frequency_hz"], 2),
-                        "voltage_v": round(v["voltage_v"], 1),
+                        "power_load_kw": round(min(v["power_load_kw"], 2.4) if compromised else v["power_load_kw"], 1), "power_max_kw": 80.0,
+                        "power_load_pct": round((min(v["power_load_kw"], 2.4) if compromised else v["power_load_kw"]) / 80.0 * 100, 1),
+                        "frequency_hz": round(min(v["frequency_hz"], 12.5) if compromised else v["frequency_hz"], 2),
+                        "voltage_v": round(min(v["voltage_v"], 48.0) if compromised else v["voltage_v"], 1),
                         "engine_temp_c": round(v["engine_temp_c"], 1),
                         "ats_status": "TRIP TERPUTUS (EFEK PALSU)" if compromised else "NORMAL (SIMULASI)"}}
 
         if kind == "cctv":
             ang = snap.get("gate_angle_deg", 0.0)
             cams = int(snap.get("cams_online", 4))
-            sh_open = v["gate_angle_deg"] > 5
+            sh_open = compromised or (v["gate_angle_deg"] > 5)
+            sh_ang = max(v["gate_angle_deg"], 90.0 if compromised else 0.0)
             return {**base, "role": "Komando Perimeter & Gerbang CCTV Pangkalan",
                     "aset_asli": {**common_real, "nama": "Perimeter Barrier Gate & Video Surveillance Gateway",
                                   "gate_status": "TERBUKA" if ang > 5 else f"TERTUTUP / TERKUNCI ({ang:.0f}°)",
@@ -493,10 +576,10 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
                                   "anpr_verified": f"{int(snap.get('vehicles_today', 14))} KENDARAAN TERVERIFIKASI"},
                     "panggung_bayangan": {**common_sh,
                         "nama": f"Bayangan HikVision NVR & Gate Decoy ({sh.id})",
-                        "gate_status": f"TERBUKA (EFEK PALSU {v['gate_angle_deg']:.0f}°)" if sh_open else "TERTUTUP (SIMULASI 0°)",
+                        "gate_status": f"TERBUKA (EFEK PALSU {sh_ang:.0f}°)" if sh_open else "TERTUTUP (SIMULASI 0°)",
                         "gate_is_open": sh_open,
                         "cctv_feed_status": "LOOPED STATIC DECOY FEED (PALSU)",
-                        "perimeter_beam": "BYPASS TERDETEKSI (SIMULASI)" if v["beam_ok"] < 1 else "NORMAL (SIMULASI)",
+                        "perimeter_beam": "BYPASS TERDETEKSI (SIMULASI)" if sh_open else "NORMAL (SIMULASI)",
                         "anpr_verified": "LOGIN ADMIN DECOY CAPTURED"}}
 
         if kind == "gateway":
@@ -597,37 +680,59 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         n.autonomy.set_level(3, "tactical_lockdown")
         return {"status": "ok", "msg": f"Pangkalan {n.satuan} berhasil di-LOCKDOWN! Otonomi ditingkatkan ke L3 (Blokir Otomatis)."}
 
+    sim_seq = {"n": 10}
+
     @app.post("/api/simulate/{action}")
-    async def api_simulate(action: str):
+    async def api_simulate(action: str, request: Request):
         from sim_attacker import scenarios as sc
-        target_node = nodes.get("KODAM-IV-Diponegoro") or nodes.get("Kodim-DEMO-03")
-        if not target_node:
-            target_node = next(iter(nodes.values()))
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        req_sat = (body or {}).get("satuan") if isinstance(body, dict) else None
+        if req_sat:
+            target_node = node(req_sat)
+        else:
+            target_node = nodes.get("KODAM-IV-Diponegoro") or nodes.get("Kodim-DEMO-03") or next(iter(nodes.values()))
+
+        spec = getattr(target_node.shadow, "spec", None)
+        act_addr = spec.actuator_addr if spec else 11
+        sim_seq["n"] = (sim_seq["n"] % 200) + 1
+        seq = sim_seq["n"]
 
         if action == "t1":
-            await sc.t1_opportunist("127.0.0.1", target_node.ports["shadow"], "127.0.0.88")
+            await sc.t1_opportunist("127.0.0.1", target_node.ports["shadow"],
+                                    f"127.0.1.{seq}", actuator_addr=act_addr)
             target_node.sync()
-            return {"status": "ok", "msg": "Simulasi T1 (Botnet Recon Scan) selesai. Terdeteksi oleh Mesin Adaptif."}
+            return {"status": "ok", "satuan": target_node.satuan,
+                    "msg": f"Simulasi T1 (Recon Scan) pada {target_node.satuan} selesai. Terdeteksi oleh Mesin Adaptif."}
         elif action == "t2":
-            await sc.t2_targeted("127.0.0.1", target_node.ports["kelir"], "127.0.0.99")
+            await sc.t2_targeted("127.0.0.1", target_node.ports["kelir"],
+                                 f"127.0.2.{seq}", actuator_addr=act_addr)
             target_node.sync()
-            return {"status": "ok", "msg": "Simulasi T2 (Manipulasi Kendali ICS) dialihkan secara transparan ke Bayangan! Draf aturan nftables terbit & notifikasi Telegram terkirim."}
+            return {"status": "ok", "satuan": target_node.satuan,
+                    "msg": f"Simulasi T2 pada {target_node.satuan} dialihkan ke Bayangan! Manipulasi register {act_addr} tertahan (0-Harm ke aset fisik riil)."}
         elif action == "campaign":
+            pusat.resolved_campaigns.clear()
             unique_nodes = list({n.satuan: n for n in nodes.values()}.values())
             for idx, n in enumerate(unique_nodes[:3]):
-                await sc.t1_opportunist("127.0.0.1", n.ports["shadow"], f"198.51.100.{idx + 1}")
+                n_spec = getattr(n.shadow, "spec", None)
+                n_act = n_spec.actuator_addr if n_spec else 11
+                await sc.t1_opportunist("127.0.0.1", n.ports["shadow"],
+                                        f"127.0.3.{(seq + idx) % 230 + 10}", actuator_addr=n_act)
                 n.sync()
             return {"status": "ok", "msg": "Simulasi Kampanye Terkoordinasi Multi-Satuan dijalankan. Vektor serangan aktif di Peta Komando C4ISR!"}
         elif action == "phishing":
             target_node.social.on_mail(
                 "sarwa.wibisana.21e3b1@cyber.steamcraft.online",
                 sender="spear-phish@evil-apt.net (185.220.101.5)",
-                subject="PERINTAH MENDESAK: Kalibrasi Register Katup Depo"
+                subject=f"PERINTAH MENDESAK: Kalibrasi Register {target_node.satuan}"
             )
             target_node.social.scan_text("... referensi dokumen nota-dinas-rahasia ...",
                                          src="185.220.101.5", where="email phishing")
             target_node.sync()
-            return {"status": "ok", "msg": "Email Phishing umpan terdeteksi di domain cyber.steamcraft.online dan dicatat di Peta Pengintaian."}
+            return {"status": "ok", "satuan": target_node.satuan,
+                    "msg": f"Email Phishing & Canary Token pada {target_node.satuan} terdeteksi dan dicatat di Peta Pengintaian."}
 
         raise HTTPException(400, "Aksi simulasi tidak dikenal")
 

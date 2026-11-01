@@ -1,7 +1,7 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-54%2F54%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-55%2F55%20passed-brightgreen.svg)]()
 [![Rancangan Keamanan Fisik](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(by%20design)-blue.svg)]()
 [![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-1.50ms%20(loopback)-orange.svg)]()
 [![End-to-End Alert](https://img.shields.io/badge/TTFA%20Telegram-45--120ms%20(e2e)-orange.svg)]()
@@ -134,25 +134,25 @@ Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attack
 
 | Metrik | Definisi dan cara ukur | Hasil | n | Batasan |
 |---|---|---|---|---|
-| **TTFA Deteksi (dalam proses)** | Waktu dari frame Modbus pertama diterima proxy hingga keputusan pengalihan diambil dalam memori loopback. Target proposal: < 2.000 ms (< 2 dtk). | **5.91 ms** (median) / **10.61 ms** (p95) | n = 105 transaksi | Diukur dalam proses internal di loopback; belum mencakup latensi propagasi jaringan WAN. |
-| **TTFA Ujung ke Ujung (Web HUD WebSocket)** | Waktu dari deteksi serangan pertama hingga notifikasi tiba di antarmuka Web HUD operator via WebSocket. (Target internal direvisi: < 500 ms). | **288.7 – 422.9 ms** (median ~289 ms) | n = 105 uji kirim alert | Diukur hingga Web HUD via WebSocket loopback/LAN. Transmisi bot Telegram pihak ketiga via WAN bervariasi bergantung gateway Telegram (~500–2.000 ms). |
+| **TTFA Deteksi (dalam proses)** | Waktu dari frame Modbus pertama diterima proxy hingga keputusan pengalihan diambil dalam memori loopback. Target proposal: < 2.000 ms (< 2 dtk). | **4.42 ms** (median) / **8.52 ms** (p95) | n = 105 transaksi | Diukur dalam proses internal di loopback; belum mencakup latensi propagasi jaringan WAN. |
+| **TTFA Ujung ke Ujung (Web HUD WebSocket)** | Waktu dari deteksi serangan pertama hingga notifikasi tiba di antarmuka Web HUD operator via WebSocket. (Target internal direvisi: < 500 ms). | **283.4 – 417.2 ms** (median ~283 ms) | n = 105 uji kirim alert | Diukur hingga Web HUD via WebSocket loopback/LAN. Transmisi bot Telegram pihak ketiga via WAN bervariasi bergantung gateway Telegram (~500–2.000 ms). |
 | **Dwell Time Penyerang (CuriousAttacker)** | Durasi interaksi penyerang sebelum berhenti pada umpan bayangan adaptif dibanding honeypot statis (CuriousAttacker). Target proposal: adaptif lebih tinggi. | **+122.5%** (27.5s ± 2.0s vs 12.4s ± 1.3s, 95% CI ±0.7s) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi dengan kesabaran acak, bukan manusia nyata. |
 | **Dwell Time Penyerang (AggressiveAttacker)** | Durasi interaksi penyerang agresif multi-register pada umpan adaptif dibanding honeypot statis. Target proposal: adaptif lebih tinggi. | **+41.8%** (5.0s ± 0.4s vs 3.5s ± 0.4s, 95% CI ±0.2s) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi dengan kesabaran acak, bukan manusia nyata. |
 | **Dampak Fisik ke PLC Riil** | Perintah tulis manipulasi berbahaya yang lolos dan dieksekusi pada register PLC riil saat terjadi serangan (verifikasi nilai sentinel: operator `0x1111`, penyerang `0xDEAD`). Target proposal: 0 perintah. | **0 penulisan tembus (0.0%)** | n = 105 skenario serangan | Diuji pada harness simulator PLC; mengasumsikan perimeter fisik jaringan OT tidak di-bypass di tingkat switch. |
 | **Operator Terkompromi (Kebijakan Granular)** | Sumber terdaftar mencoba menulis register di luar izin kebijakan (register offset 11 / kendali pompa). Target: dialihkan ke bayangan. | **100% dialihkan ke bayangan** (0xDEAD tertahan di bayangan, 0 perintah ilegal ke PLC riil) | n = 1 skenario kompromi operator | Membuktikan bahwa workstation operator sah yang terinfeksi malware tidak dapat merusak PLC fisik riil. |
 | **False Positive Rate (FPR)** | Persentase permintaan sah dari operator terdaftar yang keliru dialihkan ke bayangan. Target proposal: mendekati 0. | **0.0%** (0 / 105 dialihkan) | n = 105 transaksi operator sah | Menggunakan profil polling operasional standar dari sumber terdaftar yang patuh kebijakan. |
 | **Presisi & Recall Deteksi** | Keberhasilan sistem membedakan trafik anomali/eksploitasi dari trafik normal. | **1.00 (100%) / 1.00 (100%)** | n = 105 variasi serangan berskrip | Terukur terhadap penyerang tak terdaftar berskrip internal (lihat rincian kelas sah tak terdaftar di bawah). |
-| **Penghematan Bandwidth Taktis** | Rasio perbandingan volume data ringkasan sesi terkompresi WAYANG dibandingkan event JSON mentah setara sesi yang sama. | **80.9% reduksi** (14816 B vs 77600 B mentah; 92.2% pada sesi panjang) | n = 40 sesi | Baseline pembanding adalah log mentah event JSON transaksi biner Modbus tanpa kompresi pada durasi yang sama. |
-| **Latensi Jalur Riil (Overhead p95)** | Tambahan waktu tunda proxy per transaksi Modbus pada koneksi operator sah ke aset riil. Target proposal: < 50 ms. | **22.46 ms** | n = 300 transaksi | Status: **Tercapai** (< 50 ms). |
-| **Latensi Jalur Bayangan (Overhead p95)** | Waktu tunda pada koneksi penyerang yang dilayani oleh emulasi bayangan. Target: sesuai profil emulasi PLC riil. | **22.52 ms** | n = 300 transaksi | Status: **Sesuai profil PLC** (penundaan tangga 15–25 ms disengaja untuk mimikri siklus ladder logic). |
-| **Selisih Latensi (Delta)** | Selisih latensi sebelum vs sesudah pengalihan diukur pada sesi yang sama. Target: < 5 ms (tidak dapat dideteksi penyerang). | **0.10 ms** (rata-rata sebelum: 21.42 ms vs sesudah: 21.31 ms) | n = 110 transaksi beruntun | Status: **Tercapai (< 5 ms)** (profil adaptif meniru distribusi aset riil secara kontinu). |
-| **Ketahanan Fail-to-Wire** | Waktu pulih watchdog fail-to-wire bypass saat proxy freeze / crash untuk menjamin ketersediaan instalasi vital pangkalan. Target: < 200 ms. | **68.5 ms** | n = 1 simulasi freeze | Status: **Tercapai** (3 miss berturut-turut pada interval 25 ms memicu relai bypass fisik). |
+| **Penghematan Bandwidth Taktis** | Rasio perbandingan volume data ringkasan sesi terkompresi WAYANG dibandingkan event JSON mentah setara sesi yang sama. | **81.3% reduksi** (14824 B vs 79233 B mentah; 92.4% pada sesi panjang) | n = 40 sesi | Baseline pembanding adalah log mentah event JSON transaksi biner Modbus tanpa kompresi pada durasi yang sama. |
+| **Latensi Jalur Riil (Overhead p95)** | Tambahan waktu tunda proxy per transaksi Modbus pada koneksi operator sah ke aset riil. Target proposal: < 50 ms. | **22.50 ms** | n = 300 transaksi | Status: **Tercapai** (< 50 ms). |
+| **Latensi Jalur Bayangan (Overhead p95)** | Waktu tunda pada koneksi penyerang yang dilayani oleh emulasi bayangan. Target: sesuai profil emulasi PLC riil. | **22.83 ms** | n = 300 transaksi | Status: **Sesuai profil PLC** (penundaan tangga 15–25 ms disengaja untuk mimikri siklus ladder logic). |
+| **Selisih Latensi (Delta)** | Selisih latensi sebelum vs sesudah pengalihan diukur pada sesi yang sama. Target: < 5 ms (tidak dapat dideteksi penyerang). | **0.06 ms** (rata-rata sebelum: 21.60 ms vs sesudah: 21.54 ms) | n = 110 transaksi beruntun | Status: **Tercapai (< 5 ms)** (profil adaptif meniru distribusi aset riil secara kontinu). |
+| **Ketahanan Fail-to-Wire** | Waktu pulih watchdog fail-to-wire bypass saat proxy freeze / crash untuk menjamin ketersediaan instalasi vital pangkalan. Target: < 200 ms. | **67.0 ms** | n = 1 simulasi freeze | Status: **Tercapai** (3 miss berturut-turut pada interval 25 ms memicu relai bypass fisik). |
 | **Peta Register Depo BBM** | Sapuan 1.000 register Modbus (4 blok peralatan: tangki, pompa 1-2, cadangan, genset/ATS) dengan celah alamat wajar. Target: Exception 02 pada celah alamat. | **1.000 register diuji** (Blok 0..49, 100..125, 200..225, 300..330 mengembalikan telemetri valid; celah 100% Modbus Exception 02) | n = 1.000 register (FC 03 & 04) | Status: **Tercapai** (arsitektur memori identik Schneider Modicon M221 TM221CE24T). |
 | **Teknik ATT&CK per Sesi (Bab 13.1)** | Rata-rata jumlah teknik MITRE ATT&CK for ICS yang berhasil dipancing dari setiap penyerang. Target proposal: >= 2 teknik. | **3.99 teknik/sesi** | n = 105 sesi serangan | Status: **Tercapai** (ekstraksi intelijen taktis multi-tahap). |
 | **Rasio Benteng Pertahanan (Bab 13.1)** | Rasio konsolidasi pertahanan dan usulan blokir taktis yang diusulkan ke komando. Target proposal: 1.00. | **1.00** | n = 105 sesi | Status: **Tercapai** (100% kampanye beresiko menghasilkan draf blokir L3). |
 | **Integritas Rantai Bukti (Bab 13.1)** | Verifikasi integritas rantai hash kriptografis SHA-256 dan Merkle Tree (RFC 6962) pada seluruh log forensik. | **100% valid (chain_ok=True)** | Seluruh event log forensik | Menjamin chain of custody alat bukti digital di hadapan audit forensik militer. |
 | **Ketahanan Putus Link (Store & Forward)** | Uji isolasi komunikasi WAN terputus selama link blackout + simulasi crash reboot proses; integritas data diuji saat tautan pulih. Target proposal: 0 data hilang. | **0 data hilang (100% tersinkron)** | n = 40 sesi di-buffer di SQLite | Tersimpan aman pada antrean SQLite lokal terenkripsi di edge node; 100% data tersinkronisasi kembali saat link aktif. |
-| **Penggunaan Sumber Daya Komputasi** | Penggunaan CPU dan RAM footprint pada 10 node satuan pangkalan (Kelir + bayangan + State Mirror). Target: muat di 4 core / 8 GB. | **CPU 51.6% dari 1 core, RAM total 86.3 MB** (est. single container ~38.5 MB [estimasi]) | 10 node simultan | Sangat ringan, dapat beroperasi pada hardware mini-PC taktis lapangan / edge switch. |
+| **Penggunaan Sumber Daya Komputasi** | Penggunaan CPU dan RAM footprint pada 10 node satuan pangkalan (Kelir + bayangan + State Mirror). Target: muat di 4 core / 8 GB. | **CPU 63.7% dari 1 core, RAM total 86.1 MB** (est. single container ~38.5 MB [estimasi]) | 10 node simultan | Sangat ringan, dapat beroperasi pada hardware mini-PC taktis lapangan / edge switch. |
 | **Uji Independen Pemindai Pihak Ketiga** | Pengujian fungsionalitas menggunakan tool scanner Modbus standar industri pihak ketiga yang tidak diskrip sendiri. | **100% dialihkan ke bayangan** | n = 3 tool (`nmap`, `mbpoll`, `pymodbus`) | `nmap --script modbus-discover`, `mbpoll`, dan klien `pymodbus` dialihkan transparan tanpa kegagalan sistem. |
 | **Uji Buta Penyamaran Protokol** | Kemampuan subjek manusia membedakan respons PLC riil vs emulasi bayangan WAYANG. Target Bab 13: rasio tebakan ~50% (setara tebakan acak). | **[isi]** | n = 5–10 relawan manusia | Membutuhkan relawan operator/peneliti ICS independen sesuai metodologi `docs/uji_buta_protokol.md`. |
 
@@ -189,16 +189,16 @@ cd cyber
 pip install -r requirements.txt
 ```
 
-### 2. Menjalankan Seluruh Pengujian Otomatis (54 Unit & Integration Tests)
+### 2. Menjalankan Seluruh Pengujian Otomatis (55 Unit & Integration Tests)
 ```bash
 python -m pytest tests -q -p no:warnings
 ```
-*Output diharapkan: `54 passed in ~6.5s (100%)`.*
+*Output diharapkan: `55 passed in ~6.5s (100%)`.*
 
 Untuk memverifikasi jumlah tes yang terdaftar:
 ```bash
 python -m pytest tests --collect-only -q | Select-Object -Last 1
-# Menampilkan: 54 tests collected
+# Menampilkan: 55 tests collected
 ```
 
 ### 3. Menjalankan Konsol Komando C4ISR (Lokal)
@@ -249,7 +249,7 @@ cyber/
 ├── console/             # API FastAPI, Dalang Console (HTML5/Leaflet), Telegram bot, BAP report
 ├── sim_attacker/        # Simulator penyerang T1-T3, harness evaluasi ilmiah
 ├── hosting_gateway/     # Konfigurasi reverse-proxy subdomain cPanel (index.php, .htaccess)
-├── tests/               # 54 test suite pengujian modul & integrasi end-to-end
+├── tests/               # 55 test suite pengujian modul & integrasi end-to-end
 ├── docs/                # Arsitektur detail, hasil evaluasi Bab 13, protokol uji buta
 ├── Dockerfile           # Konfigurasi container non-root aman
 ├── Procfile             # Konfigurasi proses cloud deployment
