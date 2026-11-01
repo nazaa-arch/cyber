@@ -336,6 +336,171 @@ h1, h2, h3, h4, .brand-title, .brand-tag, .tactical-label, .hud-title, .metric-v
   flex: none;
 }
 
+/* Global Dark Tactical Scrollbar (menghilangkan scrollbar putih bawaan OS) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 162, 39, 0.35) #030A15;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #030A15;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 162, 39, 0.32);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+/* Forensic Session Cards (#ses) */
+.ses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ses-card {
+  background: rgba(5, 16, 30, 0.74);
+  border: 1px solid var(--line-dark);
+  border-left: 2.5px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s, transform .12s;
+}
+.ses-card:hover {
+  background: rgba(12, 29, 54, 0.9);
+  border-color: rgba(201, 162, 39, 0.45);
+}
+.ses-card.stage-danger {
+  border-left-color: #DC2626;
+}
+.ses-card.stage-recon {
+  border-left-color: var(--teal);
+}
+.ses-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ses-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.ses-id {
+  font-family: var(--font-mono);
+  font-size: .6563rem;
+  font-weight: 700;
+  color: var(--ivory);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ses-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.ses-depth-pill {
+  font-family: var(--font-mono);
+  font-size: .5625rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(31, 111, 139, 0.25);
+  border: 1px solid rgba(31, 111, 139, 0.55);
+  color: #7DD3FC;
+}
+.ses-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: .625rem;
+}
+.ses-sat-ip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.ses-sat-lbl {
+  color: var(--on-dark-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ses-stage-pill {
+  font-family: var(--font-head);
+  font-size: .5313rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(233, 238, 246, 0.06);
+  border: 1px solid rgba(233, 238, 246, 0.14);
+  color: var(--on-dark);
+  white-space: nowrap;
+  flex: none;
+}
+.ses-stage-pill.danger {
+  background: rgba(153, 27, 27, 0.25);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #FCA5A5;
+}
+.ses-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(233, 238, 246, 0.05);
+}
+.ses-tech-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.ses-tech-tag {
+  font-family: var(--font-mono);
+  font-size: .5625rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  color: var(--gold-soft);
+}
+.ses-tech-tag.danger {
+  background: rgba(127, 29, 29, 0.32);
+  border-color: rgba(185, 28, 28, 0.5);
+  color: var(--crimson-text);
+}
+.ses-replay-cue {
+  font-family: var(--font-head);
+  font-size: .5625rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--cyan);
+  white-space: nowrap;
+  flex: none;
+}
+
 /* ==========================================================================
    ZONE 1: SUPREME C4ISR COMMAND HUD (TOP BAR)
    Clean, spacious, 3-section layout
@@ -1743,13 +1908,13 @@ main#ops-theater {
     <!-- TAB 3: Dalang Firewall Approvals -->
     <div class="rail-tab-body" id="tab-pane-dec" style="display:none">
       <span class="kicker" style="margin-bottom:4px">Antrean Blokir nftables</span>
-      <div id="dec" style="max-height:360px;overflow-y:auto"></div>
+      <div id="dec" style="max-height:400px;overflow-y:auto;overflow-x:hidden;padding-right:3px"></div>
     </div>
 
     <!-- TAB 4: Tracked Sessions -->
     <div class="rail-tab-body" id="tab-pane-ses" style="display:none">
       <span class="kicker" style="margin-bottom:4px">Sesi Penyerang Terobservasi</span>
-      <div id="ses" style="max-height:360px;overflow-y:auto"></div>
+      <div id="ses" style="max-height:400px;overflow-y:auto;overflow-x:hidden;padding-right:3px"></div>
     </div>
 
   </div>
@@ -2406,20 +2571,25 @@ async function openSes(sat, id) {
   const allTechs = r.flatMap(e => e.techniques || []);
   renderMatrix(allTechs);
 
-  $('replay').innerHTML = r.map(e => `
-    <div style="padding:4px 0;border-bottom:1px solid var(--line-dark);cursor:pointer" onclick="openPacketModal()">
-      <span style="color:var(--cyan)">+${e.t}s</span>
-      <span class="unit-status-pill status-tipuan" style="font-size:7.5px">L${e.depth}</span>
-      <b>${esc(e.action)}</b>
-      <span style="color:var(--on-dark-muted)">${esc(JSON.stringify(e.target || ''))}</span>
-      <span style="color:var(--gold)">[${esc((e.techniques || []).join(', '))}]</span>
+  const firstTabBtn = document.querySelector('.rail-tab-btn');
+  switchRailTab('stream', firstTabBtn);
+
+  $('replay').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;margin-bottom:6px;background:rgba(201,162,39,0.1);border:1px solid var(--line-gold);border-radius:var(--radius)">
+      <span style="color:var(--gold-soft);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(id)} · ${esc(sat)}</span>
+      <div style="display:inline-flex;gap:5px;flex:none">
+        <a href="/api/report/${encodeURIComponent(sat)}/${encodeURIComponent(id)}.docx" class="btn btn--gold btn--xs" style="min-height:20px;padding:0 6px;font-size:.5625rem">⬇ DOCX</a>
+        <a href="/api/report/${encodeURIComponent(sat)}/${encodeURIComponent(id)}.html" target="_blank" class="btn btn--ghost btn--xs" style="min-height:20px;padding:0 6px;font-size:.5625rem">HTML</a>
+      </div>
     </div>
-  `).join('') + `
-    <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line-gold);font-size:.625rem">
-      <a href="/api/report/${sat}/${id}.docx" style="font-weight:700;color:var(--gold);text-decoration:none">Unduh BAP-FD Sesi Ini (.docx)</a> · 
-      <a href="/api/report/${sat}/${id}.html" target="_blank" style="color:var(--cyan);text-decoration:none">Lihat HTML</a>
+  ` + r.map(e => `
+    <div style="padding:5px 4px;border-bottom:1px solid var(--line-dark);cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:5px" onclick="openPacketModal()">
+      <span style="color:var(--cyan);min-width:34px">+${e.t}s</span>
+      <span class="ses-depth-pill">L${e.depth}</span>
+      <b style="color:var(--ivory)">${esc(e.action)}</b>
+      ${(e.techniques || []).map(tk => `<span class="ses-tech-tag ${['T0855','T0836','T0831'].includes(tk) ? 'danger' : ''}">${esc(tk)}</span>`).join('')}
     </div>
-  `;
+  `).join('');
   refreshTwin();
 }
 
@@ -2526,16 +2696,44 @@ async function refresh() {
   }).join('') + '</div>' : '<span style="color:var(--on-dark-muted);font-size:.6875rem">Semua usulan blokir telah ditinjau.</span>';
 
   // 5. Tracked Sessions
-  $('ses').innerHTML = '<table class="c4-table"><tr><th>Sesi</th><th>Sumber IP</th><th>Tahap</th><th>Level</th><th>Teknik</th></tr>' +
-    s.slice(0, 10).map(x => `
-      <tr style="cursor:pointer" onclick="openSes('${x.satuan}','${x.session}')">
-        <td><b>${esc(x.session)}</b><br><small style="color:var(--on-dark-muted)">${esc(x.satuan)}</small></td>
-        <td><span class="mono" style="color:var(--cyan)">${esc(x.src)}</span>${x.diverted ? ' <span class="unit-status-pill status-tipuan" style="font-size:7.5px">Bayangan</span>' : ''}</td>
-        <td>${esc(x.stage)}</td>
-        <td>L${x.depth}</td>
-        <td><span style="color:var(--gold)">${esc((x.techniques || []).join(', '))}</span></td>
-      </tr>
-    `).join('') + '</table>';
+  const STAGE_LABELS = {
+    manipulation_attempt: 'Manipulasi OT',
+    enumeration: 'Enumerasi',
+    reconnaissance: 'Pengintaian',
+    persistence: 'Persistensi'
+  };
+  $('ses').innerHTML = (s && s.length) ? '<div class="ses-list">' + s.slice(0, 15).map(x => {
+    const isDanger = x.stage === 'manipulation_attempt' || x.stage === 'persistence';
+    const cardMod = isDanger ? 'stage-danger' : (x.stage === 'reconnaissance' ? 'stage-recon' : '');
+    const stText = STAGE_LABELS[x.stage] || x.stage;
+    const techs = (x.techniques && x.techniques.length)
+      ? x.techniques.map(tk => `<span class="ses-tech-tag ${['T0855','T0836','T0831'].includes(tk) ? 'danger' : ''}">${esc(tk)}</span>`).join('')
+      : '<span style="font-size:.5625rem;color:var(--on-dark-muted)">Observasi awal</span>';
+    return `
+      <div class="ses-card ${cardMod}" onclick="openSes('${esc(x.satuan)}','${esc(x.session)}')" title="Klik untuk memutar ulang kronologi forensik sesi ini">
+        <div class="ses-top">
+          <div class="ses-title-wrap">
+            <span class="ses-id">${esc(x.session)}</span>
+          </div>
+          <div class="ses-badges">
+            ${x.diverted ? '<span class="unit-status-pill status-tipuan" style="font-size:.5rem;padding:1px 5px">BAYANGAN</span>' : ''}
+            <span class="ses-depth-pill">L${x.depth}</span>
+          </div>
+        </div>
+        <div class="ses-mid">
+          <div class="ses-sat-ip">
+            <span class="mono" style="color:var(--cyan);font-weight:700">${esc(x.src)}</span>
+            <span class="ses-sat-lbl" title="${esc(x.satuan)}">· ${esc(x.satuan)}</span>
+          </div>
+          <span class="ses-stage-pill ${isDanger ? 'danger' : ''}" title="${esc(x.stage)}">${esc(stText)}</span>
+        </div>
+        <div class="ses-bottom">
+          <div class="ses-tech-list">${techs}</div>
+          <span class="ses-replay-cue">Putar ▸</span>
+        </div>
+      </div>
+    `;
+  }).join('') + '</div>' : '<span style="color:var(--on-dark-muted);font-size:.6875rem">Belum ada sesi penyerang yang terekam.</span>';
 
   // 6. Live Stream
   if (Array.isArray(evts) && evts.length) {
