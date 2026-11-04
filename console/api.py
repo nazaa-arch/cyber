@@ -69,12 +69,25 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):
         path = request.url.path
+        # Tolak akses langsung ke /static/index.html
+        if path == "/static/index.html":
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
+
         if (not token or path == "/" or path.startswith("/static/")
                 or path.startswith("/api/auth/")):
-            return await call_next(request)
-        if _authed(request.headers, request.cookies):
-            return await call_next(request)
-        return JSONResponse({"detail": "Autentikasi diperlukan"}, status_code=401)
+            response = await call_next(request)
+        elif _authed(request.headers, request.cookies):
+            response = await call_next(request)
+        else:
+            response = JSONResponse({"detail": "Autentikasi diperlukan"}, status_code=401)
+
+        # Header Keamanan Militer Tingkat Lanjut (Anti-MIME Sniffing, Clickjacking & DevTools Tampering)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
 
     @app.get("/api/auth/status")
     async def auth_status(request: Request):

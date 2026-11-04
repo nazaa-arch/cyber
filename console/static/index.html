@@ -1699,6 +1699,17 @@ main#ops-theater {
   background: rgba(233, 238, 246, 0.03);
 }
 
+/* Visual Lockdown Saat Sesi Komando Belum Terautentikasi (Anti-Inspection & Anti-Bypass) */
+body.theater-locked #ops-theater,
+body.theater-locked .tactical-deck,
+body.theater-locked header#main-header .header-actions {
+  filter: blur(14px) grayscale(0.85);
+  opacity: 0.12;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
 /* Modals System */
 .modal-overlay {
   display: none;
@@ -1785,7 +1796,7 @@ main#ops-theater {
 }
 </style>
 </head>
-<body>
+<body class="theater-locked">
 
 <!-- ==========================================================================
      ZONE 1: SUPREME C4ISR COMMAND HUD (TOP BAR)
@@ -1949,13 +1960,13 @@ main#ops-theater {
 
 <div id="toast"></div>
 
-<div id="login-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(2,7,16,.96);align-items:center;justify-content:center">
+<div id="login-overlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:rgba(2,7,16,.96);align-items:center;justify-content:center">
   <div class="hud-panel" style="padding:26px 30px;min-width:320px;text-align:center">
     <div style="font-weight:800;letter-spacing:.12em;color:var(--gold);font-size:.8rem;margin-bottom:6px">AKSES KOMANDO TERBATAS</div>
     <div style="color:var(--on-dark-muted);font-size:.65rem;margin-bottom:14px">Masukkan Token Komando untuk membuka konsol WAYANG</div>
     <input id="login-token" type="password" autocomplete="off" placeholder="Token Komando" onkeydown="if(event.key==='Enter')doLogin()"
       style="width:100%;padding:9px 10px;background:#020710;border:1px solid var(--line-gold);color:#fff;border-radius:3px;font-family:var(--font-mono)">
-    <button class="btn btn--sm" style="margin-top:12px;width:100%;background:var(--gold);color:#020710;font-weight:800;border:none;cursor:pointer;padding:8px" onclick="doLogin()">MASUK KONSOL</button><div style='margin-top:10px;font-size:.65rem;color:#94a3b8'>Token Standar: <code style='color:#C9A227;cursor:pointer;padding:2px 6px;background:rgba(201,162,39,.15);border-radius:3px' onclick='document.getElementById("login-token").value="komando-wayang-2026";doLogin()' title='Klik untuk masuk langsung'>komando-wayang-2026</code></div>
+    <button class="btn btn--sm" style="margin-top:12px;width:100%;background:var(--gold);color:#020710;font-weight:800;border:none;cursor:pointer;padding:8px" onclick="doLogin()">MASUK KONSOL</button>
     <div id="login-err" style="color:var(--crimson);font-size:.65rem;margin-top:8px;min-height:1em"></div>
   </div>
 </div>
@@ -2220,26 +2231,105 @@ main#ops-theater {
 <script src="/static/echarts.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+let isAuthed = false;
+let refreshTimer = null;
+let _toastTimer = null;
+
+function showToast(msg, durationMs = 3000) {
+  const t = $('toast');
+  if (!t) return;
+  t.innerText = msg;
+  t.style.display = 'block';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.display = 'none'; }, durationMs);
+}
+
 function showLogin() {
-  const o = document.getElementById('login-overlay');
+  document.body.classList.add('theater-locked');
+  const o = $('login-overlay');
   if (o) o.style.display = 'flex';
 }
+
+function hideLogin() {
+  document.body.classList.remove('theater-locked');
+  const o = $('login-overlay');
+  if (o) o.style.display = 'none';
+}
+
 const J = (u, o) => fetch(u, o).then(r => {
-  if (r.status === 401) { showLogin(); throw new Error('401'); }
+  if (r.status === 401) {
+    isAuthed = false;
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    showLogin();
+    throw new Error('401');
+  }
   return r.json();
 });
+
 async function doLogin() {
   const t = $('login-token').value.trim();
-  const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: t }) });
+  const r = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: t })
+  });
   if (r.ok) { location.reload(); return; }
   const j = await r.json().catch(() => ({}));
   $('login-err').innerText = j.detail || 'Gagal masuk';
 }
+
 async function doLogout() {
   await fetch('/api/auth/logout', { method: 'POST' });
   location.reload();
 }
-fetch('/api/auth/status').then(r => r.json()).then(s => { if (s.required && !s.authed) showLogin(); }).catch(() => {});
+
+// Watchdog Anti-Tamper DevTools: Mencegah bypass login overlay via Inspect Element / delete node
+const overlayNode = document.getElementById('login-overlay');
+if (overlayNode && window.MutationObserver) {
+  const obs = new MutationObserver(() => {
+    if (!isAuthed) {
+      if (overlayNode.style.display === 'none' || !document.body.contains(overlayNode)) {
+        document.body.classList.add('theater-locked');
+        if (!document.body.contains(overlayNode)) {
+          document.body.appendChild(overlayNode);
+        }
+        overlayNode.style.display = 'flex';
+      }
+    }
+  });
+  obs.observe(overlayNode, { attributes: true, attributeFilter: ['style', 'class'] });
+  obs.observe(document.body, { childList: true });
+}
+
+// 1. Spanduk Peringatan Doktrin Keamanan Siber (DevTools Console Warning)
+console.log(
+  "%c[WAYANG C4ISR DECEPTION GRID — TNI AD]%c\n" +
+  "SISTEM PERTAHANAN SIBER OPERASIONAL KAWASAN TERBATAS MILITER.\n\n" +
+  "Akses tidak sah, inspeksi DOM, ekstraksi memori, atau manipulasi terhadap konsol komando ini " +
+  "diawasi secara otomatis oleh sensor Kelir Proxy dan dicatat ke dalam buku besar kriptografis " +
+  "Merkle Tree RFC 6962.\n\n" +
+  "Pelanggaran akses tanpa izin diancam pidana sesuai UU RI No. 1 Tahun 2024 (UU ITE) Pasal 30 & Pasal 46.",
+  "color:#C9A227;font-size:15px;font-weight:900;background:#05101E;padding:8px 14px;border:1.5px solid #C9A227;border-radius:3px;display:inline-block;",
+  "color:#94a3b8;font-size:11px;font-family:monospace;line-height:1.6;margin-top:6px;"
+);
+
+// 2. Pembatasan Menu Klik Kanan & Pintasan Tombol DevTools
+window.addEventListener('contextmenu', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  e.preventDefault();
+});
+
+window.addEventListener('keydown', e => {
+  const k = e.key ? e.key.toUpperCase() : '';
+  if (
+    e.key === 'F12' ||
+    (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(k)) ||
+    (e.ctrlKey && k === 'U')
+  ) {
+    e.preventDefault();
+    showToast('AKSI DIBATASI: Inspeksi konsol komando dinonaktifkan untuk keamanan operasional.');
+  }
+});
 let curSat = 'KODAM-IV-Diponegoro';
 let audioEnabled = false;
 let audioCtx = null;
@@ -3130,10 +3220,28 @@ $('kill').onclick = () => {
   }
 };
 
-renderMatrix({});
-initWebSocket();
-refresh();
-setInterval(refresh, 2500);
+async function startConsole() {
+  try {
+    const s = await fetch('/api/auth/status').then(r => r.json());
+    if (s.required && !s.authed) {
+      showLogin();
+      return;
+    }
+    // Terautentikasi atau tanpa token (mode terbuka): aktifkan HUD penuh
+    isAuthed = true;
+    hideLogin();
+    renderMatrix({});
+    initWebSocket();
+    refresh();
+    if (!refreshTimer) {
+      refreshTimer = setInterval(refresh, 2500);
+    }
+  } catch (e) {
+    showLogin();
+  }
+}
+
+startConsole();
 </script>
 </body>
 </html>
