@@ -13,11 +13,16 @@ import asyncio
 import hashlib
 import hmac
 import json
+import logging
 import os
 import pathlib
+import secrets
 import time
 import uuid
 from typing import Set
+from urllib.parse import urlsplit
+
+log = logging.getLogger("wayang.console")
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi import Request
@@ -38,6 +43,7 @@ class LevelBody(BaseModel):
 LOGIN_MAX_FAILS = 5
 LOGIN_WINDOW_S = 60.0
 COOKIE_NAME = "wayang_token"
+SESSION_TTL_S = 12 * 3600
 
 
 def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) -> FastAPI:
@@ -45,14 +51,57 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
     string kosong -> autentikasi dimatikan eksplisit; string lain -> wajib untuk seluruh /api/*."""
     app = FastAPI(title="WAYANG Dalang C4ISR Console", docs_url=None, redoc_url=None)
     token = admin_token if admin_token is not None else os.environ.get("WAYANG_ADMIN_TOKEN", "")
-    session_sig = (hmac.new(token.encode(), b"wayang-console-session", hashlib.sha256).hexdigest()
-                   if token else "")
     fails: dict[str, list[float]] = {}
 
+    # Penyimpanan sesi server-side: sid acak -> waktu kedaluwarsa. Dapat dicabut (logout)
+    # dan punya TTL, menggantikan tanda tangan statis yang tak pernah berubah/rotasi.
+    sessions_live: dict[str, float] = {}
+
+    # Hanya percaya header IP dari proxy bila dinyatakan eksplisit; jika tidak, header
+    # X-Forwarded-For/CF-Connecting-IP dapat dipalsukan untuk melewati rate-limit.
+    trust_proxy = os.environ.get("WAYANG_TRUST_PROXY", "").strip().lower() in ("1", "true", "yes", "on")
+
+    # Origin yang diizinkan untuk permintaan pengubah-state & WebSocket (anti-CSRF/CSWSH).
+    allowed_origins = {o.strip().rstrip("/").lower()
+                       for o in os.environ.get("WAYANG_ALLOWED_ORIGINS", "").split(",") if o.strip()}
+
+    def _new_session() -> str:
+        now = time.time()
+        for k in [k for k, exp in sessions_live.items() if exp < now]:
+            sessions_live.pop(k, None)
+        sid = secrets.token_urlsafe(32)
+        sessions_live[sid] = now + SESSION_TTL_S
+        return sid
+
+    def _session_valid(sid: str) -> bool:
+        exp = sessions_live.get(sid)
+        if not exp:
+            return False
+        if exp < time.time():
+            sessions_live.pop(sid, None)
+            return False
+        return True
+
     def _client_ip(request) -> str:
-        h = request.headers
-        return (h.get("cf-connecting-ip") or (h.get("x-forwarded-for") or "").split(",")[0].strip()
-                or (request.client.host if request.client else "?"))
+        if trust_proxy:
+            h = request.headers
+            fwd = (h.get("cf-connecting-ip")
+                   or (h.get("x-forwarded-for") or "").split(",")[0].strip())
+            if fwd:
+                return fwd
+        return request.client.host if request.client else "?"
+
+    def _same_origin(request, origin: str) -> bool:
+        if not origin:
+            return True  # klien non-browser (curl/API) tidak mengirim Origin
+        o = origin.rstrip("/").lower()
+        if o in allowed_origins:
+            return True
+        host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").lower()
+        try:
+            return bool(host) and urlsplit(o).netloc == host
+        except ValueError:
+            return False
 
     def _authed(headers, cookies) -> bool:
         if not token:
@@ -64,14 +113,40 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         if given and hmac.compare_digest(given.encode(), token.encode()):
             return True
         ck = cookies.get(COOKIE_NAME) or ""
-        return bool(ck) and hmac.compare_digest(ck.encode(), session_sig.encode())
+        return bool(ck) and _session_valid(ck)
+
+    # Content-Security-Policy: membatasi sumber agar XSS tak bisa memuat/mengirim data keluar.
+    # script-src memakai nonce per-request (bukan 'unsafe-inline') — hanya blok <script>
+    # bawaan yang membawa nonce cocok yang boleh jalan; skrip sisipan penyerang ditolak.
+    # style-src masih 'unsafe-inline' karena atribut style inline tak bisa diberi nonce.
+    def _csp(nonce: str) -> str:
+        return ("default-src 'self'; "
+                "img-src 'self' data: https://server.arcgisonline.com; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                f"script-src 'self' 'nonce-{nonce}'; "
+                "connect-src 'self'; "
+                "object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+
+    MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):
         path = request.url.path
+        nonce = secrets.token_urlsafe(16)
+        request.state.csp_nonce = nonce
         # Tolak akses langsung ke /static/index.html
         if path == "/static/index.html":
             return JSONResponse({"detail": "Not Found"}, status_code=404)
+
+        # Anti-CSRF: permintaan pengubah-state harus berasal dari Origin yang sah.
+        # Login/logout dikecualikan (belum/akan membentuk sesi) dan dilindungi token+rate-limit.
+        if (token and request.method in MUTATING
+                and not path.startswith("/api/auth/")
+                and not _same_origin(request, request.headers.get("origin", ""))):
+            log.warning("CSRF ditolak: method=%s path=%s origin=%s ip=%s",
+                        request.method, path, request.headers.get("origin"), _client_ip(request))
+            return JSONResponse({"detail": "Origin tidak sah"}, status_code=403)
 
         if (not token or path == "/" or path.startswith("/static/")
                 or path.startswith("/api/auth/")):
@@ -81,12 +156,15 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         else:
             response = JSONResponse({"detail": "Autentikasi diperlukan"}, status_code=401)
 
-        # Header Keamanan Militer Tingkat Lanjut (Anti-MIME Sniffing, Clickjacking & DevTools Tampering)
+        # Header Keamanan (Anti-MIME Sniffing, Clickjacking, kebijakan konten & isolasi)
+        response.headers["Content-Security-Policy"] = _csp(nonce)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response
 
     @app.get("/api/auth/status")
@@ -106,17 +184,22 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         if not token or hmac.compare_digest(given.encode(), token.encode()):
             resp = JSONResponse({"ok": True})
             if token:
+                sid = _new_session()
                 secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
-                resp.set_cookie(COOKIE_NAME, session_sig, httponly=True, samesite="lax",
-                                secure=secure, max_age=12 * 3600)
+                resp.set_cookie(COOKIE_NAME, sid, httponly=True, samesite="lax",
+                                secure=secure, max_age=SESSION_TTL_S)
             fails.pop(ip, None)
             return resp
         recent.append(now)
         fails[ip] = recent
+        log.warning("Login gagal dari ip=%s", ip)
         return JSONResponse({"detail": "Token salah"}, status_code=401)
 
     @app.post("/api/auth/logout")
-    async def auth_logout():
+    async def auth_logout(request: Request):
+        sid = request.cookies.get(COOKIE_NAME)
+        if sid:
+            sessions_live.pop(sid, None)  # cabut sesi di sisi server
         resp = JSONResponse({"ok": True})
         resp.delete_cookie(COOKIE_NAME)
         return resp
@@ -128,8 +211,8 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         for k, v in nodes.items():
             if satuan.lower() in k.lower() or k.lower() in satuan.lower():
                 return v
-        if nodes:
-            return next(iter(nodes.values()))
+        # Tidak ada fallback diam-diam ke node sembarang: satuan tak dikenal -> 404,
+        # agar endpoint tidak beroperasi pada target yang salah.
         raise HTTPException(404, "Satuan tidak dikenal")
 
     async def broadcast_ws(payload: dict):
@@ -160,7 +243,7 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
                     }
                 }))
         except Exception:
-            pass
+            log.exception("Gagal menyiarkan event bus ke WebSocket")
 
     for n in set(nodes.values()):
         if hasattr(n, "bus"):
@@ -197,6 +280,7 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
             except asyncio.CancelledError:
                 break
             except Exception:
+                log.exception("Loop telemetri gagal sesaat; melanjutkan")
                 await asyncio.sleep(1.0)
 
     @app.on_event("startup")
@@ -210,6 +294,11 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
 
     @app.websocket("/ws/live")
     async def websocket_live(websocket: WebSocket):
+        # Anti-CSWSH: tolak koneksi lintas-situs. Origin pada WS tak tunduk SameSite,
+        # jadi halaman jahat bisa membuka WS dengan cookie korban bila tak diperiksa.
+        if not _same_origin(websocket, websocket.headers.get("origin", "")):
+            await websocket.close(code=1008)
+            return
         if not _authed(websocket.headers, websocket.cookies):
             await websocket.close(code=1008)
             return
@@ -231,8 +320,10 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
             active_websockets.discard(websocket)
 
     @app.get("/", response_class=HTMLResponse)
-    async def index():
+    async def index(request: Request):
         content = (STATIC / "index.html").read_text(encoding="utf-8")
+        nonce = getattr(request.state, "csp_nonce", "")
+        content = content.replace("__CSP_NONCE__", nonce)
         return HTMLResponse(content=content, headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
