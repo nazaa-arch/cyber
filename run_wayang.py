@@ -204,7 +204,8 @@ async def start_realtime_background_engine(nodes: dict, pusat: Pusat):
         except asyncio.CancelledError:
             break
         except Exception as e:
-            # Cegah loop terputus bila ada anomali sesaat
+            # Cegah loop terputus bila ada anomali sesaat (tetap catat, jangan telan diam-diam)
+            print(f"[REALTIME] Anomali loop sesaat: {e!r}")
             await asyncio.sleep(1.0)
 
 
@@ -241,15 +242,30 @@ async def amain(args):
     # Jalankan background engine realtime
     bg_task = asyncio.create_task(start_realtime_background_engine(nodes, pusat))
 
-    if os.environ.get("WAYANG_AUTH", "on").lower() == "off":
+    _loopback = {"127.0.0.1", "localhost", "::1", ""}
+    _is_public = args.host not in _loopback
+    _auth_off = os.environ.get("WAYANG_AUTH", "on").lower() == "off"
+    if _auth_off and _is_public:
+        # Fail-closed: menolak mematikan autentikasi saat terikat ke antarmuka publik.
+        raise SystemExit(
+            f"[FATAL] WAYANG_AUTH=off hanya diizinkan saat host loopback (mis. --host 127.0.0.1). "
+            f"Host saat ini '{args.host}' bersifat publik. Set WAYANG_ADMIN_TOKEN dan nyalakan autentikasi."
+        )
+    if _auth_off:
         admin_token = ""
-        print("[PERINGATAN] Autentikasi konsol DIMATIKAN (WAYANG_AUTH=off). Jangan dipakai di jaringan publik.")
+        print("[PERINGATAN] Autentikasi konsol DIMATIKAN (WAYANG_AUTH=off) — HANYA untuk host loopback.")
     else:
-        admin_token = os.environ.get("WAYANG_ADMIN_TOKEN") or "komando-wayang-2026"
-        if not os.environ.get("WAYANG_ADMIN_TOKEN"):
-            print(f"[AUTH] Token Komando acak (set WAYANG_ADMIN_TOKEN agar tetap): {admin_token}")
-        else:
+        env_token = os.environ.get("WAYANG_ADMIN_TOKEN")
+        if env_token:
+            admin_token = env_token
             print("[AUTH] Konsol dilindungi token dari WAYANG_ADMIN_TOKEN.")
+        else:
+            # Tanpa token tetap: buat token acak per-proses (tidak pernah hardcoded).
+            admin_token = secrets.token_urlsafe(24)
+            print("[AUTH] WAYANG_ADMIN_TOKEN tidak diset — memakai token ACAK sekali-jalan.")
+            print(f"[AUTH] Token Komando (set WAYANG_ADMIN_TOKEN agar tetap): {admin_token}")
+            if _is_public:
+                print("[PERINGATAN] Deploy publik tanpa token tetap: token di atas berubah tiap restart.")
     app = make_console_app(nodes, pusat, admin_token=admin_token)
     print("=" * 70)
     print("       WAYANG: C4ISR CYBER DEFENSE REALTIME PLATFORM (TNI AD)")

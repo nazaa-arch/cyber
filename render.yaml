@@ -11,3 +11,10 @@ services:
         value: 3.12.0
       - key: WAYANG_ADMIN_TOKEN
         generateValue: true
+      # Kunci master bukti forensik — acak & stabil antar-restart (filesystem Render efemeral).
+      - key: WAYANG_MASTER_KEY
+        generateValue: true
+      # Render berada di belakang proxy: izinkan membaca IP klien asli dari X-Forwarded-For
+      # agar rate-limit login akurat (tanpa ini, header bisa dipalsukan bila dipercaya sembarangan).
+      - key: WAYANG_TRUST_PROXY
+        value: "1"

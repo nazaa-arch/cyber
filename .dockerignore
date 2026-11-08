@@ -1,0 +1,30 @@
+# Rahasia & kredensial — JANGAN pernah masuk ke image
+.env
+.env.*
+*.pem
+*.key
+
+# Riwayat & bukti runtime (jangan di-bake ke image)
+data/
+out/
+applied/
+*.db
+*.log
+
+# Metadata & cache
+.git/
+.gitignore
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+node_modules/
+deploy/*.exe
+*.exe
+
+# Artefak dev yang tidak perlu di runtime
+tests/
+*.md
+LICENSE

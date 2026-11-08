@@ -6,11 +6,42 @@ Gamelan ke Pipeline, lalu ke Dalang Console, Bot, dan Edge Sync.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import os
 import pathlib
+import secrets
 import time
 
 import uvicorn
+
+
+def _derive_secret(satuan: str, seed: int, out: pathlib.Path) -> bytes:
+    """Turunkan kunci HMAC per-satuan dari master key acak berentropi tinggi.
+
+    Menggantikan rahasia lama 'rahasia-{satuan}-{seed}' yang dapat ditebak dari
+    data publik (nama satuan + seed kecil), sehingga dossier audit Merkle tak
+    dapat dipalsukan. Master key diambil dari WAYANG_MASTER_KEY bila diset; jika
+    tidak, dibuat acak dan dipertahankan (dibagi antar-satuan & restart).
+    """
+    master = os.environ.get("WAYANG_MASTER_KEY")
+    if master:
+        mkey = master.encode()
+    else:
+        key_path = out.parent / ".wayang_master.key"
+        try:
+            if key_path.is_file():
+                mkey = bytes.fromhex(key_path.read_text().strip())
+            else:
+                mkey = secrets.token_bytes(32)
+                key_path.write_text(mkey.hex())
+                try:
+                    os.chmod(key_path, 0o600)
+                except OSError:
+                    pass
+        except (OSError, ValueError):
+            mkey = secrets.token_bytes(32)  # tak bisa baca/tulis -> kunci sesi (non-persisten)
+    return hmac.new(mkey, f"{satuan}|{seed}".encode(), hashlib.sha256).digest()
 
 from console.bot import BotDalang, ConsoleChannel, MultiChannel, TelegramChannel
 from console.edge_sync import EdgeSync
@@ -47,7 +78,7 @@ class SatuanNode:
         self.ports: dict[str, int] = {}
         self.out = pathlib.Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
-        self.secret = f"rahasia-{satuan}-{seed}".encode()
+        self.secret = _derive_secret(satuan, seed, self.out)
         self.whitelist = set(whitelist or set())
         self.bus = Gamelan()
         stamp = "" if db_path == ":memory:" else "-" + time.strftime("%d%H%M")   # ID unik per proses (DB persisten)
