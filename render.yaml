@@ -9,8 +9,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
+      # Token login konsol. Diisi MANUAL di dashboard Render (Environment), bukan di file ini,
+      # agar rahasia tidak ikut ter-commit ke Git. sync:false = Render tidak menimpa nilai dashboard.
       - key: WAYANG_ADMIN_TOKEN
-        generateValue: true
+        sync: false
       # Kunci master bukti forensik — acak & stabil antar-restart (filesystem Render efemeral).
       - key: WAYANG_MASTER_KEY
         generateValue: true

@@ -67,7 +67,8 @@ foreach (explode("\r\n", $header_text) as $hdr) {
     if (empty($hdr)) continue;
     $hdr_lower = strtolower($hdr);
     if (strpos($hdr_lower, 'transfer-encoding:') === 0) continue;
-    if (strpos($hdr_lower, 'content-security-policy:') === 0) continue;
+    // Content-Security-Policy dari backend SENGAJA diteruskan (jangan dibuang):
+    // nonce per-request di HTML hanya bermakna bila header CSP-nya sampai ke browser.
     header($hdr, false);
 }
 
