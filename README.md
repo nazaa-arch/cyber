@@ -1,4 +1,4 @@
-# WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
+# WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI ADd
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
 [![Tests Passing](https://img.shields.io/badge/tests-55%2F55%20passed-brightgreen.svg)]()
