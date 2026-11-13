@@ -183,6 +183,11 @@ async def start_realtime_background_engine(nodes: dict, pusat: Pusat):
 
     # 2. Loop real-time latar belakang terus menerus
     loop_count = 0
+    try:
+        attack_s = float(os.environ.get("WAYANG_AUTO_ATTACK_S", "60"))
+    except ValueError:
+        attack_s = 60.0
+    attack_every = max(1, round(attack_s / 2.0))  # satu loop = 2 detik
     while True:
         try:
             await asyncio.sleep(2.0)
@@ -193,8 +198,9 @@ async def start_realtime_background_engine(nodes: dict, pusat: Pusat):
                 if hasattr(n, "sync") and name in [u["satuan"] for u in OPERATIONAL_UNITS]:
                     n.sync()
 
-            # Setiap 60 detik (30 loop), lakukan pemindaian ringan otomatis untuk menjaga sistem tetap hidup
-            if loop_count % 30 == 0 and os.environ.get("WAYANG_AUTO_ATTACK") == "1":
+            # Simulasi serangan ringan berkala (WAYANG_AUTO_ATTACK=1), jeda diatur
+            # WAYANG_AUTO_ATTACK_S (detik, bawaan 60; mis. 900 = tiap 15 menit).
+            if loop_count % attack_every == 0 and os.environ.get("WAYANG_AUTO_ATTACK") == "1":
                 target_node = nodes.get("KODAM-IV-Diponegoro")
                 if target_node:
                     src_ip = f"203.0.113.{10 + (loop_count % 50)}"
@@ -207,6 +213,40 @@ async def start_realtime_background_engine(nodes: dict, pusat: Pusat):
             # Cegah loop terputus bila ada anomali sesaat (tetap catat, jangan telan diam-diam)
             print(f"[REALTIME] Anomali loop sesaat: {e!r}")
             await asyncio.sleep(1.0)
+
+
+def _keepalive_url() -> str | None:
+    """URL publik untuk keep-alive. Render mengisi RENDER_EXTERNAL_URL otomatis;
+    di lokal tidak ada, sehingga keep-alive mati dengan sendirinya."""
+    url = os.environ.get("WAYANG_KEEPALIVE_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+    return url.rstrip("/") if url else None
+
+
+async def keep_awake_loop(url: str, interval_s: float) -> None:
+    """Ping URL publik sendiri secara berkala agar Render Free tidak tidur.
+
+    Render hanya menghitung trafik MASUK lewat internet; trafik internal (127.0.0.1)
+    tidak mencegah tidur. Endpoint /api/auth/status ringan dan tidak butuh login.
+    """
+    import urllib.request
+    target = f"{url}/api/auth/status"
+    loop = asyncio.get_running_loop()
+    print(f"[KEEPALIVE] Aktif: ping {target} tiap {interval_s:.0f} detik.")
+
+    def _ping() -> int:
+        req = urllib.request.Request(target, headers={"User-Agent": "WAYANG-keepalive/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status
+
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            code = await loop.run_in_executor(None, _ping)
+            print(f"[KEEPALIVE] ping -> HTTP {code}")
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"[KEEPALIVE] ping gagal: {e!r}")
 
 
 def _resolve_out_dir(args) -> str:
@@ -241,6 +281,16 @@ async def amain(args):
 
     # Jalankan background engine realtime
     bg_task = asyncio.create_task(start_realtime_background_engine(nodes, pusat))
+
+    # Keep-alive Render Free (tidur setelah 15 menit tanpa trafik masuk).
+    ka_task = None
+    ka_url = _keepalive_url()
+    if ka_url and os.environ.get("WAYANG_KEEPALIVE", "on").lower() != "off":
+        try:
+            ka_s = float(os.environ.get("WAYANG_KEEPALIVE_S", "600"))
+        except ValueError:
+            ka_s = 600.0
+        ka_task = asyncio.create_task(keep_awake_loop(ka_url, max(60.0, ka_s)))
 
     _loopback = {"127.0.0.1", "localhost", "::1", ""}
     _is_public = args.host not in _loopback
@@ -279,6 +329,8 @@ async def amain(args):
         await server.serve()
     finally:
         bg_task.cancel()
+        if ka_task:
+            ka_task.cancel()
         for r in reals:
             r.close()
         for n in set(nodes.values()):
