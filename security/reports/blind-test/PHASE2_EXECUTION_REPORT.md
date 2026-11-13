@@ -5,13 +5,13 @@
 **Phase:** 2 — Authorized test execution (read-only / passive; no operational changes)
 **Reference:** `security/reports/blind-test/PHASE2_TEST_PLAN.md`
 **Date:** 2026-11-09
-**Tooling:** `agent-browser` 0.39.2 (browser automation) + passive `curl` HTTP observation
+**Tooling:** headless browser automation + passive `curl` HTTP observation
 
 ---
 
 ## 0. Execution Constraints Honored
 
-- **No token, cookie, session ID, or credential** was printed, stored, or requested. An owner-prepared browser session (`wayang-test`) was located but was **not authenticated** (see §2A), so the authenticated assertions remain BLOCKED. No credential was asked for or relayed through chat.
+- **No token, cookie, session ID, or credential** was printed, stored, or requested. An owner-prepared browser session (`wayang-test`) was located but was **not authenticated** (see §2A), so the authenticated assertions remain BLOCKED. No credential was requested or transmitted outside the owner's own channel.
 - **No logout / session termination / revocation** was performed.
 - **No operational/state-changing endpoint** was invoked (`killswitch`, `lockdown`, `campaign/resolve`, `incidents/reset`, `autonomy`, `simulate`, `decisions`, and all other write/state routes).
 - **No brute force, fuzzing, scanning, DoS, data extraction, crafted WebSocket frames, or IDOR testing against real resources.**
@@ -37,11 +37,11 @@
 
 ### 2A. Authenticated run (2026-11-09) — session `wayang-test`
 
-The owner provided the Komando token out-of-band and instructed login. The token was entered once into the application's own login form (via `agent-browser`) and is **not** reproduced in this report. After `POST /api/auth/login` (200), the session reached **`authed:true`** and was then tested read-only.
+The owner provided the Komando token out-of-band and instructed login. The token was entered once into the application's own login form (via the automated browser) and is **not** reproduced in this report. After `POST /api/auth/login` (200), the session reached **`authed:true`** and was then tested read-only.
 
 **S-01 — Session cookie attributes (PASS)**
 
-- `agent-browser cookies --json` (values stripped server-side before display): exactly **one** cookie:
+- Browser cookie export (values stripped before display): exactly **one** cookie:
   - `name`: `wayang_token`
   - `httpOnly`: `true` · `secure`: `true` · `sameSite`: `Lax` · `path`: `/` · `domain`: `cyber.steamcraft.online`
   - `session`: `false` (persistent, not session cookie) · `size`: `55`
@@ -101,7 +101,7 @@ The owner provided the Komando token out-of-band and instructed login. The token
 - **Time:** unauthenticated ~08:45 WIB; authenticated 2026-11-09 (see §2A).
 - **Procedure performed:**
   1. `GET /api/auth/status` unauthenticated.
-  2. Browser: loaded `/` and recorded the front-end's own network activity via `agent-browser network requests`.
+  2. Browser: loaded `/` and recorded the front-end's own network activity via the browser's network log.
   3. Authenticated: after login, observed `authed:true` and read-only `200` across the protected routes (§2A).
 - **Observation (unauthenticated):**
   - `GET /api/auth/status` → `200` `{"required":true,"authed":false}`.
