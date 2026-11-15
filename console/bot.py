@@ -8,11 +8,59 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import pathlib
 import threading
 import time
 import urllib.request
 
 log = logging.getLogger("wayang.bot")
+
+MAX_SUBSCRIBERS = 50
+_SUBS_FILE = pathlib.Path(os.environ.get(
+    "WAYANG_TG_SUBS_FILE", str(pathlib.Path(__file__).resolve().parents[1] / "data" / "tg_subscribers.json")))
+_SUBS_LOCK = threading.Lock()
+_SUBS: dict[str, set[int]] = {}  # dibagi antar-node: token -> kumpulan chat_id
+
+
+def _subs_for(token: str) -> set[int]:
+    with _SUBS_LOCK:
+        if token not in _SUBS:
+            ids: set[int] = set()
+            try:
+                ids = {int(x) for x in json.loads(_SUBS_FILE.read_text("utf-8")).get(token[-8:], [])}
+            except Exception:
+                pass
+            _SUBS[token] = ids
+        return _SUBS[token]
+
+
+def _subs_for_unlocked(token: str) -> set[int]:
+    """Versi tanpa kunci (pemanggil sudah memegang _SUBS_LOCK)."""
+    if token not in _SUBS:
+        ids: set[int] = set()
+        try:
+            ids = {int(x) for x in json.loads(_SUBS_FILE.read_text("utf-8")).get(token[-8:], [])}
+        except Exception:
+            pass
+        _SUBS[token] = ids
+    return _SUBS[token]
+
+
+def _save_subs(token: str) -> None:
+    try:
+        _SUBS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            data = json.loads(_SUBS_FILE.read_text("utf-8"))
+        except Exception:
+            data = {}
+        data[token[-8:]] = sorted(_SUBS.get(token, set()))
+        _SUBS_FILE.write_text(json.dumps(data), "utf-8")
+    except Exception:
+        log.warning("Gagal menyimpan daftar pelanggan Telegram", exc_info=True)
+
+
+READONLY_CMDS = {"/start", "/stop", "/help", "/status"}
 
 BUTTONS = [("Setujui blokir", "approve"), ("Abaikan", "ignore"), ("Buka konsol", "open")]
 
@@ -57,13 +105,35 @@ class TelegramChannel:
             return 0
 
     def send(self, text: str, buttons=None) -> int:
-        payload = {"chat_id": self.chat_id, "text": text}
-        if buttons:
-            payload["reply_markup"] = {"inline_keyboard": [[
-                {"text": label, "callback_data": f"{act}:{pid}"} for label, act, pid in buttons]]}
-        # Kirim di background thread agar tidak memblokir event loop dan latensi Modbus/OT
-        threading.Thread(target=self._send_retry, args=(payload,), daemon=True).start()
+        """Alert ke chat pemilik (dengan tombol aksi) dan ke semua pelanggan /start (hanya-baca)."""
+        with _SUBS_LOCK:
+            others = sorted(_subs_for_unlocked(self.token) - {self.chat_id})
+        for cid in [self.chat_id] + others:
+            payload = {"chat_id": cid, "text": text}
+            if buttons and cid == self.chat_id:  # hanya pemilik yang boleh menyetujui/mengabaikan
+                payload["reply_markup"] = {"inline_keyboard": [[
+                    {"text": label, "callback_data": f"{act}:{pid}"} for label, act, pid in buttons]]}
+            # Kirim di background thread agar tidak memblokir event loop dan latensi Modbus/OT
+            threading.Thread(target=self._send_retry, args=(payload,), daemon=True).start()
         return 1
+
+    def _reply(self, chat_id: int, text: str) -> None:
+        threading.Thread(target=self._send_retry, args=({"chat_id": chat_id, "text": text},),
+                         daemon=True).start()
+
+    def _handle_start(self, chat_id: int, name: str) -> None:
+        subs = _subs_for(self.token)
+        if chat_id != self.chat_id and chat_id not in subs and len(subs) >= MAX_SUBSCRIBERS:
+            self._reply(chat_id, "Batas pelanggan notifikasi tercapai.")
+            return
+        with _SUBS_LOCK:
+            subs.add(chat_id)
+            _save_subs(self.token)
+        self._reply(chat_id, (
+            f"🛡️ WAYANG Dalang aktif, {name}.\n"
+            "Chat ini sekarang menerima notifikasi serangan secara real-time "
+            "(mode lihat-saja).\n"
+            "Perintah: /status · /stop · /help"))
 
     def _send_retry(self, payload: dict, attempts: int = 4) -> int:
         """Kirim dengan percobaan ulang (backoff 2,4,8 dtk) agar alert tidak hilang saat jaringan goyah."""
@@ -88,6 +158,7 @@ class TelegramChannel:
                     cq = upd["callback_query"]
                     cb_id = cq["id"]
                     cb_data = cq.get("data", "")
+                    cb_chat = (cq.get("message") or {}).get("chat", {}).get("id")
                     sender = cq.get("from", {}).get("username") or cq.get("from", {}).get("first_name") or "perwira"
                     # Konfirmasi callback ke Telegram UI
                     ack = urllib.request.Request(
@@ -95,15 +166,34 @@ class TelegramChannel:
                         json.dumps({"callback_query_id": cb_id, "text": "Diproses Dalang..."}).encode(),
                         {"Content-Type": "application/json"})
                     await loop.run_in_executor(None, lambda: urllib.request.urlopen(ack, timeout=5))
-                    if self.on_callback:
+                    if cb_chat != self.chat_id:
+                        self._reply(cb_chat, "⛔ Hanya perwira jaga yang dapat menekan tombol ini.")
+                    elif self.on_callback:
                         reply = self.on_callback(cb_data, who=f"@{sender}")
                         self.send(f"✅ {reply}")
                 elif "message" in upd and "text" in upd["message"]:
                     txt = upd["message"]["text"].strip()
-                    if txt.startswith("/") and self.on_command:
-                        reply = self.on_command(txt)
+                    chat = upd["message"].get("chat", {})
+                    cid = chat.get("id")
+                    if not txt.startswith("/") or cid is None:
+                        continue
+                    cmd = txt.split()[0].split("@")[0].lower()
+                    who = (upd["message"].get("from", {}).get("first_name") or "perwira")
+                    if cmd == "/start":
+                        self._handle_start(cid, who)
+                    elif cmd == "/stop":
+                        with _SUBS_LOCK:
+                            _subs_for_unlocked(self.token).discard(cid)
+                            _save_subs(self.token)
+                        self._reply(cid, "Notifikasi dihentikan. Kirim /start untuk mengaktifkan lagi.")
+                    elif cmd == "/help":
+                        self._reply(cid, "/start aktifkan notifikasi · /stop hentikan · /status ringkasan")
+                    elif cmd not in READONLY_CMDS and cid != self.chat_id:
+                        self._reply(cid, "⛔ Perintah ini hanya untuk perwira jaga.")
+                    elif self.on_command:
+                        reply = self.on_command(cmd)
                         if reply:
-                            self.send(reply)
+                            self._reply(cid, reply)
         except Exception:
             pass
 

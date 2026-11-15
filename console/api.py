@@ -458,7 +458,7 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
     @app.get("/api/alerts")
     async def api_alerts():
         out = []
-        for s, n in set(nodes.values()):
+        for n in set(nodes.values()):
             out += [{"satuan": n.satuan, "kind": a["kind"], "text": a["text"], "warn": a["warn"],
                      "session": a["session"]} for a in n.pipeline.alerts]
         return out[-100:]
