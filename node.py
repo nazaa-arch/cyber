@@ -111,13 +111,33 @@ class SatuanNode:
                                  AttckMapper(), self.autonomy, self.approvals,
                                  self.bot, self.edge)
         self.bus.subscribe(self.pipeline.on_event)
+        # ---- Integrasi SOC (opsional, mati bila variabel tidak diisi) ----
+        self.wazuh = None
+        wz_path = os.environ.get("WAYANG_WAZUH_LOG")
+        if wz_path:
+            from integrations.wazuh_export import WazuhExporter
+            self.wazuh = WazuhExporter(wz_path, satuan,
+                                       include_noisy=os.environ.get("WAYANG_WAZUH_ALL") == "1")
+            self.bus.subscribe(self.wazuh)          # setelah Pipeline: event sudah ber-hash
+        self.ids = None
+        self.eve = None
+        eve_path = os.environ.get("WAYANG_SURICATA_EVE")
+        if eve_path:
+            from integrations.suricata_eve import EveWatcher, IdsWatchlist
+            ignore = {x.strip() for x in os.environ.get("WAYANG_IDS_IGNORE", "").split(",") if x.strip()}
+            self.ids = IdsWatchlist(ttl_s=float(os.environ.get("WAYANG_IDS_TTL_S", "900")),
+                                    ignore=ignore)
+            self.eve = EveWatcher(eve_path, self.ids, on_flag=self._on_ids_flag,
+                                  max_severity=int(os.environ.get("WAYANG_IDS_MAX_SEVERITY", "2")),
+                                  from_start=os.environ.get("WAYANG_IDS_FROM_START") == "1")
         self.shadow = ShadowDevice("depo_bbm_01", satuan, seed, self.sessions, self.bus,
                                    time_scale=time_scale, start_hour=start_hour, kind=kind)
         self.mirror = StateMirror(real_addr, mirror_interval, mapping=MIRROR_MAP.get(kind))
         self.watchdog = WatchdogFailToWire(satuan, bus=self.bus)
         self.kelir = Kelir(satuan, real_addr, self.shadow, self.sessions,
                            SessionScorer(self.whitelist), self.bus, self.autonomy,
-                           self.blocklist, self.mirror)
+                           self.blocklist, self.mirror, ids=self.ids,
+                           ids_operator_mode=os.environ.get("WAYANG_IDS_OPERATOR_MODE", "alert"))
         self.social = SocialDecoys(satuan, seed, self.secret, self.bus,
                                    domain=os.environ.get("DECOY_DOMAIN"))
         self.personas = self.social.make_directory(5)
@@ -127,12 +147,31 @@ class SatuanNode:
         self._uv: uvicorn.Server | None = None
         self._uv_task = None
 
+    def _on_ids_flag(self, hit, alert: dict) -> None:
+        """Tanda Suricata baru/memburuk -> event Gamelan (masuk rantai hash, konsol, Wazuh)."""
+        self.bus.publish({
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "t_mono": time.monotonic(), "satuan": self.satuan, "shadow": None,
+            "proto": alert.get("proto") or "?", "src": hit.ip, "session": None,
+            "action": "ids_flag", "via": "suricata",
+            "reason": hit.reason(), "ids_sid": alert.get("sid", hit.sid),
+            "ids_signature": alert.get("signature", hit.signature),
+            "ids_severity": alert.get("severity", hit.severity), "dest_ip": alert.get("dest_ip"),
+            "dest_port": alert.get("dest_port")})
+
+    def integrations_status(self) -> dict:
+        return {"wazuh": self.wazuh.status() if self.wazuh else None,
+                "suricata": self.eve.status() if self.eve else None,
+                "ids_operator_mode": self.kelir.ids_operator_mode}
+
     async def start(self, with_hmi: bool = True) -> None:
         try:
             await self.mirror.poll_once()
         except (OSError, asyncio.TimeoutError):
             pass
         self.mirror.start()
+        if self.eve:
+            self.eve.start()
         kp, sp, hp = self.req_ports
         ks = await self.kelir.serve(self.host, kp)
         ss = await self.shadow.serve(self.host, sp)
@@ -165,6 +204,8 @@ class SatuanNode:
             SatuanNode._tg_polling_active = False
             self.tg_channel.stop_polling()
         self.mirror.stop()
+        if self.eve:
+            self.eve.stop()
         for s in self._servers:
             s.close()
         if self._uv:

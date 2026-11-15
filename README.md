@@ -126,6 +126,15 @@ Pada skenario pengujian **"Operator Terkompromi"** (`tests/test_kelir.py::test_c
 
 ---
 
+### 8. Integrasi SOC: Suricata dan Wazuh
+WAYANG melengkapi SOC satuan, bukan menggantikannya ([rincian](integrations/README.md)):
+- **Suricata → WAYANG**: alert di `eve.json` menandai IP. Sumber tak terdaftar yang ditandai langsung dilayani bayangan. Operator terdaftar yang ditandai memicu peringatan ke Dalang, atau karantina bila mode `divert` dipilih.
+- **WAYANG → Wazuh**: setiap event bayangan ditulis sebagai JSON per baris lengkap dengan hash bukti. Rule `100700-100711` mengubahnya menjadi alert Wazuh.
+- **WAYANG → Suricata**: draf rule per penyerang (tulis Modbus, koneksi ke port OT) ikut di paket persetujuan Dalang dan tersedia di `/api/tactical/rules/suricata.rules`.
+- Diuji pada Suricata 8.0.8 dan Wazuh 4.14.9 asli memakai pcap lab sintetis (`integrations/lab/`).
+
+---
+
 ## 📊 Hasil Uji & Benchmark Evaluasi (Bab 13)
 
 ### Hasil pada skenario berskrip (simulator internal)

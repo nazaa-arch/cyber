@@ -59,6 +59,11 @@ class Pipeline:
         self.store.add_event(ev)
         for t in ev["attack_technique"]:
             self.technique_counts[t] = self.technique_counts.get(t, 0) + 1
+        if ev.get("action") == "ids_flag":                 # tanda dari Suricata (tanpa sesi)
+            self._alert("ids", ev, f"Suricata menandai {ev.get('src')}: "
+                        f"{ev.get('ids_signature')} (sid {ev.get('ids_sid')}). "
+                        "Sumber ini akan dilayani bayangan bila menyentuh aset OT.",
+                        warn=int(ev.get("ids_severity") or 3) <= 1)
         if s is None:
             return
         s.techniques.update(ev["attack_technique"])
@@ -80,6 +85,12 @@ class Pipeline:
                         f"sesi {s.src} layak dialihkan. {ev.get('reason', '')}")
         elif action == "diverted_write_alert":
             self._on_diverted_write(ev, s, summ)
+        elif action == "ids_flag_operator":
+            tindak = ("dikarantina ke bayangan" if ev.get("ids_mode") == "divert"
+                      else "masih ke aset asli, butuh keputusan Dalang")
+            self._alert("ids_operator", ev, f"PERINGATAN: operator terdaftar {s.src} "
+                        f"ditandai Suricata ({ev.get('ids_signature')}); sesi {tindak}.",
+                        warn=True)
         elif action not in ("auto_block",) and not s.pinned and s.events <= 1:
             self._info(ev, s)
         if self.edge is not None and (s.diverted or s.honeytokens_planted
@@ -118,7 +129,7 @@ class Pipeline:
         self.alerts.append({"kind": kind, "session": ev.get("session"), "text": text,
                             "t_event": ev["t_mono"], "t_alert": time.monotonic(),
                             "warn": warn, "event_id": ev.get("event_id")})
-        if self.bot and kind in ("info", "honeytoken", "rekomendasi"):
+        if self.bot and kind in ("info", "honeytoken", "rekomendasi", "ids", "ids_operator"):
             self.bot.info(text)
 
     # ---------- bukti ----------

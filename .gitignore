@@ -14,3 +14,7 @@ deploy/*.exe
 *.exe
 
 data/
+
+# lab integrasi (dibangkitkan ulang)
+integrations/lab/rules/
+integrations/lab/pcap/

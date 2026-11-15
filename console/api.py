@@ -778,6 +778,36 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         lines.append("}")
         return "\n".join(lines)
 
+    @app.get("/api/tactical/rules/suricata.rules", response_class=PlainTextResponse)
+    async def api_tactical_suricata():
+        from engine import rulegen
+        out = ["# =====================================================================",
+               "# WAYANG -> SURICATA: DRAF RULE DARI SUMBER PENYENTUH BAYANGAN",
+               "# Mode IDS: biarkan 'alert'. Mode IPS inline: ganti ke 'drop' setelah disetujui Dalang.",
+               "# Wajib: vars.address-groups.OT_NET dan app-layer modbus aktif di suricata.yaml.",
+               "# ====================================================================="]
+        seen = set()
+        for n in set(nodes.values()):
+            lab = getattr(n.approvals, "lab_mode", False)
+            for s in n.store.sessions():
+                key = (s.get("satuan"), s.get("src"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                try:
+                    out.append(rulegen.suricata_rules(s, whitelist=n.whitelist,
+                                                      allow_loopback=lab, with_header=False))
+                except ValueError as e:
+                    out.append(f"# dilewati {s.get('src')}: {e}")
+        if len(out) == 5:
+            out.append("# Belum ada sumber yang menyentuh bayangan.")
+        return "\n".join(out) + "\n"
+
+    @app.get("/api/integrations")
+    async def api_integrations():
+        return {n.satuan: n.integrations_status() for n in set(nodes.values())
+                if hasattr(n, "integrations_status")}
+
     @app.post("/api/tactical/lockdown/{satuan}")
     async def api_lockdown(satuan: str):
         n = node(satuan)

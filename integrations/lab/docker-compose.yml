@@ -1,0 +1,33 @@
+# Lab integrasi WAYANG <-> Suricata <-> Wazuh (satu laptop, tanpa serangan nyata).
+#
+#   python integrations/lab/make_pcap.py                 # rekaman serangan sintetis
+#   docker compose -f integrations/lab/docker-compose.yml run --rm suricata
+#       -> integrations/lab/out/eve.json (alert sid 9799001 untuk 10.10.5.90)
+#   WAYANG_SURICATA_EVE=integrations/lab/out/eve.json WAYANG_IDS_FROM_START=1 \
+#   WAYANG_WAZUH_LOG=integrations/lab/out/wayang-alerts.json python run_wayang.py
+#   docker compose -f integrations/lab/docker-compose.yml up -d wazuh-manager
+#       -> alert rule 1007xx di /var/ossec/logs/alerts/alerts.json
+#
+# Wazuh manager butuh memori Docker >= 4 GB saat start.
+services:
+  suricata:
+    image: jasonish/suricata:8.0.8
+    volumes:
+      - ./pcap:/lab/pcap:ro
+      - ../suricata:/lab/rules:ro
+      - ./out:/lab/out
+    command: >
+      -r /lab/pcap/serangan-modbus.pcap -S /lab/rules/wayang-ot.rules -l /lab/out
+      -k none --runmode single
+      --set vars.address-groups.OT_NET=[10.10.5.0/24]
+      --set vars.address-groups.MODBUS_OPERATORS=[10.10.5.30]
+      --set app-layer.protocols.modbus.enabled=yes
+
+  wazuh-manager:
+    build:
+      context: ..
+      dockerfile: lab/wazuh/Dockerfile
+    hostname: wazuh-manager
+    volumes:
+      - ./out:/var/log/wayang:ro
+    restart: "no"

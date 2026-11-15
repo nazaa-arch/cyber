@@ -1,0 +1,11 @@
+<!--
+  Tambahkan ke ossec.conf agen Wazuh di mesin WAYANG (atau manajer bila satu mesin).
+  Wazuh mengizinkan beberapa blok <ossec_config>, jadi blok ini boleh ditempel di akhir berkas.
+  Jalankan WAYANG dengan: WAYANG_WAZUH_LOG=/var/log/wayang/wayang-alerts.json
+-->
+<ossec_config>
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/wayang/wayang-alerts.json</location>
+  </localfile>
+</ossec_config>

@@ -1,0 +1,98 @@
+<!--
+  WAYANG -> Wazuh: rule untuk event panggung bayangan (rentang id 100700-100719).
+  Pasang di manajer: /var/ossec/etc/rules/wayang_rules.xml, lalu restart manajer.
+  Sumber log: berkas JSON per baris dari WazuhExporter (lihat ossec_localfile.xml).
+  Teknik ATT&CK for ICS ada di field wayang.mitre_ics (Wazuh hanya memuat katalog
+  Enterprise di blok <mitre>, jadi ICS tidak ditaruh di sana).
+-->
+<group name="wayang,ot_deception,">
+
+  <rule id="100700" level="3">
+    <decoded_as>json</decoded_as>
+    <field name="integration">^wayang$</field>
+    <description>WAYANG: event panggung bayangan di $(wayang.satuan)</description>
+  </rule>
+
+  <rule id="100701" level="6">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^unlisted_source_read$</field>
+    <description>WAYANG: sumber tak terdaftar $(srcip) membaca aset OT $(wayang.satuan), dilayani bayangan</description>
+    <group>recon,</group>
+  </rule>
+
+  <rule id="100702" level="10">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^shadow_divert$</field>
+    <description>WAYANG: sesi $(srcip) dialihkan ke bayangan $(wayang.satuan) - $(wayang.reason)</description>
+    <group>deception,attack,</group>
+  </rule>
+
+  <rule id="100703" level="12">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^diverted_write_alert$</field>
+    <description>WAYANG: perintah tulis Modbus dari $(srcip) tertahan di bayangan $(wayang.satuan), PLC asli aman</description>
+    <group>attack,ot_impact_attempt,</group>
+  </rule>
+
+  <rule id="100704" level="12">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^honeytoken_used$|^http_login_honeytoken$</field>
+    <description>WAYANG: honeytoken bocor dipakai dari $(srcip) di $(wayang.satuan)</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>credential_access,honeytoken,</group>
+  </rule>
+
+  <rule id="100705" level="8">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^http_login_default_cred$</field>
+    <description>WAYANG: percobaan kredensial bawaan dari $(srcip) pada HMI umpan $(wayang.satuan)</description>
+    <mitre>
+      <id>T1078.001</id>
+    </mitre>
+    <group>authentication_failed,</group>
+  </rule>
+
+  <rule id="100706" level="8">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^auto_block$</field>
+    <description>WAYANG: $(srcip) diblokir otomatis (L3) di $(wayang.satuan)</description>
+    <group>active_response,</group>
+  </rule>
+
+  <rule id="100707" level="12">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^policy_violation_divert$</field>
+    <description>WAYANG: operator terdaftar $(srcip) melanggar kebijakan per-sumber - $(wayang.reason)</description>
+    <group>attack,insider,</group>
+  </rule>
+
+  <rule id="100708" level="5">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^ids_flag$</field>
+    <description>WAYANG: tanda Suricata untuk $(srcip) diterima - $(wayang.ids_signature)</description>
+    <group>ids,</group>
+  </rule>
+
+  <rule id="100709" level="13">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^ids_flag_operator$</field>
+    <description>WAYANG: operator terdaftar $(srcip) ditandai Suricata, indikasi workstation dikuasai ($(wayang.ids_mode))</description>
+    <group>attack,insider,</group>
+  </rule>
+
+  <rule id="100710" level="8">
+    <if_sid>100700</if_sid>
+    <field name="wayang.action">^would_divert$</field>
+    <description>WAYANG: rekomendasi alihkan $(srcip) (otonomi rendah, butuh keputusan Dalang)</description>
+  </rule>
+
+  <rule id="100711" level="13" frequency="3" timeframe="300">
+    <if_matched_sid>100702</if_matched_sid>
+    <same_source_ip />
+    <description>WAYANG: $(srcip) berulang kali dialihkan ke bayangan dalam 5 menit, kampanye aktif</description>
+    <group>attack,campaign,</group>
+  </rule>
+
+</group>

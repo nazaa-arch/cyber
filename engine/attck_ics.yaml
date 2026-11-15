@@ -30,5 +30,6 @@ actions:
   http_config_download: [T0845]
   http_panel: [T0801]
   unlisted_source_read: [T0801]
+  ids_flag_operator: [T0859]
 flags:
   sequential_scan: [T0846, T0840]

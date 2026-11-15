@@ -25,8 +25,14 @@ class Kelir:
                  sessions: SessionRegistry, scorer: SessionScorer, bus: Gamelan,
                  autonomy: Autonomy | None = None, blocklist: Blocklist | None = None,
                  mirror: StateMirror | None = None, clock=time.monotonic,
-                 zero_trust: bool = True):
+                 zero_trust: bool = True, ids=None, ids_operator_mode: str = "alert"):
         self.satuan = satuan
+        # Integrasi Suricata (opsional): IdsWatchlist dari integrations.suricata_eve.
+        # ids_operator_mode: "alert" (bawaan, operator tetap ke aset asli) | "divert".
+        if ids_operator_mode not in ("alert", "divert"):
+            raise ValueError("ids_operator_mode harus 'alert' atau 'divert'")
+        self.ids = ids
+        self.ids_operator_mode = ids_operator_mode
         self.real_addr = real_addr
         self.shadow = shadow
         self.sessions = sessions
@@ -90,6 +96,14 @@ class Kelir:
             "proto": "modbus_tcp", "src": s.src, "session": s.id, "action": action,
             "target": None, "stage": s.stage, "depth": s.engine.depth,
             "via": "kelir", **extra})
+
+    def _ids_hit(self, src: str):
+        if self.ids is None:
+            return None
+        try:
+            return self.ids.flagged(src)
+        except Exception:      # integrasi luar tidak boleh mematikan jalur Modbus
+            return None
 
     def _pin(self, s, decision) -> None:
         s.pinned = True
@@ -195,6 +209,22 @@ class Kelir:
                     return self._to_shadow(s, src, unit, pdu)
                 return None  # drop
 
+            hit = self._ids_hit(src)
+            if hit is not None and not self.maintenance_mode:
+                # IP bukan identitas: operator terdaftar yang ditandai Suricata
+                # kemungkinan workstation-nya dikuasai penyerang.
+                if not getattr(s, "ids_noted", False):
+                    s.ids_noted = True
+                    s.observe(now, req.action, unit=unit, table=req.table, addr=req.addr,
+                              qty=req.qty, fc=req.fc, is_write=req.is_write)
+                    self._event(s, "ids_flag_operator", reason=hit.reason(), src=src,
+                                ids_sid=hit.sid, ids_signature=hit.signature,
+                                ids_severity=hit.severity, ids_mode=self.ids_operator_mode,
+                                unit=unit, fc=req.fc)
+                if self.ids_operator_mode == "divert" and self.autonomy.can_divert:
+                    self._pin(s, Decision(1.0, True, f"karantina operator: {hit.reason()}"))
+                    return self._to_shadow(s, src, unit, pdu)
+
             return await self._forward(holder, tid, unit, pdu, whitelisted=True)
 
         s = self.sessions.get(src, now)
@@ -217,6 +247,13 @@ class Kelir:
         decision = self.scorer.score(
             src, modbus_funcs=funcs, scan_targets=s.seq, scan_window_s=s.scan_window(),
             default_cred_attempts=s.default_cred, req_rate_hz=s.rate_hz(now))
+        hit = self._ids_hit(src)
+        if hit is not None and not self.maintenance_mode:
+            # Korelasi IDS: sumber tak terdaftar yang sudah ditandai Suricata
+            # dialihkan sejak frame pertama, apa pun skor heuristiknya.
+            decision = Decision(max(decision.score, 1.0), True,
+                                f"dialihkan karena: {hit.reason()} + {decision.reason}",
+                                decision.signals)
         # Kebijakan Zero Trust Bawaan:
         # Sumber tak terdaftar selalu dilayani bayangan berbasis State Mirror (0 bacaan ke PLC riil),
         # kecuali jika teknisi sah mengaktifkan Mode Perawatan (maintenance mode).

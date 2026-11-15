@@ -151,6 +151,60 @@ def nftables_draft(src: str, ports=(502,), ttl: str = "15m",
         f"    {sel} saddr @blocked_{a.version} tcp dport {{ {pl} }} drop\n  }}\n}}\n")
 
 
+SURICATA_SID_BASE = 9_700_000     # rentang lokal WAYANG: 9.700.000 - 9.799.999
+
+
+def _suricata_sid(src: str, i: int) -> int:
+    import zlib
+    return SURICATA_SID_BASE + (zlib.crc32(src.encode()) % 9_999) * 10 + i
+
+
+def suricata_rules(summary: dict, whitelist: set[str] | None = None,
+                   allow_loopback: bool = False, action: str = "alert",
+                   ot_ports=(502,), with_header: bool = True) -> str:
+    """Draf rule Suricata untuk satu sumber yang menyentuh bayangan.
+
+    action "alert" untuk mode IDS; "drop" hanya berlaku bila Suricata inline (IPS).
+    Butuh app-layer modbus aktif (suricata.yaml: app-layer.protocols.modbus.enabled).
+    """
+    if action not in ("alert", "drop"):
+        raise ValueError("action harus 'alert' atau 'drop'")
+    for k in ("satuan", "session"):
+        if not _SAFE.match(str(summary.get(k, ""))):
+            raise ValueError(f"nilai {k} tidak aman")
+    a = validate_ip(summary.get("src", ""), whitelist, allow_loopback)
+    for p in ot_ports:
+        if not isinstance(p, int) or not 1 <= p <= 65535:
+            raise ValueError("port tidak valid")
+    src, sat, sess = str(a), summary["satuan"], summary["session"]
+    ports = ",".join(str(p) for p in ot_ports)
+    ports = f"[{ports}]" if len(ot_ports) > 1 else ports
+    techs = set(summary.get("techniques", []))
+    meta = f"wayang_satuan {sat}, wayang_session {sess}"
+    out = []
+    if with_header:
+        out += ["# DRAF WAYANG - BELUM DITERAPKAN. Butuh tinjauan dan persetujuan Dalang.",
+                f"# Sumber {src} menyentuh bayangan {sat} (sesi {sess}).",
+                "# Variabel $OT_NET wajib didefinisikan di suricata.yaml (vars.address-groups)."]
+    out.append(
+        f'{action} modbus {src} any -> $OT_NET {ports} (msg:"WAYANG {sat} - perintah tulis '
+        f'Modbus dari sumber penyentuh bayangan"; flow:to_server,established; '
+        f'modbus: access write; classtype:attempted-admin; priority:1; '
+        f'sid:{_suricata_sid(src, 0)}; rev:1; metadata: {meta}, mitre_technique T0855;)')
+    out.append(
+        f'{action} tcp {src} any -> $OT_NET {ports} (msg:"WAYANG {sat} - koneksi baru dari '
+        f'sumber penyentuh bayangan ke aset OT"; flow:to_server; flags:S,12; '
+        f'threshold: type limit, track by_src, count 1, seconds 60; classtype:misc-activity; '
+        f'priority:2; sid:{_suricata_sid(src, 1)}; rev:1; metadata: {meta};)')
+    if techs & {"T0888"}:
+        out.append(
+            f'{action} modbus {src} any -> $OT_NET {ports} (msg:"WAYANG {sat} - Read Device '
+            f'Identification dari sumber penyentuh bayangan"; flow:to_server,established; '
+            f'modbus: function 43; classtype:attempted-recon; priority:2; '
+            f'sid:{_suricata_sid(src, 2)}; rev:1; metadata: {meta}, mitre_technique T0888;)')
+    return "\n".join(out) + "\n"
+
+
 def recommendations(summary: dict) -> list[str]:
     out = []
     for t in summary.get("techniques", []):
@@ -181,6 +235,8 @@ def build_bundle(summary: dict, whitelist: set[str] | None = None,
         "sigma": rules,
         "ioc": ioc_bundle(summary),
         "nftables": nftables_draft(summary["src"], whitelist=whitelist,
+                                   allow_loopback=allow_loopback),
+        "suricata": suricata_rules(summary, whitelist=whitelist,
                                    allow_loopback=allow_loopback),
         "hardening": recommendations(summary),
         "ratio_benteng": (len(covered_techniques(techs)) / len(techs)) if techs else 1.0,

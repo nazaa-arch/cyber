@@ -1,0 +1,13 @@
+# WAYANG - rule Suricata statis untuk segmen OT (sid 9799001-9799099).
+# Alert dari rule ini dibaca WAYANG (WAYANG_SURICATA_EVE) dan membuat sumbernya
+# dilayani panggung bayangan sejak frame pertama.
+# Wajib di suricata.yaml (atau --set):
+#   vars.address-groups.OT_NET            mis. [10.10.5.0/24]
+#   vars.address-groups.MODBUS_OPERATORS  HMI/SCADA sah, mis. [10.10.5.30]
+#   app-layer.protocols.modbus.enabled: yes
+
+alert modbus !$MODBUS_OPERATORS any -> $OT_NET 502 (msg:"WAYANG-OT perintah tulis Modbus dari host bukan operator"; flow:to_server,established; modbus: access write; classtype:attempted-admin; priority:1; sid:9799001; rev:1; metadata: mitre_technique T0855;)
+
+alert modbus !$MODBUS_OPERATORS any -> $OT_NET 502 (msg:"WAYANG-OT Read Device Identification dari host bukan operator"; flow:to_server,established; modbus: function 43; classtype:attempted-recon; priority:2; sid:9799002; rev:1; metadata: mitre_technique T0888;)
+
+alert tcp !$MODBUS_OPERATORS any -> $OT_NET 502 (msg:"WAYANG-OT pemindaian port Modbus dari host bukan operator"; flow:to_server; flags:S,12; detection_filter: track by_src, count 5, seconds 60; classtype:attempted-recon; priority:2; sid:9799003; rev:1; metadata: mitre_technique T0846;)
