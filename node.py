@@ -51,7 +51,7 @@ from engine.autonomy import Autonomy, Blocklist
 from engine.gamelan import Gamelan
 from engine.pipeline import Pipeline
 from engine.social import SocialDecoys
-from engine.watchdog import WatchdogFailToWire
+from engine.gerbang import GerbangBypass
 from evidence.hashchain import HashChain
 from evidence.session_store import SessionStore
 from kelir.mirror import StateMirror
@@ -70,7 +70,8 @@ class SatuanNode:
                  time_scale: float = 1.0, level: int = 2, transport=None,
                  mirror_interval: float = 1.0, host: str = "127.0.0.1",
                  ports: tuple[int, int, int] = (0, 0, 0), start_hour: float | None = None,
-                 db_path: str = ":memory:", lab_mode: bool = False, kind: str = "bbm"):
+                 db_path: str = ":memory:", lab_mode: bool = False, kind: str = "bbm",
+                 bypass: bool | None = None):
         self.kind = kind              # bbm | genset | cctv | gateway
         self.satuan = satuan
         self.host = host
@@ -133,7 +134,26 @@ class SatuanNode:
         self.shadow = ShadowDevice("depo_bbm_01", satuan, seed, self.sessions, self.bus,
                                    time_scale=time_scale, start_hour=start_hour, kind=kind)
         self.mirror = StateMirror(real_addr, mirror_interval, mapping=MIRROR_MAP.get(kind))
-        self.watchdog = WatchdogFailToWire(satuan, bus=self.bus)
+        # Gerbang Bypass (fail-to-wire aman): None -> ikut env WAYANG_BYPASS (bawaan mati
+        # untuk pemakaian pustaka/tes; run_wayang menyalakannya).
+        if bypass is None:
+            bypass = os.environ.get("WAYANG_BYPASS", "0").strip().lower() in ("1", "true", "yes", "on")
+        self.bypass_enabled = bypass
+        self.real_addr = real_addr
+        self.gerbang: GerbangBypass | None = None
+        self._beat = time.monotonic()
+        self._beat_task = None
+        self._kelir_server = None
+        self._fault_until = 0.0
+        self.max_loop_stall_s = 0.0          # diagnostik: macet terlama event loop Kelir
+        # Ambang "Kelir dianggap beku": loop tak berdetak selama N detik. Terlalu kecil ->
+        # bypass palsu saat beban sesaat (GC, SQLite, CPU sibuk); terlalu besar -> operator
+        # menunggu lebih lama saat Kelir benar-benar beku. Total waktu alih ~ ambang + 3 x 0.25 s.
+        try:
+            self.bypass_stall_s = max(0.3, float(os.environ.get("WAYANG_BYPASS_STALL_S", "2.0")))
+        except ValueError:
+            self.bypass_stall_s = 2.0
+        self.loop_stalls_over_500ms = 0
         self.kelir = Kelir(satuan, real_addr, self.shadow, self.sessions,
                            SessionScorer(self.whitelist), self.bus, self.autonomy,
                            self.blocklist, self.mirror, ids=self.ids,
@@ -173,10 +193,33 @@ class SatuanNode:
         if self.eve:
             self.eve.start()
         kp, sp, hp = self.req_ports
-        ks = await self.kelir.serve(self.host, kp)
+        if self.bypass_enabled:
+            # Kelir pindah ke port internal loopback; port publik dipegang Gerbang.
+            self.kelir.proxy_protocol = True
+            ks = await self.kelir.serve("127.0.0.1", 0)
+        else:
+            ks = await self.kelir.serve(self.host, kp)
+        self._kelir_server = ks
         ss = await self.shadow.serve(self.host, sp)
         self._servers = [ks, ss]
         self.ports["kelir"] = ks.sockets[0].getsockname()[1]
+        if self.bypass_enabled:
+            self.ports["kelir_internal"] = self.ports["kelir"]
+            self._beat = time.monotonic()
+            self._beat_task = asyncio.ensure_future(self._heartbeat_loop())
+            loop = asyncio.get_running_loop()
+
+            def _notify(ev: dict) -> None:
+                if not loop.is_closed():
+                    loop.call_soon_threadsafe(self.bus.publish, ev)
+
+            self.gerbang = GerbangBypass(
+                self.satuan, (self.host, kp), ("127.0.0.1", self.ports["kelir_internal"]),
+                self.real_addr, self.whitelist, self._kelir_healthy,
+                blocklist=self.blocklist, notify=_notify,
+                alert=self.tg_channel.send if self.tg_channel else None,
+                interval_s=0.25)
+            self.ports["kelir"] = await asyncio.to_thread(self.gerbang.start)
         self.ports["shadow"] = ss.sockets[0].getsockname()[1]
 
         smtp_p = int(os.environ.get("SMTP_PORT", "0"))
@@ -199,7 +242,37 @@ class SatuanNode:
             self._is_tg_poller = True
             self.tg_channel.start_polling()
 
+    async def _heartbeat_loop(self) -> None:
+        """Detak jantung di event loop Kelir: berhenti berdetak bila loop membeku."""
+        prev = time.monotonic()
+        while True:
+            now = time.monotonic()
+            stall = now - prev - 0.05          # terlambat dari jadwal = loop sempat macet
+            if stall > self.max_loop_stall_s:
+                self.max_loop_stall_s = stall
+            if stall > 0.5:
+                self.loop_stalls_over_500ms += 1
+            prev = now
+            self._beat = now
+            await asyncio.sleep(0.05)
+
+    def _kelir_healthy(self) -> bool:
+        """Dipanggil dari thread Gerbang: loop Kelir masih berdetak & server masih melayani."""
+        if time.monotonic() < self._fault_until:
+            return False                         # uji fail-to-wire terkendali dari konsol
+        ks = self._kelir_server
+        return (ks is not None and ks.is_serving()
+                and time.monotonic() - self._beat < self.bypass_stall_s)
+
+    def simulate_proxy_fault(self, seconds: float) -> None:
+        """Uji taktis: buat Gerbang melihat Kelir gagal selama N detik (Kelir tetap hidup)."""
+        self._fault_until = time.monotonic() + max(0.0, min(float(seconds), 120.0))
+
     async def stop(self) -> None:
+        if self.gerbang:
+            await asyncio.to_thread(self.gerbang.stop)
+        if self._beat_task:
+            self._beat_task.cancel()
         if getattr(self, "_is_tg_poller", False) and self.tg_channel:
             SatuanNode._tg_polling_active = False
             self.tg_channel.stop_polling()

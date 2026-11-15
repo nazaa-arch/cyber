@@ -142,7 +142,9 @@ async def build_operational_system(host: str, base_port: int, out_dir: str, fres
             str(pathlib.Path(out_dir) / name), {"10.0.0.5", "192.168.1.100"},
             db_path=(":memory:" if fresh else str(pathlib.Path(out_dir) / name / "sessions.db")),
             time_scale=60.0, transport=link, host=host, lab_mode=True, kind=u.get("kind", "bbm"),
-            ports=(base_port + i * 10, base_port + i * 10 + 1, base_port + i * 10 + 2)
+            ports=(base_port + i * 10, base_port + i * 10 + 1, base_port + i * 10 + 2),
+            # Gerbang Bypass aman aktif bawaan; matikan dengan WAYANG_BYPASS=0
+            bypass=os.environ.get("WAYANG_BYPASS", "1").strip().lower() not in ("0", "false", "no", "off"),
         )
 
         pusat.register_unit(

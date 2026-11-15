@@ -9,6 +9,7 @@ Jaminan keselamatan:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import time
 
 from engine.autonomy import Autonomy, Blocklist, L3_BLOCK_TTL_S, L3_REPEAT_THRESHOLD
@@ -18,6 +19,33 @@ from kelir.scoring import SessionScorer, Decision
 from kelir.session import SessionRegistry
 from shadows import modbus_proto as mp
 from shadows.modbus_shadow import ShadowDevice
+
+PROXY_HEADER_TIMEOUT_S = 2.0
+
+
+async def read_proxy_v1(reader) -> str | None:
+    """Baca header PROXY protocol v1 dari Gerbang Bypass; kembalikan IP klien asli."""
+    try:
+        line = await asyncio.wait_for(reader.readuntil(b"\r\n"), PROXY_HEADER_TIMEOUT_S)
+    except (asyncio.IncompleteReadError, asyncio.LimitOverrunError,
+            asyncio.TimeoutError, ConnectionError):
+        return None
+    if len(line) > 107:
+        return None
+    parts = line.decode("ascii", "replace").strip().split(" ")
+    if len(parts) != 6 or parts[0] != "PROXY" or parts[1] not in ("TCP4", "TCP6"):
+        return None
+    try:
+        return str(ipaddress.ip_address(parts[2]))
+    except ValueError:
+        return None
+
+
+def _is_loopback(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip).is_loopback
+    except ValueError:
+        return False
 
 
 class Kelir:
@@ -43,6 +71,9 @@ class Kelir:
         self.mirror = mirror
         self.clock = clock
         self.zero_trust = zero_trust
+        # Aktif bila Kelir duduk di belakang Gerbang Bypass: IP klien asli dibawa lewat
+        # header PROXY v1, dan hanya dipercaya dari loopback (Gerbang di mesin yang sama).
+        self.proxy_protocol = False
         self.divert_counts: dict[str, int] = {}
         self.active_conns = 0
         self.active_operator_conns = 0
@@ -123,6 +154,12 @@ class Kelir:
     # ---------- koneksi klien ----------
     async def handle_client(self, reader, writer) -> None:
         src = writer.get_extra_info("peername")[0]
+        if self.proxy_protocol:
+            real = await read_proxy_v1(reader) if _is_loopback(src) else None
+            if real is None:          # header hilang/cacat atau bukan dari Gerbang: tolak
+                writer.close()
+                return
+            src = real
         up = None
         is_operator = src in self.scorer.whitelist
 

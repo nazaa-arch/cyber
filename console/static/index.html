@@ -1810,6 +1810,18 @@ img, svg, canvas { -webkit-user-drag: none; user-drag: none; }
     display: block; padding: 40px; font: 700 18px sans-serif; color: #000;
   }
 }
+/* Gerbang Bypass: spanduk mode fail-to-wire aman */
+.bypass-banner {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin: 10px 20px 0; padding: 10px 16px;
+  background: var(--crimson-wine); border: 1px solid #DC2626; border-radius: 4px;
+  color: #FFF1F1; font-family: var(--font-head); font-size: .8125rem; line-height: 1.45;
+}
+.bypass-banner[hidden], .bypass-banner [hidden] { display: none !important; }
+.bypass-banner strong { letter-spacing: .06em; text-transform: uppercase; }
+.bypass-banner .bypass-detail { flex: 1 1 420px; }
+.bypass-banner .bypass-meta { font-family: var(--font-mono); font-size: .75rem; color: var(--crimson-text); }
+.bypass-banner.is-locked { background: #5B1010; }
 </style>
 </head>
 <body class="theater-locked">
@@ -1962,6 +1974,7 @@ img, svg, canvas { -webkit-user-drag: none; user-drag: none; }
         <svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#020710"><polyline points="20 6 9 17 4 12"></polyline></svg>
         Netralisir Insiden
       </button>
+      <button class="btn btn--ghost btn--sm" data-act="testBypass" title="Uji fail-to-wire: Gerbang memperlakukan Kelir satuan terpilih sebagai gagal selama 8 detik">Uji Fail-to-Wire</button>
       <button class="btn btn--ghost btn--sm" data-act="resetIncidents" title="Bersihkan tampilan insiden (bukti forensik tetap tersimpan)">Reset Tampilan</button>
       <button class="btn btn--ghost btn--sm" data-act="doLogout" title="Keluar dari sesi komando">Keluar</button>
     </div>
@@ -1990,6 +2003,14 @@ img, svg, canvas { -webkit-user-drag: none; user-drag: none; }
 <!-- ==========================================================================
      ZONE 3: PRIMARY C4ISR OPERATIONAL THEATER
      ========================================================================== -->
+<div id="bypass-banner" class="bypass-banner" role="alert" hidden>
+  <div class="bypass-detail">
+    <strong id="bypass-title">Mode Bypass Aman Aktif</strong>
+    <div id="bypass-text"></div>
+    <div class="bypass-meta" id="bypass-meta"></div>
+  </div>
+  <button class="btn btn--ghost btn--sm" id="bypass-restore" data-act="restoreBypass" hidden>Pulihkan ke Kelir</button>
+</div>
 <main id="ops-theater">
 
   <!-- COLUMN 1: TERRITORIAL COMMAND NODES (275px) -->
@@ -2527,6 +2548,45 @@ async function resolveCampaign(id) {
   refresh();
 }
 
+let bypassUnits = {};
+async function refreshBypass() {
+  const r = await J('/api/bypass').catch(() => null);
+  const banner = $('bypass-banner');
+  if (!r || !banner) return;
+  bypassUnits = r.units || {};
+  const active = Object.values(bypassUnits).filter(u => u.bypass_active);
+  if (!active.length) { banner.hidden = true; return; }
+  const locked = active.some(u => u.locked);
+  banner.hidden = false;
+  banner.classList.toggle('is-locked', locked);
+  $('bypass-title').textContent = locked ? 'Mode Bypass Aman Dikunci' : 'Mode Bypass Aman Aktif';
+  $('bypass-text').textContent =
+    `Proxy Kelir di ${active.map(u => u.satuan).join(', ')} tidak merespons. ` +
+    'Operator terdaftar tersambung langsung ke PLC (baca-saja); semua sumber lain diputus.' +
+    (locked ? ' Kelir jatuh-bangun berulang: jalur baru kembali normal setelah konfirmasi operator.' : '');
+  $('bypass-meta').textContent = active.map(u =>
+    `${u.satuan}: ${u.engaged_for_s}s · baca ${u.stats.bypass_reads} · tulis ditahan ${u.stats.bypass_writes_blocked} · diputus ${u.stats.bypass_dropped}`
+  ).join('  |  ');
+  $('bypass-restore').hidden = !locked;
+}
+
+async function restoreBypass() {
+  const locked = Object.values(bypassUnits).filter(u => u.bypass_active && u.locked);
+  for (const u of locked) {
+    if (!confirm(`Kembalikan jalur ${u.satuan} ke proxy Kelir?`)) continue;
+    const r = await post(`/api/bypass/${encodeURIComponent(u.satuan)}/restore`);
+    showToast(r.detail || 'Permintaan pemulihan dikirim.');
+  }
+  refreshBypass();
+}
+
+async function testBypass() {
+  if (!confirm(`Uji Fail-to-Wire pada ${curSat}: Gerbang akan memperlakukan Kelir sebagai gagal selama 8 detik. Lanjutkan?`)) return;
+  const r = await post(`/api/bypass/${encodeURIComponent(curSat)}/test?seconds=8`);
+  showToast(r.ok ? `Uji dimulai: ${r.satuan} masuk mode bypass ±8 detik.` : (r.detail || 'Gerbang Bypass tidak aktif.'));
+  setTimeout(refreshBypass, 600);
+}
+
 async function resetIncidents() {
   if (!confirm('Reset Tampilan: bersihkan status insiden di dasbor? (Bukti forensik TIDAK dihapus)')) return;
   const r = await post('/api/tactical/incidents/reset');
@@ -3029,6 +3089,7 @@ async function openSes(sat, id) {
 
 // Refresh Main State
 async function refresh() {
+  refreshBypass();
   const [m, c, d, s, h, a, b, r, pers, vecs, evts] = await Promise.all([
     'map', 'campaigns', 'decisions', 'sessions', 'heatmap', 'autonomy',
     'bot', 'recon', 'personas', 'map/vectors', 'events/recent'
@@ -3307,6 +3368,7 @@ startConsole();
   const A = {
     openPacketModal, openAboutModal, openMerkleModal, toggleAudio,
     doLogin, doLogout, resolveAllThreats, resetIncidents, lockdownCurrent,
+    restoreBypass, testBypass,
     clearMatrixFilter,
     sim: (a) => sim(a),
     setAutonomyUI: (a) => setAutonomyUI(+a),

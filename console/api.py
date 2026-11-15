@@ -841,6 +841,41 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
             out.append("# Belum ada sumber yang menyentuh bayangan.")
         return "\n".join(out) + "\n"
 
+    def _gerbang_nodes():
+        seen, out = set(), []
+        for n in nodes.values():
+            if id(n) in seen:
+                continue
+            seen.add(id(n))
+            if getattr(n, "gerbang", None):
+                out.append(n)
+        return out
+
+    @app.get("/api/bypass")
+    async def bypass_status():
+        return {"enabled": bool(_gerbang_nodes()),
+                "units": {n.satuan: {**n.gerbang.status(),
+                                     "max_loop_stall_ms": round(n.max_loop_stall_s * 1000),
+                                     "loop_stalls_over_500ms": n.loop_stalls_over_500ms}
+                          for n in _gerbang_nodes()}}
+
+    @app.post("/api/bypass/{satuan}/restore")
+    async def bypass_restore(satuan: str):
+        n = node(satuan)
+        if not getattr(n, "gerbang", None):
+            raise HTTPException(409, "Gerbang Bypass tidak aktif di satuan ini")
+        ok, msg = await asyncio.to_thread(n.gerbang.confirm_restore, "Dalang Console")
+        return JSONResponse({"ok": ok, "detail": msg}, status_code=200 if ok else 409)
+
+    @app.post("/api/bypass/{satuan}/test")
+    async def bypass_test(satuan: str, seconds: float = 8.0):
+        """Uji taktis fail-to-wire: Gerbang melihat Kelir gagal selama N detik (Kelir tetap hidup)."""
+        n = node(satuan)
+        if not getattr(n, "gerbang", None):
+            raise HTTPException(409, "Gerbang Bypass tidak aktif di satuan ini")
+        n.simulate_proxy_fault(seconds)
+        return {"ok": True, "satuan": n.satuan, "seconds": min(max(seconds, 0), 120)}
+
     @app.get("/api/integrations")
     async def api_integrations():
         return {n.satuan: n.integrations_status() for n in set(nodes.values())

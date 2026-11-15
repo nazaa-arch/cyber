@@ -196,7 +196,7 @@ WAYANG saat ini adalah **purwarupa yang seluruh buktinya berasal dari lingkungan
 - **Penyerang berskrip buatan tim.** Presisi/recall 100% dan FPR 0% diukur terhadap skenario yang ditulis oleh tim yang sama dengan penulis detektornya, sehingga cenderung optimistis. Belum ada red team independen atau uji buta manusia (baris "Uji Buta" masih kosong).
 - **Hanya Modbus/TCP.** Belum ada dukungan DNP3, IEC 60870-5-104, S7comm, OPC UA, atau Modbus RTU serial.
 - **Latensi diukur di loopback** satu mesin; belum di switch industri, link radio/satelit, atau mini-PC satuan.
-- **Fail-to-wire baru logika perangkat lunak.** Relai bypass fisik belum ada dan belum diuji.
+- **Fail-to-wire baru di tingkat perangkat lunak.** Gerbang Bypass (`engine/gerbang.py`) aktif di setiap node: bila event loop Kelir tak berdetak selama `WAYANG_BYPASS_STALL_S` (bawaan 2 detik, dicek tiap 0,25 detik, 3x berturut-turut), hanya IP operator terdaftar yang disambungkan langsung ke PLC, **baca-saja** (FC 1/2/3/4/43); tulis dijawab exception 0x01, sumber lain diputus. Kelir yang jatuh-bangun 3x dalam 10 menit membuat bypass dikunci sampai operator konfirmasi di konsol. Gerbang hidup di proses yang sama, jadi **tidak menolong bila seluruh proses/mesin mati**; relai bypass fisik belum ada. Angka 67 ms di tabel berasal dari harness `sim_attacker/evaluate.py` (interval 25 ms), bukan dari konfigurasi live yang lebih konservatif.
 - **Konsol memakai satu token bersama** tanpa peran (RBAC) dan tanpa jejak audit per-pengguna.
 
 ### Asumsi rancangan

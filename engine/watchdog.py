@@ -20,7 +20,9 @@ class WatchdogFailToWire:
     def __init__(self, satuan: str, bus=None,
                  heartbeat_interval_s: float = 1.0,
                  miss_threshold: int = 3,
-                 relay_actuator: Callable[[bool], None] | None = None):
+                 relay_actuator: Callable[[bool], None] | None = None,
+                 flap_limit: int = 3, flap_window_s: float = 600.0,
+                 clock: Callable[[], float] = time.monotonic):
         self.satuan = satuan
         self.bus = bus
         self.interval = heartbeat_interval_s
@@ -32,6 +34,16 @@ class WatchdogFailToWire:
         self.running = False
         self._task: asyncio.Task | None = None
         self.history: list[dict] = []
+        # Anti-flapping: bila bypass terpicu >= flap_limit kali dalam flap_window_s,
+        # bypass DIKUNCI aktif dan hanya bisa dikembalikan lewat konfirmasi operator.
+        # Mencegah penyerang memaksa sistem bolak-balik dengan membanjiri proxy.
+        self.flap_limit = flap_limit
+        self.flap_window_s = flap_window_s
+        self.clock = clock
+        self.engage_times: list[float] = []
+        self.locked = False
+        self.engaged_since: float | None = None
+        self.last_reason = ""
 
     def _default_relay_actuator(self, bypass_state: bool) -> None:
         """Simulasi perintah ke driver relai NIC hardware (contoh: Silicom Bypass NIC / GPIO relay)."""
@@ -45,6 +57,7 @@ class WatchdogFailToWire:
             "action": action,
             "bypass_active": self.is_bypass_active,
             "missed_beats": self.missed_beats,
+            "t_mono": self.clock(), "via": "watchdog", "src": None, "session": None,
             **extra
         }
         self.history.append(rec)
@@ -54,16 +67,51 @@ class WatchdogFailToWire:
     def engage_bypass(self, reason: str = "Heartbeat timeout") -> None:
         """Mengaktifkan relai bypass fail-to-wire fisik/software."""
         if not self.is_bypass_active:
+            now = self.clock()
             self.is_bypass_active = True
+            self.engaged_since = now
+            self.last_reason = reason
+            self.engage_times = [t for t in self.engage_times if now - t < self.flap_window_s] + [now]
             self.relay_actuator(True)
             self._event("fail_to_wire_engaged", reason=reason, doktrin="Availability > Confidentiality")
+            if not self.locked and len(self.engage_times) >= self.flap_limit:
+                self.locked = True
+                self._event("fail_to_wire_locked",
+                            reason=f"Proxy gagal {len(self.engage_times)}x dalam "
+                                   f"{int(self.flap_window_s)} detik; bypass dikunci sampai operator konfirmasi")
 
     def disengage_bypass(self, reason: str = "Proxy recovered") -> None:
         """Mengembalikan jalur normal melalui proxy Kelir saat proxy pulih."""
         if self.is_bypass_active:
             self.is_bypass_active = False
+            self.engaged_since = None
             self.relay_actuator(False)
             self._event("fail_to_wire_disengaged", reason=reason)
+
+    def confirm_restore(self, who: str = "operator") -> tuple[bool, str]:
+        """Operator membuka kunci anti-flapping dan mengembalikan jalur ke Kelir.
+
+        Ditolak bila proxy belum sehat: kembali ke Kelir yang masih mati sama saja
+        memutus operator dari PLC.
+        """
+        if not self.is_bypass_active:
+            self.locked = False
+            return True, "Jalur sudah normal lewat Kelir"
+        if self.healthy_beats < self.miss_threshold:
+            return False, "Proxy Kelir belum sehat; bypass tetap aktif"
+        self.locked = False
+        self.engage_times.clear()
+        self.disengage_bypass(f"Dipulihkan manual oleh {who}")
+        return True, "Jalur dikembalikan ke Kelir"
+
+    def status(self) -> dict:
+        now = self.clock()
+        return {"bypass_active": self.is_bypass_active, "locked": self.locked,
+                "missed_beats": self.missed_beats, "healthy_beats": self.healthy_beats,
+                "engaged_for_s": round(now - self.engaged_since, 1) if self.engaged_since else 0,
+                "engagements_in_window": len([t for t in self.engage_times
+                                              if now - t < self.flap_window_s]),
+                "reason": self.last_reason if self.is_bypass_active else ""}
 
     def record_heartbeat(self, healthy: bool) -> bool:
         """
@@ -73,7 +121,8 @@ class WatchdogFailToWire:
         if healthy:
             self.missed_beats = 0
             self.healthy_beats += 1
-            if self.is_bypass_active and self.healthy_beats >= self.miss_threshold:
+            if (self.is_bypass_active and not self.locked
+                    and self.healthy_beats >= self.miss_threshold):
                 self.disengage_bypass()
         else:
             self.healthy_beats = 0

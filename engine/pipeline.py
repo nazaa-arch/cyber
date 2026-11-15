@@ -16,6 +16,18 @@ from kelir.session import SessionRegistry
 INFO_ALERT_DEDUP_S = 60.0     # deduplikasi per sumber (Bab 14.1, banjir alert)
 
 
+# Telegram untuk bypass dikirim langsung oleh Gerbang (tetap jalan walau loop ini macet),
+# jadi di sini hanya masuk ke daftar peringatan konsol.
+BYPASS_ALERTS = {
+    "fail_to_wire_engaged": "MODE BYPASS AMAN AKTIF di {satuan}: {reason}. Operator terdaftar "
+                            "langsung ke PLC (baca-saja), sumber lain diputus.",
+    "fail_to_wire_locked": "BYPASS DIKUNCI di {satuan}: {reason}.",
+    "fail_to_wire_disengaged": "{satuan}: jalur kembali normal lewat Kelir ({reason}).",
+    "bypass_write_blocked": "Mode bypass {satuan}: perintah tulis FC{fc} dari operator {src} "
+                            "ditahan (baca-saja).",
+}
+
+
 class Pipeline:
     def __init__(self, satuan: str, sessions: SessionRegistry, store: SessionStore,
                  chain: HashChain, mapper: AttckMapper, autonomy: Autonomy,
@@ -64,6 +76,11 @@ class Pipeline:
                         f"{ev.get('ids_signature')} (sid {ev.get('ids_sid')}). "
                         "Sumber ini akan dilayani bayangan bila menyentuh aset OT.",
                         warn=int(ev.get("ids_severity") or 3) <= 1)
+        act = ev.get("action")
+        if act in BYPASS_ALERTS:                         # Gerbang Bypass / watchdog (tanpa sesi)
+            self._alert("bypass", ev, BYPASS_ALERTS[act].format(
+                satuan=ev.get("satuan"), src=ev.get("src"), fc=ev.get("fc"),
+                reason=ev.get("reason", "")), warn=act != "fail_to_wire_disengaged")
         if s is None:
             return
         s.techniques.update(ev["attack_technique"])
