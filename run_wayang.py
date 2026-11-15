@@ -266,6 +266,10 @@ def _resolve_out_dir(args) -> str:
             probe.unlink()
             return base
         except OSError:
+            if os.environ.get("WAYANG_DATA_DIR"):
+                # Direktori bukti diminta eksplisit: jangan diam-diam pindah ke folder sementara.
+                raise SystemExit(f"[FATAL] WAYANG_DATA_DIR={base} tidak dapat ditulis; "
+                                 f"bukti forensik tidak akan persisten. Pasang volume yang dapat ditulis.")
             print(f"[PERINGATAN] {base} tidak dapat ditulis; memakai folder sementara (bukti tidak persisten).")
     return tempfile.mkdtemp(prefix="wayang_live_")
 
@@ -313,9 +317,19 @@ async def amain(args):
             # Tanpa token tetap: buat token acak per-proses (tidak pernah hardcoded).
             admin_token = secrets.token_urlsafe(24)
             print("[AUTH] WAYANG_ADMIN_TOKEN tidak diset — memakai token ACAK sekali-jalan.")
-            print(f"[AUTH] Token Komando (set WAYANG_ADMIN_TOKEN agar tetap): {admin_token}")
             if _is_public:
-                print("[PERINGATAN] Deploy publik tanpa token tetap: token di atas berubah tiap restart.")
+                # Host publik: log sering diteruskan ke pihak ketiga, jadi nilai token TIDAK dicetak.
+                # Token ditulis ke berkas ber-izin 0600 di direktori audit.
+                tok_path = pathlib.Path(out_dir) / ".admin_token"
+                tok_path.write_text(admin_token, encoding="utf-8")
+                try:
+                    os.chmod(tok_path, 0o600)
+                except OSError:
+                    pass
+                print(f"[AUTH] Token sekali-jalan disimpan di: {tok_path} (tidak dicetak ke log).")
+                print("[PERINGATAN] Deploy publik tanpa token tetap: set WAYANG_ADMIN_TOKEN lewat secret/environment.")
+            else:
+                print(f"[AUTH] Token Komando (set WAYANG_ADMIN_TOKEN agar tetap): {admin_token}")
     app = make_console_app(nodes, pusat, admin_token=admin_token)
     print("=" * 70)
     print("       WAYANG: C4ISR CYBER DEFENSE REALTIME PLATFORM (TNI AD)")
@@ -346,7 +360,9 @@ def main():
     parser.add_argument("--base-port", type=int, default=15020, help="Base port Modbus/HMI")
     parser.add_argument("--out", default=None, help="Direktori keluaran log/audit (default: data/audit, persisten)")
     parser.add_argument("--fresh", action="store_true", help="Mode demo bersih: folder sementara, tanpa riwayat sesi lama")
-    parser.add_argument("--mode", default="realtime", choices=["realtime", "full", "console"], help="Mode operasi")
+    # --mode dipertahankan hanya demi kompatibilitas skrip lama; entrypoint ini selalu realtime.
+    parser.add_argument("--mode", default="realtime", choices=["realtime"],
+                        help="Hanya 'realtime'. Mode demo 'full'/'console' ada di: python -m demo")
     args = parser.parse_args()
 
     asyncio.run(amain(args))

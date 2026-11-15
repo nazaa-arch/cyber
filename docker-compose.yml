@@ -1,17 +1,30 @@
 # Pemasangan: docker compose up  (Bab 15)
 # Prototipe: satu layanan menjalankan satuan simulasi + Dalang Console.
-# Untuk satu satuan nyata, ganti real_addr di demo.py/SatuanNode dengan alamat aset asli
+# Untuk satu satuan nyata, ganti real_addr di SatuanNode dengan alamat aset asli
 # dan hapus RealDeviceSim. Pengerasan bayangan (Bab 14): read-only, batas CPU/RAM, tanpa egress.
+#
+# Wajib: set WAYANG_ADMIN_TOKEN (mis. di file .env di samping berkas ini) sebelum `up`.
 services:
   wayang:
     build: .
-    command: ["python", "-m", "demo", "--mode", "full", "--host", "0.0.0.0"]
+    command: ["python", "run_wayang.py", "--host", "0.0.0.0"]
+    environment:
+      # Fail-closed: compose menolak jalan bila token konsol belum diset.
+      WAYANG_ADMIN_TOKEN: ${WAYANG_ADMIN_TOKEN:?Set WAYANG_ADMIN_TOKEN sebelum menjalankan docker compose}
+      # Bukti forensik (hash-chain, sessions.db, master key) ditulis ke volume persisten.
+      WAYANG_DATA_DIR: /data/audit
+      WAYANG_TG_SUBS_FILE: /data/tg_subscribers.json
     read_only: true
     tmpfs: ["/tmp"]
+    volumes:
+      - wayang_data:/data
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     mem_limit: 1g
     cpus: 2.0
     ports:
       - "8080:8080"      # Dalang Console
-      - "15020-15042:15020-15042"   # Kelir, bayangan Modbus, bayangan HMI per satuan
+      - "15020-15062:15020-15062"   # Kelir, bayangan Modbus, bayangan HMI per satuan
+
+volumes:
+  wayang_data:

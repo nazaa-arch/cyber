@@ -1,8 +1,8 @@
 """Demo terpadu WAYANG.
 
-  python -m demo --mode full      3 satuan simulasi + pusat + Dalang Console + penyerang
-  python -m demo --mode console   hanya konsol dengan satu satuan simulasi
-  python -m demo --mode node      satu node (Kelir + bayangan + HMI) di atas aset asli simulasi
+  python -m demo                  mesin operasional realtime (sama dengan run_wayang.py)
+  python -m demo --mode full      3 satuan simulasi + pusat + Dalang Console + skenario penyerang
+  python -m demo --mode console   3 satuan simulasi + konsol, tanpa skenario penyerang
 
 Semua satuan, alamat, dan persona adalah SIMULASI/FIKTIF.
 """
@@ -98,18 +98,25 @@ async def amain(a):
         await attack_story(nodes)
     for n in nodes.values():
         n.edge.flush()
-    app = make_console_app(nodes, pusat)
+    token = os.environ.get("WAYANG_ADMIN_TOKEN", "")
+    if not token and a.host not in ("127.0.0.1", "localhost", "::1"):
+        raise SystemExit("[FATAL] Mode demo tanpa WAYANG_ADMIN_TOKEN hanya diizinkan di host loopback. "
+                         "Set WAYANG_ADMIN_TOKEN atau pakai --host 127.0.0.1.")
+    app = make_console_app(nodes, pusat, admin_token=token)
     print(f"Dalang Console: http://{a.host}:{a.port}   keluaran: {out}")
     await uvicorn.Server(uvicorn.Config(app, host=a.host, port=a.port, log_level="warning")).serve()
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["realtime", "full", "console", "node"], default="realtime")
+    ap.add_argument("--mode", choices=["realtime", "full", "console"], default="realtime",
+                    help="realtime: mesin operasional (run_wayang); full: 3 satuan + skenario serangan; "
+                         "console: 3 satuan tanpa serangan")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--base-port", type=int, default=15020)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--fresh", action="store_true")
     asyncio.run(amain(ap.parse_args()))
 
 
