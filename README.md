@@ -1,7 +1,7 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-59%2F59%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-76%2F76%20passed-brightgreen.svg)]()
 [![Rancangan Keamanan Fisik](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(by%20design)-blue.svg)]()
 [![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-4.42ms%20median%20%2F%208.52ms%20p95%20(loopback)-orange.svg)]()
 [![End-to-End Alert](https://img.shields.io/badge/TTFA%20Web%20HUD-~283ms%20median%20(e2e%20WebSocket)-orange.svg)]()
@@ -17,6 +17,7 @@
 ## 🌐 Akses Sistem Operasional (Live Cloud 24/7)
 - **Konsol Komando Utama (C4ISR)**: [https://cyber.steamcraft.online/](https://cyber.steamcraft.online/)
 - **Backend Cloud Deployment (Render SG)**: [https://wayang-c4isr.onrender.com/](https://wayang-c4isr.onrender.com/)
+- **Bot Telegram Notifikasi (Bot Dalang)**: [@dalangwayangbot](https://t.me/dalangwayangbot). Kirim `/start` untuk menerima notifikasi serangan (hanya-baca), `/status` untuk ringkasan satuan, `/stop` untuk berhenti. Tombol aksi (setujui blokir) hanya berlaku untuk chat Perwira Jaga terdaftar.
 
 ![Dashboard C4ISR WAYANG](docs/dashboard_c4isr.png)
 
@@ -229,16 +230,16 @@ cd cyber
 pip install -r requirements.txt
 ```
 
-### 2. Menjalankan Seluruh Pengujian Otomatis (59 Unit & Integration Tests)
+### 2. Menjalankan Seluruh Pengujian Otomatis (76 Unit & Integration Tests)
 ```bash
 python -m pytest tests -q -p no:warnings
 ```
-*Output diharapkan: `59 passed`.*
+*Output diharapkan: `76 passed`.*
 
 Untuk memverifikasi jumlah tes yang terdaftar:
 ```bash
 python -m pytest tests --collect-only -q | Select-Object -Last 1
-# Menampilkan: 59 tests collected
+# Menampilkan: 76 tests collected
 ```
 
 ### 3. Menjalankan Konsol Komando C4ISR (Lokal)
@@ -292,7 +293,7 @@ cyber/
 ├── console/             # API FastAPI, Dalang Console (HTML5/Leaflet), Telegram bot, BAP report
 ├── sim_attacker/        # Simulator penyerang T1-T3, harness evaluasi ilmiah
 ├── hosting_gateway/     # Konfigurasi reverse-proxy subdomain cPanel (index.php, .htaccess)
-├── tests/               # 59 test suite pengujian modul & integrasi end-to-end
+├── tests/               # 76 test suite pengujian modul & integrasi end-to-end
 ├── docs/                # Arsitektur detail, hasil evaluasi Bab 13, protokol uji buta
 ├── Dockerfile           # Konfigurasi container non-root aman
 ├── Procfile             # Konfigurasi proses cloud deployment

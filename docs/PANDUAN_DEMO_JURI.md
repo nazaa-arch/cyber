@@ -40,9 +40,9 @@ Buku saku ini disiapkan khusus agar Anda dapat membawakan demonstrasi **WAYANG**
     > *- Di sisi kanan (Bayangan), nilai katup terbaca TERBUKA dan pompa aktif. Penyerang merasa operasinya sukses.*
     > *- Namun lihat di sisi kiri: **ASET FISIK RIIL TETAP 100% AMAN!** Pompa asli tetap MATI, katup asli tetap tertutup rapat. Zero writes reached the physical asset."*
 - **Langkah 3: Tunjukkan Notifikasi Telegram**
-  - Buka Telegram / perlihatkan layar bot:
+  - Buka Telegram / perlihatkan layar bot [@dalangwayangbot](https://t.me/dalangwayangbot). Juri bisa ikut menerima notifikasi dengan mengirim `/start` ke bot (hanya-baca).
   - **Ucapkan:**
-    > *"Secara bersamaan, bot telegram `@Dalangwayangbot` di genggaman Perwira Jaga Satuan langsung berbunyi membawa intelijen taktis lengkap dengan tombol persetujuan blokir."*
+    > *"Secara bersamaan, bot telegram `@dalangwayangbot` di genggaman Perwira Jaga Satuan langsung berbunyi membawa intelijen taktis lengkap dengan tombol persetujuan blokir."*
 
 ### Menit 03.30 – 04.30: Siklus Bayangan ke Benteng & Forensik BAP-FD
 - **Aksi Layar:** Scroll ke tabel **Siklus Bayangan ke Benteng** dan **Rantai Bukti Hash**.
@@ -50,7 +50,9 @@ Buku saku ini disiapkan khusus agar Anda dapat membawakan demonstrasi **WAYANG**
   > *"WAYANG tidak berhenti pada pengalihan. Intelijen musuh langsung diekstraksi menjadi benteng perlindungan:*
   > *1. Menghasilkan aturan **Sigma** dan IoC **STIX 2.1** untuk disebarkan ke seluruh satuan Korem/Kodam.*
   > *2. Menyusun draf pemblokiran **nftables** seketika.*
-  > *3. Seluruh jejak audit terkunci dalam **Rantai Hash SHA-256** anti-manipulasi."*
+  > *3. Seluruh jejak audit terkunci dalam **Rantai Hash SHA-256** anti-manipulasi.*
+  > *4. Terhubung ke SOC satuan: alert **Suricata** langsung membuat penyerang dialihkan ke bayangan, setiap event bayangan masuk **Wazuh SIEM**, dan draf rule Suricata per penyerang siap disetujui."*
+  - **Opsional (demo integrasi):** jalankan `python integrations/lab/demo_alur.py` untuk menunjukkan alur Suricata → WAYANG → Wazuh dengan PLC asli menerima 0 tulis.
 - **Langkah 4: Klik tombol `Unduh BAP-FD (.docx)` di kanan atas konsol.**
   - Buka berkas Word yang terunduh.
   - **Ucapkan:**
