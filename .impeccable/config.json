@@ -1,0 +1,50 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "montserrat",
+        "createdAt": "2026-11-16T15:25:08.080Z",
+        "reason": "Claude decided: Montserrat adalah font identitas resmi WAYANG (Panduan Identitas Navy Emas)"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          "console/static/index.html"
+        ],
+        "createdAt": "2026-11-16T15:25:08.219Z",
+        "reason": "Claude decided: garis merah-putih pada palang gerbang (.scada-gate-arm), meniru palang fisik"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "console/static/index.html"
+        ],
+        "createdAt": "2026-11-16T15:25:08.349Z",
+        "reason": "Claude decided: kisi layar CCTV/HMI pada panel SCADA, bukan latar dekoratif"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "console/static/index.html"
+        ],
+        "createdAt": "2026-11-16T15:25:21.039Z",
+        "reason": "Claude decided: kedua titik adalah indikator status literal (LED live WebSocket dan titik REC CCTV)"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "console/static/index.html"
+        ],
+        "createdAt": "2026-11-16T15:25:21.248Z",
+        "reason": "Claude decided: satu-satunya loop adalah permukaan cairan tangki BBM pada panel SCADA"
+      }
+    ]
+  }
+}
