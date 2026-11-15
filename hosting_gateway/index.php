@@ -19,6 +19,10 @@ $headers = [];
 if (function_exists('getallheaders')) {
     foreach (getallheaders() as $name => $val) {
         $name_lower = strtolower($name);
+        // Header IP dari klien dibuang agar tak bisa dipalsukan untuk mengelabui Penjaga.
+        if (in_array($name_lower, ['x-forwarded-for', 'x-real-ip', 'cf-connecting-ip', 'forwarded'], true)) {
+            continue;
+        }
         if ($name_lower !== 'host' && $name_lower !== 'content-length') {
             $headers[] = "$name: $val";
         }
@@ -28,6 +32,8 @@ $headers[] = "Host: " . parse_url($backend_url, PHP_URL_HOST);
 $headers[] = "ngrok-skip-browser-warning: 1";
 $headers[] = "X-Forwarded-Host: cyber.steamcraft.online";
 $headers[] = "X-Forwarded-Proto: https";
+// IP asli pengunjung, dipakai Penjaga WAYANG untuk rate-limit & blokir IP penyerang.
+$headers[] = "X-Forwarded-For: " . $_SERVER['REMOTE_ADDR'];
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $target_url);

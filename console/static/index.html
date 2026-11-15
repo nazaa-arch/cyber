@@ -5,6 +5,9 @@
 <title>WAYANG · Deception Grid Adaptif IT/OT TNI AD</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="WAYANG adalah deception grid adaptif untuk pertahanan siber IT/OT: umpan, sensor tipuan, dan bukti interaksi penyerang dalam satu sistem C4ISR terpadu TNI Angkatan Darat.">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="copyright" content="© 2026 Tim WAYANG — Kartika Cyber Hackathon 2026. Dilarang menyalin tanpa izin.">
+<meta name="format-detection" content="telephone=no">
 <link rel="icon" type="image/jpeg" href="/static/Logo.jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1794,6 +1797,18 @@ body.theater-locked header#main-header .header-actions {
     padding: 10px 16px;
   }
 }
+/* PENJAGA ANTI-JIPLAK: teks tak bisa diseleksi/disalin (kecuali kolom isian),
+   gambar tak bisa diseret, dan halaman kosong bila dicetak / disimpan ke PDF. */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
+img, svg, canvas { -webkit-user-drag: none; user-drag: none; }
+@media print {
+  body > * { display: none !important; }
+  body::after {
+    content: "Dokumen ini dilindungi. Pencetakan Dalang Console WAYANG tidak diizinkan.";
+    display: block; padding: 40px; font: 700 18px sans-serif; color: #000;
+  }
+}
 </style>
 </head>
 <body class="theater-locked">
@@ -2314,22 +2329,65 @@ console.log(
 );
 
 // 2. Pembatasan Menu Klik Kanan & Pintasan Tombol DevTools
+const isEditable = el => !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+
 window.addEventListener('contextmenu', e => {
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (isEditable(e.target)) return;
   e.preventDefault();
 });
 
 window.addEventListener('keydown', e => {
   const k = e.key ? e.key.toUpperCase() : '';
-  if (
-    e.key === 'F12' ||
-    (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(k)) ||
-    (e.ctrlKey && k === 'U')
-  ) {
+  const mod = e.ctrlKey || e.metaKey;
+  const devtools = e.key === 'F12' ||
+    (mod && e.shiftKey && ['I', 'J', 'C', 'K'].includes(k)) ||
+    (e.metaKey && e.altKey && ['I', 'J', 'C', 'U'].includes(k)) ||
+    (mod && k === 'U');
+  // Simpan halaman (Ctrl+S) & cetak (Ctrl+P) selalu diblokir; salin/potong/pilih-semua
+  // hanya diblokir di luar kolom isian agar token tetap bisa ditempel saat login.
+  const copying = (mod && ['S', 'P'].includes(k)) ||
+    (mod && ['C', 'X', 'A'].includes(k) && !e.shiftKey && !isEditable(e.target));
+  if (devtools || copying) {
     e.preventDefault();
-    showToast('AKSI DIBATASI: Inspeksi konsol komando dinonaktifkan untuk keamanan operasional.');
+    e.stopPropagation();
+    showToast(devtools
+      ? 'AKSI DIBATASI: Inspeksi konsol komando dinonaktifkan untuk keamanan operasional.'
+      : 'AKSI DIBATASI: Menyalin, menyimpan, atau mencetak Dalang Console tidak diizinkan.');
   }
-});
+}, true);
+
+// 3. Penjaga Anti-Jiplak: salin, potong, seret, dan seleksi teks dicegah di luar kolom isian.
+['copy', 'cut'].forEach(ev => document.addEventListener(ev, e => {
+  if (isEditable(e.target)) return;
+  e.preventDefault();
+  if (e.clipboardData) e.clipboardData.setData('text/plain',
+    '© 2026 WAYANG — Kartika Cyber Hackathon. Konten dilindungi, dilarang menyalin tanpa izin.');
+}, true));
+document.addEventListener('dragstart', e => { if (!isEditable(e.target)) e.preventDefault(); }, true);
+document.addEventListener('selectstart', e => { if (!isEditable(e.target)) e.preventDefault(); }, true);
+window.addEventListener('beforeprint', () => showToast('AKSI DIBATASI: Pencetakan tidak diizinkan.'));
+
+// 4. Anti-bingkai: bila halaman dimuat di dalam iframe situs lain, keluar dari bingkai.
+if (window.top !== window.self) {
+  try { window.top.location = window.self.location.href; }
+  catch (_) { document.documentElement.innerHTML = ''; }
+}
+
+// 5. Anti-kloning: bila halaman ini disalin & dibuka dari domain lain / berkas lokal,
+//    tampilkan peringatan dan kosongkan isi agar salinan tak bisa dipakai.
+(() => {
+  const host = location.hostname;
+  const sah = host === 'cyber.steamcraft.online' || host.endsWith('.onrender.com') ||
+    host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]' ||
+    /^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(host) || host.endsWith('.trycloudflare.com') || host.endsWith('.ngrok-free.dev') || host.endsWith('.ngrok-free.app');
+  if (location.protocol === 'file:' || !sah) {
+    document.documentElement.innerHTML =
+      '<body style="background:#05101E;color:#C9A227;font:700 18px sans-serif;padding:48px">' +
+      'Salinan tidak sah dari WAYANG Dalang Console terdeteksi. ' +
+      'Gunakan situs resmi: https://cyber.steamcraft.online</body>';
+    throw new Error('WAYANG: salinan tidak sah');
+  }
+})();
 let curSat = 'KODAM-IV-Diponegoro';
 let audioEnabled = false;
 let audioCtx = null;

@@ -52,7 +52,7 @@ def test_console_api_and_report(tmp_path):
                 assert (await c.post("/api/autonomy", json={"level": 9})).status_code == 422
                 assert (await c.post("/api/killswitch")).json()[n.satuan]["level"] == 0
                 assert "WAYANG" in (await c.get("/")).text
-                assert (await c.get("/static/..%2f..%2fnode.py")).status_code == 404
+                assert (await c.get("/static/..%2f..%2fnode.py")).status_code in (403, 404)  # Penjaga menolak traversal
         finally:
             await n.stop(); rs.close()
     asyncio.run(go())

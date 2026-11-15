@@ -30,6 +30,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from pydantic import BaseModel
 
 from console import report
+from console.penjaga import Penjaga
 from console.pusat import Pusat
 
 STATIC = pathlib.Path(__file__).with_name("static")
@@ -52,6 +53,9 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
     app = FastAPI(title="WAYANG Dalang C4ISR Console", docs_url=None, redoc_url=None)
     token = admin_token if admin_token is not None else os.environ.get("WAYANG_ADMIN_TOKEN", "")
     fails: dict[str, list[float]] = {}
+    penjaga = Penjaga()
+    app.state.penjaga = penjaga
+    MAX_BODY = 1_000_000  # 1 MB: tolak body raksasa (anti-DoS memori)
 
     # Penyimpanan sesi server-side: sid acak -> waktu kedaluwarsa. Dapat dicabut (logout)
     # dan punya TTL, menggantikan tanda tangan statis yang tak pernah berubah/rotasi.
@@ -135,6 +139,21 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         path = request.url.path
         nonce = secrets.token_urlsafe(16)
         request.state.csp_nonce = nonce
+
+        # PENJAGA: gerbang pertama — alat serang, payload, probe, banjir, IP terblokir.
+        verdict = penjaga.check(_client_ip(request), request.method, path,
+                                request.url.query, request.headers.get("user-agent", ""))
+        if verdict:
+            code, msg = verdict
+            blocked = JSONResponse({"detail": msg}, status_code=code)
+            blocked.headers["X-Content-Type-Options"] = "nosniff"
+            blocked.headers["Cache-Control"] = "no-store"
+            return blocked
+        try:
+            if int(request.headers.get("content-length") or 0) > MAX_BODY:
+                return JSONResponse({"detail": "Body terlalu besar"}, status_code=413)
+        except ValueError:
+            return JSONResponse({"detail": "Content-Length tidak sah"}, status_code=400)
         # Tolak akses langsung ke /static/index.html
         if path == "/static/index.html":
             return JSONResponse({"detail": "Not Found"}, status_code=404)
@@ -148,7 +167,7 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
                         request.method, path, request.headers.get("origin"), _client_ip(request))
             return JSONResponse({"detail": "Origin tidak sah"}, status_code=403)
 
-        if (not token or path == "/" or path.startswith("/static/")
+        if (not token or path in ("/", "/robots.txt") or path.startswith("/static/")
                 or path.startswith("/api/auth/")):
             response = await call_next(request)
         elif _authed(request.headers, request.cookies):
@@ -163,6 +182,12 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        # Anti-hotlink & anti-jiplak: aset hanya boleh dimuat oleh situs ini sendiri,
+        # mesin pencari/arsip dilarang mengindeks atau menyimpan salinan halaman.
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
+        if path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
         if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response
@@ -178,6 +203,7 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         recent = [t for t in fails.get(ip, []) if now - t < LOGIN_WINDOW_S]
         if len(recent) >= LOGIN_MAX_FAILS:
             fails[ip] = recent
+            penjaga._strike(ip, "brute-force token login")  # 3x terkunci -> IP diblokir
             return JSONResponse({"detail": "Terlalu banyak percobaan. Coba lagi sebentar."},
                                 status_code=429)
         given = str((body or {}).get("token", ""))
@@ -194,6 +220,18 @@ def make_console_app(nodes: dict, pusat: Pusat, admin_token: str | None = None) 
         fails[ip] = recent
         log.warning("Login gagal dari ip=%s", ip)
         return JSONResponse({"detail": "Token salah"}, status_code=401)
+
+    @app.get("/robots.txt", response_class=PlainTextResponse)
+    async def robots():
+        return "User-agent: *\nDisallow: /\n"
+
+    @app.get("/api/guard")
+    async def guard_status():
+        return penjaga.status()
+
+    @app.post("/api/guard/unban/{ip}")
+    async def guard_unban(ip: str):
+        return {"ok": penjaga.unban(ip), "ip": ip}
 
     @app.post("/api/auth/logout")
     async def auth_logout(request: Request):

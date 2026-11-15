@@ -338,7 +338,7 @@ async def amain(args):
     print("=" * 70)
 
     try:
-        config = uvicorn.Config(app, host=args.host, port=args.port, log_level="warning")
+        config = uvicorn.Config(app, host=args.host, port=args.port, log_level="warning", server_header=False)
         server = uvicorn.Server(config)
         await server.serve()
     finally:
