@@ -1,16 +1,16 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-55%2F55%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-59%2F59%20passed-brightgreen.svg)]()
 [![Rancangan Keamanan Fisik](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(by%20design)-blue.svg)]()
-[![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-1.50ms%20(loopback)-orange.svg)]()
-[![End-to-End Alert](https://img.shields.io/badge/TTFA%20Telegram-45--120ms%20(e2e)-orange.svg)]()
+[![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-4.42ms%20median%20%2F%208.52ms%20p95%20(loopback)-orange.svg)]()
+[![End-to-End Alert](https://img.shields.io/badge/TTFA%20Web%20HUD-~283ms%20median%20(e2e%20WebSocket)-orange.svg)]()
 [![STIX 2.1 RFC](https://img.shields.io/badge/STIX-2.1%20RFC%20Compliant-brightgreen.svg)]()
-[![Cryptography RFC 6962](https://img.shields.io/badge/Merkle%20Proof-RFC%206962%20Compliant-blueviolet.svg)]()
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+[![Merkle Audit Proof](https://img.shields.io/badge/Merkle%20Proof-SHA--256%20(hash%20gaya%20RFC%206962)-blueviolet.svg)](#7-dukungan-integritas-chain-of-custody-forensik-digital-bap-fd)
+[![License](https://img.shields.io/badge/License-Apache%202.0%20%2B%20klausul%20tambahan-green.svg)](LICENSE)
 [![Live Dashboard](https://img.shields.io/badge/Live%20C4ISR-cyber.steamcraft.online-gold.svg)](https://cyber.steamcraft.online/)
 
-> **Doktrin Pertahanan**: 100% defensif. Menerapkan isolasi *fail-safe* ke panggung bayangan. Zero hack-back. Dikembangkan berdasarkan Proposal Teknis resmi: `WAYANG - Proposal Teknis Kartika Cyber Hackathon 2026.docx`.
+> **Doktrin Pertahanan**: 100% defensif. Menerapkan isolasi *fail-safe* ke panggung bayangan. Zero hack-back. Dikembangkan berdasarkan Proposal Teknis `WAYANG - Proposal Teknis Kartika Cyber Hackathon 2026.docx` (disertakan dalam paket submission, tidak ada di repositori ini). Hasil evaluasi lengkap: [`docs/hasil_evaluasi.md`](docs/hasil_evaluasi.md) · batasan dan jalur uji lapangan: [lihat di bawah](#-batasan-asumsi--jalur-menuju-uji-lapangan).
 
 ---
 
@@ -57,7 +57,7 @@ Berbeda dengan honeypot tradisional yang pasif dan mudah di-sidik jari (*fingerp
                                                               │           MESIN ADAPTIF           │
                                                               │ - Optimalisasi Kedalaman          │
                                                               │ - Pemetaan MITRE ATT&CK ICS       │
-                                                              │ - Hash-Chain SHA-256 (RFC 6962)   │
+                                                              │ - Hash-Chain SHA-256 + Merkle     │
                                                               └─────────────────┬─────────────────┘
                                                                                │
                                                                                ▼
@@ -119,7 +119,9 @@ Pada skenario pengujian **"Operator Terkompromi"** (`tests/test_kelir.py::test_c
 - **Uji Taktis Terintegrasi**: Tombol simulasi serangan terintegrasi ([T1] Recon Scan, [T2] Shadow Divert, [APT] Kampanye Terpadu, [Canary] Persona, dan Lockdown Satuan) untuk demonstrasi interaktif.
 
 ### 7. Dukungan Integritas Chain of Custody Forensik Digital (BAP-FD)
-- Setiap event dienkapsulasi dalam **Pohon Merkle RFC 6962** dengan *Root Hash* SHA-256 dan *HMAC Signature* pangkalan.
+- Setiap event menjadi daun **pohon Merkle SHA-256** dengan *Root Hash* dan tanda tangan HMAC per satuan (`evidence/merkle.py`). Hash daun dan simpul memakai pemisahan domain gaya RFC 6962 (`0x00 || data` untuk daun, `0x01 || kiri || kanan` untuk simpul), sehingga daun tidak bisa dipalsukan sebagai simpul.
+- Untuk tiap event dapat dibuat *audit proof* (jalur saudara dari daun ke akar) yang diverifikasi ulang tanpa memuat seluruh log (`/api/chain/{satuan}/merkle`).
+- **Batas klaim**: ini *tamper-evident* (perubahan terdeteksi), bukan *tamper-proof*. Bentuk pohonnya **tidak identik dengan RFC 6962**: pada jumlah daun ganjil simpul terakhir digandakan, sedangkan RFC 6962 membagi pohon di pangkat dua terbesar. Root hash-nya karena itu tidak interoperabel dengan implementasi Certificate Transparency.
 - Menghasilkan berkas **Berita Acara Pemeriksaan Forensik Digital (BAP-FD)** format `.docx` dan `.html` yang dirancang untuk mendukung *chain of custody* barang bukti digital. Dokumen purwarupa berstatus templat simulasi dengan penanda jelas `[SIMULASI CONTOH - BUKAN DOKUMEN RESMI NEGARA]` (keabsahan hukum bergantung pada prosedur dan pengesahan otoritas penyidik yang berwenang).
 
 ---
@@ -128,7 +130,7 @@ Pada skenario pengujian **"Operator Terkompromi"** (`tests/test_kelir.py::test_c
 
 ### Hasil pada skenario berskrip (simulator internal)
 
-> **Batas klaim.** Angka berikut diukur pada mesin pengembang dengan penyerang simulasi buatan tim (skrip internal, hanya ke bayangan milik sendiri). Ini bukan uji pada mini-PC satuan, bukan penyerang nyata, dan bukan uji buta manusia. Baris "Penyamaran" sengaja dibiarkan kosong `[isi]` sampai relawan manusia menguji.
+> **Batas klaim.** Angka berikut diukur pada mesin pengembang (Windows 11, 16 CPU logis, Python 3.13.7) dengan penyerang simulasi buatan tim (skrip internal, hanya ke bayangan milik sendiri). Ini bukan uji pada mini-PC satuan, bukan penyerang nyata, dan bukan uji buta manusia. Baris "Penyamaran" sengaja dibiarkan kosong `[isi]` sampai relawan manusia menguji.
 
 Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attacker/evaluate.py` dan perbandingan target formal pada Dokumen Proposal Teknis:
 
@@ -139,7 +141,7 @@ Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attack
 | **Dwell Time Penyerang (CuriousAttacker)** | Durasi interaksi penyerang sebelum berhenti pada umpan bayangan adaptif dibanding honeypot statis (CuriousAttacker). Target proposal: adaptif lebih tinggi. | **+122.5%** (27.5s ± 2.0s vs 12.4s ± 1.3s, 95% CI ±0.7s) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi dengan kesabaran acak, bukan manusia nyata. |
 | **Dwell Time Penyerang (AggressiveAttacker)** | Durasi interaksi penyerang agresif multi-register pada umpan adaptif dibanding honeypot statis. Target proposal: adaptif lebih tinggi. | **+41.8%** (5.0s ± 0.4s vs 3.5s ± 0.4s, 95% CI ±0.2s) | n = 30 sesi per kelompok (N = 60) | Penyerang adalah skrip simulasi dengan kesabaran acak, bukan manusia nyata. |
 | **Dampak Fisik ke PLC Riil** | Perintah tulis manipulasi berbahaya yang lolos dan dieksekusi pada register PLC riil saat terjadi serangan (verifikasi nilai sentinel: operator `0x1111`, penyerang `0xDEAD`). Target proposal: 0 perintah. | **0 penulisan tembus (0.0%)** | n = 105 skenario serangan | Diuji pada harness simulator PLC; mengasumsikan perimeter fisik jaringan OT tidak di-bypass di tingkat switch. |
-| **Operator Terkompromi (Kebijakan Granular)** | Sumber terdaftar mencoba menulis register di luar izin kebijakan (register offset 11 / kendali pompa). Target: dialihkan ke bayangan. | **100% dialihkan ke bayangan** (0xDEAD tertahan di bayangan, 0 perintah ilegal ke PLC riil) | n = 1 skenario kompromi operator | Membuktikan bahwa workstation operator sah yang terinfeksi malware tidak dapat merusak PLC fisik riil. |
+| **Operator Terkompromi (Kebijakan Granular)** | Sumber terdaftar mencoba menulis register di luar izin kebijakan (register offset 11 / kendali pompa). Target: dialihkan ke bayangan. | **100% dialihkan ke bayangan** (0xDEAD tertahan di bayangan, 0 perintah ilegal ke PLC riil) | n = 1 skenario kompromi operator | Terukur pada satu skenario simulasi: perintah di luar izin dari sumber terdaftar tidak sampai ke simulator PLC. Belum diuji pada PLC fisik. |
 | **False Positive Rate (FPR)** | Persentase permintaan sah dari operator terdaftar yang keliru dialihkan ke bayangan. Target proposal: mendekati 0. | **0.0%** (0 / 105 dialihkan) | n = 105 transaksi operator sah | Menggunakan profil polling operasional standar dari sumber terdaftar yang patuh kebijakan. |
 | **Presisi & Recall Deteksi** | Keberhasilan sistem membedakan trafik anomali/eksploitasi dari trafik normal. | **1.00 (100%) / 1.00 (100%)** | n = 105 variasi serangan berskrip | Terukur terhadap penyerang tak terdaftar berskrip internal (lihat rincian kelas sah tak terdaftar di bawah). |
 | **Penghematan Bandwidth Taktis** | Rasio perbandingan volume data ringkasan sesi terkompresi WAYANG dibandingkan event JSON mentah setara sesi yang sama. | **81.3% reduksi** (14824 B vs 79233 B mentah; 92.4% pada sesi panjang) | n = 40 sesi | Baseline pembanding adalah log mentah event JSON transaksi biner Modbus tanpa kompresi pada durasi yang sama. |
@@ -150,7 +152,7 @@ Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attack
 | **Peta Register Depo BBM** | Sapuan 1.000 register Modbus (4 blok peralatan: tangki, pompa 1-2, cadangan, genset/ATS) dengan celah alamat wajar. Target: Exception 02 pada celah alamat. | **1.000 register diuji** (Blok 0..49, 100..125, 200..225, 300..330 mengembalikan telemetri valid; celah 100% Modbus Exception 02) | n = 1.000 register (FC 03 & 04) | Status: **Tercapai** (arsitektur memori identik Schneider Modicon M221 TM221CE24T). |
 | **Teknik ATT&CK per Sesi (Bab 13.1)** | Rata-rata jumlah teknik MITRE ATT&CK for ICS yang berhasil dipancing dari setiap penyerang. Target proposal: >= 2 teknik. | **3.99 teknik/sesi** | n = 105 sesi serangan | Status: **Tercapai** (ekstraksi intelijen taktis multi-tahap). |
 | **Rasio Benteng Pertahanan (Bab 13.1)** | Rasio konsolidasi pertahanan dan usulan blokir taktis yang diusulkan ke komando. Target proposal: 1.00. | **1.00** | n = 105 sesi | Status: **Tercapai** (100% kampanye beresiko menghasilkan draf blokir L3). |
-| **Integritas Rantai Bukti (Bab 13.1)** | Verifikasi integritas rantai hash kriptografis SHA-256 dan Merkle Tree (RFC 6962) pada seluruh log forensik. | **100% valid (chain_ok=True)** | Seluruh event log forensik | Menjamin chain of custody alat bukti digital di hadapan audit forensik militer. |
+| **Integritas Rantai Bukti (Bab 13.1)** | Verifikasi integritas rantai hash kriptografis SHA-256 dan pohon Merkle pada seluruh log forensik. | **100% valid (chain_ok=True)** | Seluruh event log forensik | Mendeteksi perubahan log (tamper-evident) pada data simulasi; dirancang untuk mendukung chain of custody, bukan jaminan keabsahan hukum. |
 | **Ketahanan Putus Link (Store & Forward)** | Uji isolasi komunikasi WAN terputus selama link blackout + simulasi crash reboot proses; integritas data diuji saat tautan pulih. Target proposal: 0 data hilang. | **0 data hilang (100% tersinkron)** | n = 40 sesi di-buffer di SQLite | Tersimpan aman pada antrean SQLite lokal terenkripsi di edge node; 100% data tersinkronisasi kembali saat link aktif. |
 | **Penggunaan Sumber Daya Komputasi** | Penggunaan CPU dan RAM footprint pada 10 node satuan pangkalan (Kelir + bayangan + State Mirror). Target: muat di 4 core / 8 GB. | **CPU 63.7% dari 1 core, RAM total 86.1 MB** (est. single container ~38.5 MB [estimasi]) | 10 node simultan | Sangat ringan, dapat beroperasi pada hardware mini-PC taktis lapangan / edge switch. |
 | **Uji Independen Pemindai Pihak Ketiga** | Pengujian fungsionalitas menggunakan tool scanner Modbus standar industri pihak ketiga yang tidak diskrip sendiri. | **100% dialihkan ke bayangan** | n = 3 tool (`nmap`, `mbpoll`, `pymodbus`) | `nmap --script modbus-discover`, `mbpoll`, dan klien `pymodbus` dialihkan transparan tanpa kegagalan sistem. |
@@ -175,6 +177,35 @@ Pengukuran kuantitatif dilakukan menggunakan harness evaluasi ilmiah `sim_attack
 
 ---
 
+## 🧭 Batasan, Asumsi & Jalur Menuju Uji Lapangan
+
+WAYANG saat ini adalah **purwarupa yang seluruh buktinya berasal dari lingkungan simulasi**. Bagian ini merangkum apa yang belum dibuktikan dan apa yang dibutuhkan sebelum menyentuh instalasi nyata.
+
+### Batasan saat ini
+- **Tidak ada PLC fisik.** "Aset asli" di semua pengujian dan di demo live adalah `sim_attacker/real_sim.py` (`RealDeviceSim`), dan node dijalankan dengan `lab_mode=True`. Klaim nol dampak fisik berarti *0 perintah tulis penyerang sampai ke simulator*.
+- **Penyerang berskrip buatan tim.** Presisi/recall 100% dan FPR 0% diukur terhadap skenario yang ditulis oleh tim yang sama dengan penulis detektornya, sehingga cenderung optimistis. Belum ada red team independen atau uji buta manusia (baris "Uji Buta" masih kosong).
+- **Hanya Modbus/TCP.** Belum ada dukungan DNP3, IEC 60870-5-104, S7comm, OPC UA, atau Modbus RTU serial.
+- **Latensi diukur di loopback** satu mesin; belum di switch industri, link radio/satelit, atau mini-PC satuan.
+- **Fail-to-wire baru logika perangkat lunak.** Relai bypass fisik belum ada dan belum diuji.
+- **Konsol memakai satu token bersama** tanpa peran (RBAC) dan tanpa jejak audit per-pengguna.
+
+### Asumsi rancangan
+- Kelir dipasang **inline** di antara jaringan operator dan PLC, dan tidak ada jalur lain (serial, port engineering, nirkabel) yang melewatinya.
+- Daftar sumber sah dan kebijakan per-sumber dipelihara dengan benar oleh satuan.
+- Segmentasi jaringan OT sudah ada; WAYANG melengkapi, bukan menggantikan, firewall dan segmentasi.
+- Host WAYANG sendiri dipercaya dan diamankan secara fisik.
+
+### Langkah menuju uji lapangan
+1. **Hardware-in-the-loop di bangku uji**: ganti `RealDeviceSim` dengan PLC fisik di jaringan terisolasi (isi `real_addr` pada `SatuanNode`, matikan `lab_mode`). Ulangi seluruh metrik Bab 13 pada perangkat nyata.
+2. **Mode pasif dahulu**: pasang lewat port mirror/TAP tanpa berada di jalur kendali; bandingkan keputusan Kelir dengan trafik operasi nyata untuk mengukur *false positive* sebelum boleh mengalihkan apa pun.
+3. **Validasi fail-to-wire fisik**: relai bypass perangkat keras, uji cabut daya dan *freeze* proses, ukur waktu pulih pada proses nyata.
+4. **Uji independen**: red team yang tidak menulis kode ini, uji buta penyamaran sesuai `docs/uji_buta_protokol.md`, dan pemindai pihak ketiga pada perangkat nyata.
+5. **Kajian keselamatan dan keamanan**: analisis bahaya proses dan penilaian risiko mengikuti kerangka IEC 62443, disetujui pemilik aset.
+6. **Pilot terbatas**: satu aset non-kritis, mulai otonomi L0 (hanya amati), dengan prosedur *rollback* dan persetujuan komando sebelum naik tingkat.
+7. **Pengerasan operasional**: RBAC dan audit per-pengguna di konsol, manajemen rahasia, serta penyimpanan bukti di media WORM atau penandatanganan eksternal.
+
+---
+
 ## 🚀 Panduan Memulai Cepat (Quick Start)
 
 ### Persyaratan Sistem
@@ -189,16 +220,16 @@ cd cyber
 pip install -r requirements.txt
 ```
 
-### 2. Menjalankan Seluruh Pengujian Otomatis (55 Unit & Integration Tests)
+### 2. Menjalankan Seluruh Pengujian Otomatis (59 Unit & Integration Tests)
 ```bash
 python -m pytest tests -q -p no:warnings
 ```
-*Output diharapkan: `55 passed in ~6.5s (100%)`.*
+*Output diharapkan: `59 passed`.*
 
 Untuk memverifikasi jumlah tes yang terdaftar:
 ```bash
 python -m pytest tests --collect-only -q | Select-Object -Last 1
-# Menampilkan: 55 tests collected
+# Menampilkan: 59 tests collected
 ```
 
 ### 3. Menjalankan Konsol Komando C4ISR (Lokal)
@@ -214,8 +245,11 @@ Buka peramban di: **`http://127.0.0.1:8080`**
 
 ### 4. Menjalankan via Docker / Container
 ```bash
+# Token konsol wajib diset; compose menolak jalan tanpa token.
+export WAYANG_ADMIN_TOKEN="<token-acak-anda>"
 docker compose up -d
 ```
+Bukti forensik (hash-chain, `sessions.db`, master key) disimpan di volume `wayang_data` sehingga bertahan saat container dimulai ulang.
 
 ---
 
@@ -245,16 +279,16 @@ cyber/
 ├── kelir/               # Proxy Modbus/TCP, penilaian sesi, data diode cermin keadaan
 ├── shadows/             # Layanan umpan (Modbus Decoy, HMI Web SCADA, ESMTP Phishing)
 ├── engine/              # Mesin kedalaman adaptif, ATT&CK ICS, pembuat aturan nftables
-├── evidence/            # Rantai-hash SHA-256, Merkle tree RFC 6962, penyimpan SQLite
+├── evidence/            # Rantai-hash SHA-256, pohon Merkle (hash gaya RFC 6962), penyimpan SQLite
 ├── console/             # API FastAPI, Dalang Console (HTML5/Leaflet), Telegram bot, BAP report
 ├── sim_attacker/        # Simulator penyerang T1-T3, harness evaluasi ilmiah
 ├── hosting_gateway/     # Konfigurasi reverse-proxy subdomain cPanel (index.php, .htaccess)
-├── tests/               # 55 test suite pengujian modul & integrasi end-to-end
+├── tests/               # 59 test suite pengujian modul & integrasi end-to-end
 ├── docs/                # Arsitektur detail, hasil evaluasi Bab 13, protokol uji buta
 ├── Dockerfile           # Konfigurasi container non-root aman
 ├── Procfile             # Konfigurasi proses cloud deployment
 ├── render.yaml          # Spesifikasi infrastruktur otomatis Render Cloud
-├── LICENSE              # Lisensi Apache 2.0 & klausul riset pertahanan
+├── LICENSE              # Apache 2.0 + lampiran klausul tambahan (hak guna TNI AD, batasan etis)
 └── run_wayang.py        # Entrypoint utama server C4ISR multi-node
 ```
 
@@ -264,5 +298,4 @@ cyber/
 
 - **Perlindungan Kredensial & Bebas Rahasia**: Repositori ini tidak memuat token, kunci API, atau kredensial sensitif dalam riwayat commit git. Variabel operasional (seperti token Telegram Bot) sepenuhnya dibaca melalui environment variable (`.env` yang diabaikan oleh `.gitignore`).
 - **Etika Pertahanan Siber**: Sistem ini 100% defensif (*zero hack-back*), tidak memuat kode eksploitasi ofensif, dan seluruh manipulasi diisolasi di lingkungan virtual internal.
-- **Lisensi Perangkat Lunak**: Dilisensikan di bawah [Apache License 2.0](LICENSE) dengan atribusi:
-  > *Hak cipta © 2026 Tim Pengembang WAYANG. Dikembangkan untuk Kartika Cyber Hackathon 2026; hak penggunaan oleh TNI AD mengikuti ketentuan panitia.*
+- **Lisensi Perangkat Lunak**: Hak cipta © 2026 Tim Pengembang WAYANG. Kode dilisensikan dengan teks [Apache License 2.0](LICENSE) **ditambah lampiran klausul khusus** di akhir berkas `LICENSE`: (1) hak guna, evaluasi, dan pengembangan lanjutan diberikan kepada TNI AD sesuai ketentuan Kartika Cyber Hackathon 2026; (2) larangan penggunaan untuk tujuan ofensif. Karena klausul (2) membatasi penggunaan, lisensi ini **bukan Apache 2.0 murni** dan bukan lisensi sumber terbuka menurut definisi OSI; bila terjadi perbedaan tafsir, teks pada berkas `LICENSE` yang berlaku.

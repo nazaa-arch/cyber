@@ -1,4 +1,8 @@
-"""Pohon Merkle & Pembuktian Kriptografis Berstandar Militer (RFC 6962 Compliance).
+"""Pohon Merkle & pembuktian kriptografis (hash daun/simpul gaya RFC 6962).
+
+Catatan: hanya pemisahan domain hash (0x00 daun, 0x01 simpul) yang mengikuti RFC 6962.
+Bentuk pohon TIDAK identik: pada jumlah daun ganjil simpul terakhir digandakan, sedangkan
+RFC 6962 membagi di pangkat dua terbesar. Root tidak interoperabel dengan implementasi CT.
 
 Menyediakan:
 - Pohon Merkle kriptografis di atas rantai-hash SHA-256
@@ -48,7 +52,7 @@ class MerkleTree:
                 if i + 1 < len(current):
                     right = current[i + 1]
                 else:
-                    # Ganjil: duplikasi node terakhir sesuai standar RFC
+                    # Ganjil: duplikasi node terakhir (bukan perilaku RFC 6962; lihat docstring modul)
                     right = current[i]
                 next_level.append(sha256_node(left, right))
             self.levels.append(next_level)
