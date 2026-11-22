@@ -1,7 +1,7 @@
 # WAYANG: Deception Grid Adaptif untuk Pertahanan IT/OT Satuan TNI AD
 
 [![CI/CD Pipeline](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml/badge.svg)](https://github.com/nazaa-arch/cyber/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/tests-76%2F76%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-87%2F87%20passed-brightgreen.svg)]()
 [![Rancangan Keamanan Fisik](https://img.shields.io/badge/physical%20safety-0%20real%20writes%20(by%20design)-blue.svg)]()
 [![Detection TTFA](https://img.shields.io/badge/TTFA%20Deteksi-4.42ms%20median%20%2F%208.52ms%20p95%20(loopback)-orange.svg)]()
 [![End-to-End Alert](https://img.shields.io/badge/TTFA%20Web%20HUD-~283ms%20median%20(e2e%20WebSocket)-orange.svg)]()
@@ -230,16 +230,16 @@ cd cyber
 pip install -r requirements.txt
 ```
 
-### 2. Menjalankan Seluruh Pengujian Otomatis (76 Unit & Integration Tests)
+### 2. Menjalankan Seluruh Pengujian Otomatis (87 Unit & Integration Tests)
 ```bash
 python -m pytest tests -q -p no:warnings
 ```
-*Output diharapkan: `76 passed`.*
+*Output diharapkan: `87 passed`.*
 
 Untuk memverifikasi jumlah tes yang terdaftar:
 ```bash
 python -m pytest tests --collect-only -q | Select-Object -Last 1
-# Menampilkan: 76 tests collected
+# Menampilkan: 87 tests collected
 ```
 
 ### 3. Menjalankan Konsol Komando C4ISR (Lokal)
@@ -293,7 +293,7 @@ cyber/
 ├── console/             # API FastAPI, Dalang Console (HTML5/Leaflet), Telegram bot, BAP report
 ├── sim_attacker/        # Simulator penyerang T1-T3, harness evaluasi ilmiah
 ├── hosting_gateway/     # Konfigurasi reverse-proxy subdomain cPanel (index.php, .htaccess)
-├── tests/               # 76 test suite pengujian modul & integrasi end-to-end
+├── tests/               # 87 test suite pengujian modul & integrasi end-to-end
 ├── docs/                # Arsitektur detail, hasil evaluasi Bab 13, protokol uji buta
 ├── Dockerfile           # Konfigurasi container non-root aman
 ├── Procfile             # Konfigurasi proses cloud deployment
